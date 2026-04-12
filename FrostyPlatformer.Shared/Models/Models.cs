@@ -85,7 +85,7 @@ namespace FrostyPlatformer.Models
 
     public class HighScoreEnterName
     {
-        internal string letter;
+        public string letter;
 
         public string MyProperty { get; set; }
     }
@@ -130,15 +130,15 @@ namespace FrostyPlatformer.Models
     public class EnergiRainObject
     {
         public bool MakeItRain { get; set; }
-        public int NumberOfEnergi { get; internal set; }
+        public int NumberOfEnergi { get; set; }
         /// <summary>
-        /// Utgå ifrån Horisontal position 
+        /// Utgå ifrån Horisontal position
         /// </summary>
-        public float StartPosX { get; internal set; }
+        public float StartPosX { get; set; }
         /// <summary>
         /// Utgå ifrån Vertikal position
         /// </summary>
-        public float StartPosY { get; internal set; }
+        public float StartPosY { get; set; }
     }
 
 

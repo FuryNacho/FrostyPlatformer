@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FrostyPlatformer\FrostyPlatformer.csproj" />
+    <ProjectReference Include="..\FrostyPlatformer.Shared\FrostyPlatformer.Shared.csproj" />
   </ItemGroup>
 
 </Project>
