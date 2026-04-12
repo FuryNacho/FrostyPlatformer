@@ -18,8 +18,9 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using Raylib_cs;
-using FrostyPlatformer.Engine.Raylib;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using FrostyPlatformer.Engine.MonoGame;
 using FrostyPlatformer.Models.Objects;
 using FrostyPlatformer.Models.Items;
 using FrostyPlatformer.Commands;
@@ -31,55 +32,63 @@ using FrostyPlatformer.Systems;
 namespace FrostyPlatformer
 {
     /// <summary>
-    /// Composition Root — skapar och kopplar samman alla system, startar spelloop.
+    /// Composition Root — ärver MonoGame.Framework.Game, skapar och kopplar samman
+    /// alla system, hanterar spelets livscykel via Initialize/LoadContent/Update/Draw.
     /// </summary>
     /// <remarks>
     /// MÖNSTER: Composition Root
     ///
     /// MOTIVERING:
-    /// Program.cs var tidigare en 5 000-raders God Object med all spellogik inbäddad.
-    /// Efter Fas 4b Steg 5 delegeras all spellogik till GameStateManager och dess
-    /// IGameState-implementationer. Program.cs ansvarar nu enbart för att skapa
-    /// beroenden, koppla samman systemen och starta spelloopen.
+    /// Program.cs var tidigare en Raylib-spelloop. I Fas 2e ersätts den med MonoGames
+    /// Game-klass. All spellogik delegeras till GameStateManager/IGameState — Program
+    /// ansvarar enbart för att skapa beroenden, koppla samman systemen och starta
+    /// spelloopen.
     ///
-    /// ANVÄNDNING:
-    /// Initialize() sätter upp alla system och registrerar SplashState som startläge.
-    /// Run() innehåller Raylib-spelloopen som delegerar till GameStateManager varje frame.
-    /// Infrastrukturmetoder (ChangeMap, Reset, Load, Save) injiceras som delegates
-    /// i GameServices och anropas av states via _services.
+    /// MONOGAME-LOOPMÖNSTER:
+    /// All logik och rendering anropas från Draw(GameTime) via _stateManager.Update().
+    /// Update(GameTime) spårar bara förfluten tid. Detta undviker att alla IGameState-
+    /// implementationer behöver refaktoreras för att separera logik och rendering (SRP).
+    /// Se MONOGAME_PLAN.md — "Arkitekturell nyckelinsikt" för fullständig motivering.
+    ///
+    /// CLEAR:
+    /// GraphicsDevice.Clear() måste anropas FÖRE SpriteBatch.Begin(). Alla states
+    /// anropar _rc.Clear() internt, men MonoGameRenderContext.Clear() är ett no-op.
+    /// Rensningen sker i Draw() här, en gång per frame, innan batchen öppnas.
     /// </remarks>
-    public class Program
+    public class Program : Game
     {
-        // ── Infrastruktur ─────────────────────────────────────────────────────
-        private RaylibInputProvider         _input        = null!;
-        private ICameraSystem               _camera       = null!;
-        private ITileMapRenderer            _tileRenderer = null!;
-        private RaylibRenderContext         _renderContext = null!;
-        private RaylibAudioSystem           _audioSystem  = null!;
-        private IDialogSystem               _dialog       = null!;
-        private IQuestSystem                _questSystem  = null!;
-        private IItemSystem                 _itemSystem   = null!;
-        private IWorldMapSystem             _worldMapSystem = null!;
-        private ISaveLoadSystem             _saveLoadSystem = null!;
+        // ── MonoGame-infrastruktur ────────────────────────────────────────────
+        private readonly GraphicsDeviceManager _graphics;
+        private SpriteBatch                    _spriteBatch = null!;
 
-        // ── Ny tillståndsmaskin (Fas 4b Steg 5) ──────────────────────────────
+        // ── Spelsystem ────────────────────────────────────────────────────────
+        private MonoGameInputProvider   _input         = null!;
+        private ICameraSystem           _camera        = null!;
+        private ITileMapRenderer        _tileRenderer  = null!;
+        private MonoGameRenderContext   _renderContext = null!;
+        private MonoGameAudioSystem     _audioSystem   = null!;
+        private IDialogSystem           _dialog        = null!;
+        private IQuestSystem            _questSystem   = null!;
+        private IItemSystem             _itemSystem    = null!;
+        private IWorldMapSystem         _worldMapSystem  = null!;
+        private ISaveLoadSystem         _saveLoadSystem  = null!;
+
+        // ── Tillståndsmaskin ──────────────────────────────────────────────────
         private States.GameStateManager _stateManager = null!;
         private States.GameServices     _services     = null!;
 
         // ── Delad spelkontext (Blackboard) ────────────────────────────────────
         private Core.GameContext _context = new Core.GameContext();
 
-        // ── Tidsmätning (ersätter PixelEngine Clock) ──────────────────────────
+        // ── Tidsmätning ───────────────────────────────────────────────────────
+        private float    _elapsed     = 0f;
         private TimeSpan _runningTime = TimeSpan.Zero;
 
-        // ── Avstängningsflagga (ersätter PixelEngine.Game.Finish) ─────────────
-        private bool _shouldQuit = false;
-
         // ── Skärmkonstanter ───────────────────────────────────────────────────
-        const int ScreenW = GameConstants.ScreenWidth;
-        const int ScreenH = GameConstants.ScreenHeight;
-        const int PixW    = GameConstants.PixelWidth;
-        const int PixH    = GameConstants.PixelHeight;
+        private const int ScreenW = GameConstants.ScreenWidth;
+        private const int ScreenH = GameConstants.ScreenHeight;
+        private const int PixW    = GameConstants.PixelWidth;
+        private const int PixH    = GameConstants.PixelHeight;
 
         // ── Egenskaper som delegerar till _context ────────────────────────────
         private DynamicCreatureHero Hero
@@ -88,7 +97,6 @@ namespace FrostyPlatformer
             set => _context.Player = value;
         }
         private List<DynamicGameObject> listDynamics => _context.ActiveObjects;
-
         private FrostyPlatformer.Models.Map CurrentMap
         {
             get => _context.CurrentLevel;
@@ -120,12 +128,25 @@ namespace FrostyPlatformer
             set => _context.RightToAccessPodium = value;
         }
 
+        // ── Konstruktor ───────────────────────────────────────────────────────
+
+        public Program()
+        {
+            _graphics = new GraphicsDeviceManager(this);
+            _graphics.PreferredBackBufferWidth  = ScreenW * PixW;
+            _graphics.PreferredBackBufferHeight = ScreenH * PixH;
+            IsFixedTimeStep  = false;         // FrameRate = -1 (uncapped)
+            Content.RootDirectory = ".";
+            Window.Title = "Frosty Platformer";
+        }
+
         // ── Entry point ───────────────────────────────────────────────────────
-        static void Main(string[] args)
+        static void Main()
         {
             try
             {
-                new Program().Run();
+                using var game = new Program();
+                game.Run();
             }
             catch (Exception ex)
             {
@@ -133,38 +154,13 @@ namespace FrostyPlatformer
             }
         }
 
-        // ── Spelloop ──────────────────────────────────────────────────────────
+        // ── MonoGame livscykel ────────────────────────────────────────────────
 
         /// <summary>
-        /// Initierar Raylib-fönstret, laddar resurser och kör spelloopen tills spelaren stänger fönstret.
+        /// Skapar spelsystem som inte behöver GraphicsDevice. Anropas av MonoGame
+        /// innan LoadContent.
         /// </summary>
-        public void Run()
-        {
-            Raylib.InitWindow(ScreenW * PixW, ScreenH * PixH, "Frosty Platformer");
-            Raylib.InitAudioDevice();
-            Raylib.SetTargetFPS(GameConstants.FrameRate);
-
-            Initialize();
-
-            while (!Raylib.WindowShouldClose() && !_shouldQuit)
-            {
-                float elapsed = Raylib.GetFrameTime();
-                _runningTime += TimeSpan.FromSeconds(elapsed);
-                _context.GameTotalTime = _runningTime + _context.ActualTotalTime;
-
-                Raylib.BeginDrawing();
-                _stateManager.Update(_context, elapsed);
-                Raylib.EndDrawing();
-            }
-
-            _audioSystem.CleanUp();
-            _renderContext.UnloadAll();
-            Raylib.CloseWindow();
-        }
-
-        // ── Initiering ────────────────────────────────────────────────────────
-
-        private void Initialize()
+        protected override void Initialize()
         {
             Core.Aggregate.Instance.Load(this);
 
@@ -180,15 +176,25 @@ namespace FrostyPlatformer
             Hero = new DynamicCreatureHero();
             ChangeMap("worldmap", 2, 3, Hero);
 
-            _input        = new RaylibInputProvider();
+            _input        = new MonoGameInputProvider(() => IsActive);
             _camera       = new CameraSystem();
             _tileRenderer = new TileMapRenderer();
             _dialog       = new DialogSystem();
 
-            _renderContext = new RaylibRenderContext();
+            base.Initialize();
+        }
+
+        /// <summary>
+        /// Skapar SpriteBatch, RenderContext och AudioSystem. Registrerar sprites och ljud.
+        /// Kopplar ihop GameServices och sätter SplashState som startläge.
+        /// </summary>
+        protected override void LoadContent()
+        {
+            _spriteBatch   = new SpriteBatch(GraphicsDevice);
+            _renderContext = new MonoGameRenderContext(GraphicsDevice, _spriteBatch);
             RegisterSprites();
 
-            _audioSystem = new RaylibAudioSystem();
+            _audioSystem = new MonoGameAudioSystem();
             RegisterSounds();
 
             _stateManager = new States.GameStateManager();
@@ -206,7 +212,7 @@ namespace FrostyPlatformer
                 _saveLoadSystem,
                 (mapName, x, y) => ChangeMap(mapName, x, y),
                 Reset,
-                () => _shouldQuit = true,
+                () => Exit(),
                 () => { bool v = Core.Aggregate.Instance.HasSwitchedState; Core.Aggregate.Instance.HasSwitchedState = false; return v; },
                 () => Core.Aggregate.Instance.HasSwitchedState = false,
                 () => Core.Aggregate.Instance.CheckSwitchX(),
@@ -214,6 +220,48 @@ namespace FrostyPlatformer
             );
             _stateManager.SetInitial(new States.SplashState(_services), _context);
         }
+
+        /// <summary>
+        /// Spårar förfluten tid. Logik och rendering sker i Draw() — se klassens remarks.
+        /// </summary>
+        protected override void Update(GameTime gameTime)
+        {
+            _elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _runningTime += TimeSpan.FromSeconds(_elapsed);
+            _context.GameTotalTime = _runningTime + _context.ActualTotalTime;
+            base.Update(gameTime);
+        }
+
+        /// <summary>
+        /// Rensar skärmen, öppnar SpriteBatch och delegerar logik + rendering till
+        /// StateManager. Se klassens remarks för varför allt sker härifrån.
+        /// </summary>
+        protected override void Draw(GameTime gameTime)
+        {
+            // Clear måste ske FÖRE SpriteBatch.Begin — MonoGameRenderContext.Clear() är ett no-op.
+            GraphicsDevice.Clear(Color.Black);
+
+            _spriteBatch.Begin(
+                SpriteSortMode.Deferred,
+                BlendState.AlphaBlend,
+                SamplerState.PointClamp,
+                null, null, null, null);
+
+            _stateManager.Update(_context, _elapsed);
+
+            _spriteBatch.End();
+            base.Draw(gameTime);
+        }
+
+        /// <summary>Frigör GPU-texturer och ljud-resurser vid programavslut.</summary>
+        protected override void UnloadContent()
+        {
+            _audioSystem?.CleanUp();
+            _renderContext?.UnloadAll();
+            base.UnloadContent();
+        }
+
+        // ── Sprite- och ljudregistrering ──────────────────────────────────────
 
         private void RegisterSprites()
         {
@@ -224,43 +272,43 @@ namespace FrostyPlatformer
                 if (path != null) _renderContext.RegisterSprite(id, path);
             }
 
-            Reg(Rendering.SpriteId.Font,             agg.GetSpritePath("font"));
-            Reg(Rendering.SpriteId.Items,            agg.GetSpritePath("items"));
-            Reg(Rendering.SpriteId.Hero,             agg.GetSpritePath("hero"));
-            Reg(Rendering.SpriteId.EnemyPenguin,     agg.GetSpritePath("enemyone"));
-            Reg(Rendering.SpriteId.EnemyWalrus,      agg.GetSpritePath("enemytwo"));
-            Reg(Rendering.SpriteId.EnemyFrost,       agg.GetSpritePath("enemythree"));
-            Reg(Rendering.SpriteId.EnemyIcicle,      agg.GetSpritePath("enemyzero"));
-            Reg(Rendering.SpriteId.EnemyBoss,        agg.GetSpritePath("enemyboss"));
-            Reg(Rendering.SpriteId.EnemyWind,        agg.GetSpritePath("enemywind"));
-            Reg(Rendering.SpriteId.WorldMapTileSheet, agg.GetSpritePath("tilesheetwm"));
-            Reg(Rendering.SpriteId.SplashStart,       agg.GetSpritePath(SplashScreenRef.Start));
-            Reg(Rendering.SpriteId.SplashEnd,         agg.GetSpritePath(SplashScreenRef.End));
-            Reg(Rendering.SpriteId.EndArt,            agg.GetSpritePath("endart"));
-            Reg(Rendering.SpriteId.MapTileSheet,      CurrentMap.SpritePath);
+            Reg(Rendering.SpriteId.Font,              agg.GetSpritePath("font"));
+            Reg(Rendering.SpriteId.Items,             agg.GetSpritePath("items"));
+            Reg(Rendering.SpriteId.Hero,              agg.GetSpritePath("hero"));
+            Reg(Rendering.SpriteId.EnemyPenguin,      agg.GetSpritePath("enemyone"));
+            Reg(Rendering.SpriteId.EnemyWalrus,       agg.GetSpritePath("enemytwo"));
+            Reg(Rendering.SpriteId.EnemyFrost,        agg.GetSpritePath("enemythree"));
+            Reg(Rendering.SpriteId.EnemyIcicle,       agg.GetSpritePath("enemyzero"));
+            Reg(Rendering.SpriteId.EnemyBoss,         agg.GetSpritePath("enemyboss"));
+            Reg(Rendering.SpriteId.EnemyWind,         agg.GetSpritePath("enemywind"));
+            Reg(Rendering.SpriteId.WorldMapTileSheet,  agg.GetSpritePath("tilesheetwm"));
+            Reg(Rendering.SpriteId.SplashStart,        agg.GetSpritePath(SplashScreenRef.Start));
+            Reg(Rendering.SpriteId.SplashEnd,          agg.GetSpritePath(SplashScreenRef.End));
+            Reg(Rendering.SpriteId.EndArt,             agg.GetSpritePath("endart"));
+            Reg(Rendering.SpriteId.MapTileSheet,       CurrentMap.SpritePath);
         }
 
         private void RegisterSounds()
         {
-            if (Core.Aggregate.Instance.Settings?.Mute == true) return;
-
             var root     = Core.Aggregate.Instance.ReadWrite.GetRoot;
             var soundDir = System.IO.Path.Combine(root, "Resources", "Assets", "Sound");
 
-            void Reg(string soundRef)
-                => _audioSystem.RegisterSound(soundRef, System.IO.Path.Combine(soundDir, soundRef));
+            void Reg(string soundRef, bool isLooped = false)
+                => _audioSystem.RegisterSound(soundRef,
+                       System.IO.Path.Combine(soundDir, soundRef),
+                       isLooped);
 
             Reg(SoundRef.Jump);
             Reg(SoundRef.Land);
             Reg(SoundRef.Damage);
             Reg(SoundRef.DamageHero);
             Reg(SoundRef.PickUp);
-            Reg(SoundRef.BGSoundWorld);
-            Reg(SoundRef.BGSoundGame);
-            Reg(SoundRef.BGSoundFinalStage);
-            Reg(SoundRef.BGSoundEnd);
-            Reg(SoundRef.BGNearPerfectEnd);
-            Reg(SoundRef.BGPerfectEnd);
+            Reg(SoundRef.BGSoundWorld,      isLooped: true);
+            Reg(SoundRef.BGSoundGame,       isLooped: true);
+            Reg(SoundRef.BGSoundFinalStage, isLooped: true);
+            Reg(SoundRef.BGSoundEnd,        isLooped: true);
+            Reg(SoundRef.BGNearPerfectEnd,  isLooped: true);
+            Reg(SoundRef.BGPerfectEnd,      isLooped: true);
 
             if (Core.Aggregate.Instance.Settings?.AudioOn == true)
                 _audioSystem.UnMute();
@@ -282,9 +330,7 @@ namespace FrostyPlatformer
         }
 
         public void ChangeMap(string MapName, float x, float y)
-        {
-            ChangeMap(MapName, x, y, this.Hero);
-        }
+            => ChangeMap(MapName, x, y, this.Hero);
 
         public void ChangeMap(string MapName, float x, float y, DynamicGameObject hero)
         {
@@ -298,9 +344,8 @@ namespace FrostyPlatformer
             }
             CurrentMap = map;
 
-            // Uppdatera MapTileSheet i renderContexten när kartan byts.
             // _renderContext kan vara null under det första ChangeMap-anropet i Initialize()
-            // (innan _renderContext skapats) — i det fallet sker registreringen i RegisterSprites().
+            // (innan LoadContent körts). Registreringen sker då i RegisterSprites().
             if (_renderContext != null && CurrentMap.SpritePath != null)
                 _renderContext.RegisterSprite(Rendering.SpriteId.MapTileSheet, CurrentMap.SpritePath);
 
@@ -321,12 +366,10 @@ namespace FrostyPlatformer
 
         /// <summary>
         /// Anropas av skriptsystemet (CommandShowDialog) för att visa en dialogruta.
-        /// DialogSystem äger renderingen; GameplayState hanterar avfärdning och
-        /// frigör skriptkön via IScriptSystem.CompleteCurrentCommand().
         /// </summary>
         public void ShowDialog(List<string> listLines) => _dialog.Show(listLines);
 
-        /// <summary>Stänger spelfönstret och avslutar spelloopen.</summary>
-        public void Finish() => _shouldQuit = true;
+        /// <summary>Stänger spelfönstret och avslutar spelloopen via MonoGames Exit().</summary>
+        public void Finish() => Exit();
     }
 }
