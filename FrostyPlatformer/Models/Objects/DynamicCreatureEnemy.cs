@@ -157,8 +157,9 @@ namespace FrostyPlatformer.Models.Objects
             }
             else
             {
+                float inset = GameConstants.HitboxInset;
                 bool solid1 = map.GetSolid((int)(newX + (1f - fBorder)), (int)(py + fBorder) + 1);
-                bool solid2 = map.GetSolid((int)(newX + (1f - fBorder)), (int)(py + (1f - fBorder) + 1));
+                bool solid2 = map.GetSolid((int)(newX + (1f - fBorder)), (int)(py + inset) + 1);
                 if (!solid1 || !solid2 || turnPatrol) { newX = (int)newX; vx = -2; Patrol = Enum.Actions.Left; }
                 else Patrol = Enum.Actions.Right;
             }

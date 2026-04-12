@@ -559,7 +559,7 @@ namespace FrostyPlatformer.States
         {
             _energiRain.MakeItRain = false;
             float sx = _energiRain.StartPosX, sy = _energiRain.StartPosY;
-            int whenCollectable = 16;
+            int whenCollectable = 35; // ~0.6 sekunder skydd (normaliserat till 60 fps-ekvivalenta frames)
             int min = _energiRain.NumberOfEnergi / 2 >= context.Player!.Health ? context.Player.Health : _energiRain.NumberOfEnergi / 2;
             int max = _energiRain.NumberOfEnergi >= context.Player.Health ? context.Player.Health : _energiRain.NumberOfEnergi;
             int count = min >= max ? min : _rng.Next(min, max);

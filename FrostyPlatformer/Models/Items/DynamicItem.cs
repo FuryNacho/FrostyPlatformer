@@ -32,9 +32,13 @@ namespace FrostyPlatformer.Models.Items
         public Item item { get; set; }
         public bool Collected { get; set; }
         /// <summary>
-        /// 0 is Collectable
+        /// Räknar ned i 60fps-ekvivalenta frames. Positivt värde = ännu inte plockbar.
         /// </summary>
         public int Collectable { get; set; }
+
+        // Normaliserar tidsmätning mot 60 fps så skyddsperioden stämmer oavsett verklig FPS.
+        private bool  _launched = false;
+        private float _subTick  = 0f;
       
 
         public override void DrawSelf(IRenderContext graphics, float ox, float oy)
@@ -77,32 +81,26 @@ namespace FrostyPlatformer.Models.Items
 
         public override void Update(float elapsedTime, DynamicGameObject player)
         {
-            if (this.IsTempEnergi)
-            {
-                if (Collectable == 16)
-                {
-                    vx = Core.Aggregate.Instance.RNG(-5, 5);
-                    vy = Core.Aggregate.Instance.RNG(-14, -3);
+            if (!IsTempEnergi) return;
 
-                    Collectable--;
-                }
-                else if (Collectable > 0)
-                {
-                   
-                    Collectable--;
-                }
-                else
-                {
-                    Collectable--;
-                    if (Collectable < -64)
-                    {
-                        RemoveCount = 5;
-                    }
-                }
+            // Sätt kasthastighet en gång direkt när objektet aktiveras.
+            if (!_launched)
+            {
+                _launched = true;
+                vx = Core.Aggregate.Instance.RNG(-5, 5);
+                vy = Core.Aggregate.Instance.RNG(-14, -3);
             }
 
-        
-
+            // Räkna ned Collectable i 60 fps-ekvivalenta steg så att skyddsperioden
+            // (Collectable > 0) och bort-animationen (Collectable < -64) tar lika lång
+            // tid oavsett om spelet körs med 60 fps eller 240 fps.
+            _subTick += elapsedTime * 60f;
+            while (_subTick >= 1f)
+            {
+                Collectable--;
+                _subTick -= 1f;
+                if (Collectable < -64) { RemoveCount = 5; break; }
+            }
         }
 
         public override void OnInteract(DynamicGameObject player = null)

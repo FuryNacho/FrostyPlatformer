@@ -44,6 +44,13 @@ namespace FrostyPlatformer.Global
 
         public const float CollisionBorderPrecision = 0.000000005f;
 
+        /// <summary>
+        /// Inre Y-kant för kollisionsbox — håller bottenkontrollen innanför nuvarande tile
+        /// och undviker att råka sampla golvtilen under objektet.
+        /// Matchar det hårdkodade värdet i vänsterkollisionen.
+        /// </summary>
+        public const float HitboxInset = 0.9f;
+
 
         // ─────────────────────────────────────────────
         // Hopp – buffer och coyote time

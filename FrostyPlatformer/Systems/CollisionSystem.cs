@@ -34,18 +34,19 @@ namespace FrostyPlatformer.Systems
         public static (float adjustedX, bool hitWall) ResolveHorizontal(
             float posY, float newPosX, float velX, float border, IMapData map)
         {
+            float inset = Global.GameConstants.HitboxInset;
             if (velX <= 0) // Moving Left
             {
                 if (map.GetSolid((int)(newPosX + 0.0f), (int)(posY + 0.0f)) ||
-                    map.GetSolid((int)(newPosX + 0.0f), (int)(posY + 0.9f)))
+                    map.GetSolid((int)(newPosX + 0.0f), (int)(posY + inset)))
                 {
-                    return ((int)(newPosX + 0.9f), true);
+                    return ((int)(newPosX + inset), true);
                 }
             }
             else // Moving Right
             {
                 if (map.GetSolid((int)(newPosX + (1.0f - border)), (int)(posY + border + 0.0f)) ||
-                    map.GetSolid((int)(newPosX + (1.0f - border)), (int)(posY + (1.0f - border))))
+                    map.GetSolid((int)(newPosX + (1.0f - border)), (int)(posY + inset)))
                 {
                     return ((int)newPosX, true);
                 }

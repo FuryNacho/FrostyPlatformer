@@ -286,16 +286,17 @@ namespace FrostyPlatformer.States
 
         private static float ResolveHorizontal(DynamicGameObject obj, float newX, Map map, float border)
         {
+            float inset = GameConstants.HitboxInset;
             if (obj.vx <= 0)
             {
                 if (map.GetSolid((int)(newX + 0f), (int)(obj.py + 0f)) ||
-                    map.GetSolid((int)(newX + 0f), (int)(obj.py + 0.9f)))
+                    map.GetSolid((int)(newX + 0f), (int)(obj.py + inset)))
                 { newX = (int)newX + 1; obj.vx = 0; }
             }
             else
             {
                 if (map.GetSolid((int)(newX + (1f - border)), (int)(obj.py + border)) ||
-                    map.GetSolid((int)(newX + (1f - border)), (int)(obj.py + (1f - border))))
+                    map.GetSolid((int)(newX + (1f - border)), (int)(obj.py + inset)))
                 { newX = (int)newX; obj.vx = 0; }
             }
             return newX;
