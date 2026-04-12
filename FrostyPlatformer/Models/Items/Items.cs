@@ -1,5 +1,4 @@
 ﻿using FrostyPlatformer.Models.Objects;
-using PixelEngine;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,10 +9,9 @@ namespace FrostyPlatformer.Models.Items
 {
     public class Item
     {
-        public Item(string name, Sprite sprite, string desc)
+        public Item(string name, string desc)
         {
             Name = name;
-            Sprite = sprite;
             Description = desc;
         }
 
@@ -23,7 +21,6 @@ namespace FrostyPlatformer.Models.Items
 
         public string Name { get; set; }
         public string Description { get; set; }
-        public Sprite Sprite { get; set; }
         public bool KeyItem { get; set; } = false;
         public bool Equipable { get; set; } = false;
 
@@ -34,7 +31,7 @@ namespace FrostyPlatformer.Models.Items
     class ItemEnergi : Item
     {
 
-        public ItemEnergi() : base("Energi", Core.Aggregate.Instance.GetSprite("items"), "Add Energi")
+        public ItemEnergi() : base("Energi", "Add Energi")
         {
 
         }

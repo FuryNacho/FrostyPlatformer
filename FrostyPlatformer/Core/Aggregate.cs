@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using PixelEngine;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,7 +6,6 @@ using System.Linq;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Models.Items;
 using FrostyPlatformer.Commands;
-using Audio.Library;
 
 namespace FrostyPlatformer.Core
 {
@@ -41,7 +39,6 @@ namespace FrostyPlatformer.Core
         public Program? ThisGame { get; set; }
         /// <summary>Sätts i Load() — null! före dess (garanterat initierat via Load).</summary>
         public ReadWrite ReadWrite { get; set; } = null!;
-        private Dictionary<string, Sprite> MapSprites { get; set; } = new Dictionary<string, Sprite>();
         private Dictionary<string, string> MapSpritePaths { get; set; } = new Dictionary<string, string>();
         private Dictionary<string, Map> MapMaps { get; set; } = new Dictionary<string, Map>();
         private Dictionary<string, Item> MapItems { get; set; } = new Dictionary<string, Item>();
@@ -57,9 +54,6 @@ namespace FrostyPlatformer.Core
         public SettingsObj? Settings { get; set; } = new SettingsObj();
         private List<HighScoreObj> HighScoreList { get; set; } = null!;
 
-        /// <summary>null om ljudsystemet inte kunde laddas — alla anropare kontrollerar redan null.</summary>
-        public Audio.Library.Sound? Sound { get; private set; }
-
         internal void Load(Program game)
         {
             ThisGame = game;
@@ -72,73 +66,7 @@ namespace FrostyPlatformer.Core
             LoadItems();
             Script = new ScriptProcessor();
 
-
             LoadHighScore();
-
-            if (Settings != null && !Settings.Mute)
-                LoadSound();
-
-        }
-
-        public void LoadSound()
-        {
-            try
-            {
-                Sound = Audio.Library.Sound.Instance;
-                //var initSuccess = Sound.init();
-                //Sound.loadSound("uno.wav");
-
-                //Sound.loopSound("uno.wav");
-                //Sound.loadSound("Click.wav");
-
-                //Sound.loadSound("puttekong.wav");
-                //Sound.loopSound("Click.wav");
-                //Sound.play("Piano.wav");
-
-                Sound.loadSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.Jump); 
-                Sound.loadSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.Land); 
-                Sound.loadSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.Damage);
-                Sound.loadSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.DamageHero);
-                Sound.loadSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.PickUp);
-
-                Sound.loadSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.BGSoundWorld);
-                Sound.loopSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.BGSoundWorld);
-
-                Sound.loadSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.BGSoundGame);
-                Sound.loopSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.BGSoundGame);
-
-                Sound.loadSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
-                Sound.loopSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
-
-                Sound.loadSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.BGSoundEnd);
-                Sound.loopSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.BGSoundEnd);
-
-                Sound.loadSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.BGNearPerfectEnd);
-                Sound.loopSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.BGNearPerfectEnd); 
-
-                Sound.loadSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.BGPerfectEnd);
-                Sound.loopSound(FrostyPlatformer.Global.GlobalNamespace.SoundRef.BGPerfectEnd);
-                // pefect end?
-                // just done?
-
-
-                if (Settings != null)
-                    if (Settings.AudioOn)
-                    {
-                       Sound.unMute();
-                    }
-                    else if(!Settings.AudioOn)
-                    {
-                        Sound.mute();
-                    }
-
-            }
-            catch (Exception ex)
-            {
-
-                ReadWrite.WriteToLog(String.Format("LoadSound - Could not load sound. {0}", ex.ToString()));
-                Sound = null;
-            }
         }
 
         private void LoadSprites()
@@ -177,12 +105,9 @@ namespace FrostyPlatformer.Core
 
         private void LoadSprite(string FriendlyName, string FilePath, string FileName, string FileExtension)
         {
-            // make sure resource exists
             var fullDirectory = ReadWrite.CreateIfNotExists(FilePath, FileName, FileExtension, false);
             if (!string.IsNullOrEmpty(fullDirectory))
             {
-                var sprite = Sprite.Load(fullDirectory);
-                MapSprites.Add(FriendlyName, sprite);
                 MapSpritePaths.Add(FriendlyName, fullDirectory);
             }
             else
@@ -309,17 +234,10 @@ namespace FrostyPlatformer.Core
 
         /// <summary>
         /// Returnerar den fullständiga filsökvägen till en laddad sprite.
-        /// Används av PixelEngineRenderContext.RegisterSprite för att ladda sprites motor-agnostiskt.
+        /// Används av RaylibRenderContext.RegisterSprite för att ladda sprites motor-agnostiskt.
         /// </summary>
         public string? GetSpritePath(string name) =>
             MapSpritePaths.TryGetValue(name, out var path) ? path : null;
-
-        /// <summary>
-        /// Hämtar en redan laddad PixelEngine.Sprite vid namn.
-        /// Används internt av Items.cs — anropas via Aggregate.Instance direkt.
-        /// </summary>
-        public Sprite? GetSprite(string name) =>
-            MapSprites.TryGetValue(name, out var sprite) ? sprite : null;
 
         public Item? GetItem(string name) =>
             MapItems.TryGetValue(name, out var item) ? item : null;

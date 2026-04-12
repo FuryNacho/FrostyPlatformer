@@ -71,11 +71,13 @@ namespace UnitTest
         // ── EnemyFactory — okänd typ ─────────────────────────────────────────
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void Create_UnknownType_ThrowsArgumentOutOfRangeException()
         {
             var factory = new EnemyFactory();
-            factory.Create((EnemyType)999, _assets);
+            bool threw = false;
+            try { factory.Create((EnemyType)999, _assets); }
+            catch (ArgumentOutOfRangeException) { threw = true; }
+            Assert.IsTrue(threw, "Expected ArgumentOutOfRangeException");
         }
 
         // ── EnemyFactory — varje anrop ger ny instans ────────────────────────

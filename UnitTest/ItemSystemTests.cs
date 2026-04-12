@@ -16,7 +16,7 @@ public class ItemSystemTests
     /// </summary>
     private class StubItem : Item
     {
-        public StubItem(string name = "stub") : base(name, null!, "test") { }
+        public StubItem(string name = "stub") : base(name, "test") { }
     }
 
     private static GameContext MakeContext() => new GameContext();
