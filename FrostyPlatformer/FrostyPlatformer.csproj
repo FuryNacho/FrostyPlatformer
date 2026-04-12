@@ -1,188 +1,19 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{F454886E-DF75-47C7-B2C7-F211321A723C}</ProjectGuid>
     <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>FrostyPlatformer</RootNamespace>
     <AssemblyName>FrostyPlatformer</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Deterministic>true</Deterministic>
-    <LangVersion>10</LangVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
-    <PublishUrl>publish\</PublishUrl>
-    <Install>true</Install>
-    <InstallFrom>Disk</InstallFrom>
-    <UpdateEnabled>false</UpdateEnabled>
-    <UpdateMode>Foreground</UpdateMode>
-    <UpdateInterval>7</UpdateInterval>
-    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
-    <UpdatePeriodically>false</UpdatePeriodically>
-    <UpdateRequired>false</UpdateRequired>
-    <MapFileExtensions>true</MapFileExtensions>
-    <ApplicationRevision>1</ApplicationRevision>
-    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <UseApplicationTrust>false</UseApplicationTrust>
-    <PublishWizardCompleted>true</PublishWizardCompleted>
-    <BootstrapperEnabled>true</BootstrapperEnabled>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>x86</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>x86</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ImplicitUsings>disable</ImplicitUsings>
     <ApplicationIcon>PAAIcon.ico</ApplicationIcon>
   </PropertyGroup>
-  <PropertyGroup>
-    <ManifestCertificateThumbprint>18EBBB6151E8F89ABF77DC4B670F5DD4485FEAF9</ManifestCertificateThumbprint>
-  </PropertyGroup>
-  <PropertyGroup>
-    <ManifestKeyFile>PenguinAfterAll_TemporaryKey.pfx</ManifestKeyFile>
-  </PropertyGroup>
-  <PropertyGroup>
-    <GenerateManifests>true</GenerateManifests>
-  </PropertyGroup>
-  <PropertyGroup>
-    <SignManifests>false</SignManifests>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="Audio.Library, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Audio.Library.dll</HintPath>
-    </Reference>
-    <Reference Include="Gamepad.Library">
-      <HintPath>..\Gamepad.Library.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.13.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="PixelEngine">
-      <HintPath>..\PixelEngine.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
+    <PackageReference Include="Raylib-cs" Version="7.0.2" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Commands\Commands.cs" />
-    <Compile Include="Commands\Quest.cs" />
-    <Compile Include="Core\Aggregate.cs" />
-    <Compile Include="Core\ReadWrite.cs" />
-    <Compile Include="Global\GlobalNamespace\Enum.cs" />
-    <Compile Include="Global\GlobalNamespace\IsExternalInit.cs" />
-    <Compile Include="Global\GlobalNamespace\GameConstants.cs" />
-    <Compile Include="Global\GlobalNamespace\StaticRes.cs" />
-    <Compile Include="Rendering\IRenderContext.cs" />
-    <Compile Include="Rendering\PixelEngineRenderContext.cs" />
-    <Compile Include="Rendering\RenderColor.cs" />
-    <Compile Include="Rendering\SpriteId.cs" />
-    <Compile Include="Systems\CameraSystem.cs" />
-    <Compile Include="Systems\CameraView.cs" />
-    <Compile Include="Systems\ICameraSystem.cs" />
-    <Compile Include="Systems\IInputProvider.cs" />
-    <Compile Include="Systems\InputManager.cs" />
-    <Compile Include="Systems\ITileMapRenderer.cs" />
-    <Compile Include="Systems\CollisionResult.cs" />
-    <Compile Include="Systems\AudioSystem.cs" />
-    <Compile Include="Systems\CollisionSystem.cs" />
-    <Compile Include="Systems\IAudioSystem.cs" />
-    <Compile Include="Systems\IScoreSystem.cs" />
-    <Compile Include="Systems\ScoreSystem.cs" />
-    <Compile Include="Systems\IDialogSystem.cs" />
-    <Compile Include="Systems\DialogSystem.cs" />
-    <Compile Include="Systems\IQuestSystem.cs" />
-    <Compile Include="Systems\QuestSystem.cs" />
-    <Compile Include="Systems\IItemSystem.cs" />
-    <Compile Include="Systems\ItemSystem.cs" />
-    <Compile Include="Systems\IWorldMapSystem.cs" />
-    <Compile Include="Systems\WorldMapSystem.cs" />
-    <Compile Include="Systems\ISaveLoadSystem.cs" />
-    <Compile Include="Systems\SaveLoadSystem.cs" />
-    <Compile Include="Systems\ISaveGameRepository.cs" />
-    <Compile Include="Systems\SaveGameRepository.cs" />
-    <Compile Include="Systems\IMapRepository.cs" />
-    <Compile Include="Systems\MapRepository.cs" />
-    <Compile Include="Systems\IEnemyFactory.cs" />
-    <Compile Include="Systems\EnemyFactory.cs" />
-    <Compile Include="Systems\IItemFactory.cs" />
-    <Compile Include="Core\EventBus.cs" />
-    <Compile Include="Core\GameContext.cs" />
-    <Compile Include="Core\IAssets.cs" />
-    <Compile Include="Core\IEventBus.cs" />
-    <Compile Include="Core\IGameState.cs" />
-    <Compile Include="Core\IGameSystem.cs" />
-    <Compile Include="Events\CheckpointReachedEvent.cs" />
-    <Compile Include="Events\EnemyDiedEvent.cs" />
-    <Compile Include="Events\ItemCollectedEvent.cs" />
-    <Compile Include="Events\LevelCompletedEvent.cs" />
-    <Compile Include="Events\PlayerDiedEvent.cs" />
-    <Compile Include="Events\PlayerHitEvent.cs" />
-    <Compile Include="Events\QuestUpdatedEvent.cs" />
-    <Compile Include="Events\ScoreChangedEvent.cs" />
-    <Compile Include="Models\EnemyType.cs" />
-    <Compile Include="Models\IMapData.cs" />
-    <Compile Include="Models\ItemType.cs" />
-    <Compile Include="Models\Items\DynamicItem.cs" />
-    <Compile Include="Models\Items\Items.cs" />
-    <Compile Include="Models\Map.cs" />
-    <Compile Include="Models\Models.cs" />
-    <Compile Include="Models\Objects\Creature.cs" />
-    <Compile Include="Models\Objects\DynamicCreatureEnemy.cs" />
-    <Compile Include="Models\Objects\DynamicCreatureHero.cs" />
-    <Compile Include="Models\Objects\DynamicGameObject.cs" />
-    <Compile Include="Models\Objects\Teleport.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="States\EndState.cs" />
-    <Compile Include="States\EnterHighScoreState.cs" />
-    <Compile Include="States\GameOverState.cs" />
-    <Compile Include="States\GameServices.cs" />
-    <Compile Include="States\GameStateManager.cs" />
-    <Compile Include="States\GameplayState.cs" />
-    <Compile Include="States\HighScoreState.cs" />
-    <Compile Include="States\HudRenderer.cs" />
-    <Compile Include="States\MenuState.cs" />
-    <Compile Include="States\PauseState.cs" />
-    <Compile Include="States\SettingsState.cs" />
-    <Compile Include="States\SplashState.cs" />
-    <Compile Include="States\WorldMapState.cs" />
-    <Compile Include="Systems\ItemFactory.cs" />
-    <Compile Include="Systems\IScriptSystem.cs" />
-    <Compile Include="Systems\ISettingsService.cs" />
-    <Compile Include="Systems\PhysicsSystem.cs" />
-    <Compile Include="Systems\ScriptSystem.cs" />
-    <Compile Include="Systems\SettingsService.cs" />
-    <Compile Include="Systems\TileDrawCall.cs" />
-    <Compile Include="Systems\TileMapRenderer.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-    <None Include="packages.config" />
-    <None Include="ReadMe.txt" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
 </Project>

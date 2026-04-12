@@ -1,15 +1,17 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace FrostyPlatformer.Core
 {
     public class ReadWrite
     {
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            WriteIndented          = true,
+            PropertyNameCaseInsensitive = true,
+        };
+
         private string Root { get; set; }
         public string GetRoot { get { return Root; } }
 
@@ -42,8 +44,7 @@ namespace FrostyPlatformer.Core
                 string json = File.ReadAllText(FullPath);
                 if (!string.IsNullOrEmpty(json))
                 {
-                    //return PixelEngine.Utilities.Json.Parse<T>(json);
-                    return JsonConvert.DeserializeObject<T>(json);
+                    return JsonSerializer.Deserialize<T>(json, _jsonOptions);
                 }
                 else
                 {
@@ -62,9 +63,7 @@ namespace FrostyPlatformer.Core
             try
             {
                 var FullPath = CreateIfNotExists(FilePath, FileName, FileExtension);
-                //string json = PixelEngine.Utilities.Json.Stringify<T>(obj);
-
-                string json = JsonConvert.SerializeObject(obj, Formatting.Indented);
+                string json = JsonSerializer.Serialize(obj, _jsonOptions);
 
                 System.IO.File.WriteAllText(FullPath, json);
             }
