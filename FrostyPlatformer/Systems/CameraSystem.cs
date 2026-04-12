@@ -47,4 +47,13 @@ namespace FrostyPlatformer.Systems
 
             // Sub-tile offset för mjuk scrollning
             float tileOffsetX = (offsetX - (int)offsetX) * tileWidth;
-           
+            float tileOffsetY = (offsetY - (int)offsetY) * tileHeight;
+
+            return new CameraView(
+                offsetX, offsetY,
+                tileOffsetX, tileOffsetY,
+                visibleTilesX, visibleTilesY,
+                tileWidth, tileHeight);
+        }
+    }
+}

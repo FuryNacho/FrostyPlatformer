@@ -21,3 +21,13 @@ namespace FrostyPlatformer.Systems
     /// kartor (GameplayState, WorldMapState). I tester kan en fake injiceras.
     /// </remarks>
     public interface ITileMapRenderer
+    {
+        /// <summary>
+        /// Beräknar vilka tiles som är synliga och var de ska ritas.
+        /// </summary>
+        /// <param name="cam">Kameravyn för aktuell frame.</param>
+        /// <param name="map">Kartdata med tile-index och dimensioner.</param>
+        /// <returns>Sekvens av ritningsanrop, ett per synlig tile.</returns>
+        IEnumerable<TileDrawCall> GetDrawCalls(CameraView cam, IMapData map);
+    }
+}

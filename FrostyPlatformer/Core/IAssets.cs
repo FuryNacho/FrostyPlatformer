@@ -19,4 +19,7 @@ namespace FrostyPlatformer.Core
         /// <summary>Hämtar ett item-objekt med angivet namn. Returnerar null om det inte finns.</summary>
         Item? GetItem(string name);
 
-        /// <summary>Hämtar kartdata (LevelObj) 
+        /// <summary>Hämtar kartdata (LevelObj) med angivet namn. Returnerar null om den inte finns.</summary>
+        LevelObj? GetMapData(string name);
+    }
+}

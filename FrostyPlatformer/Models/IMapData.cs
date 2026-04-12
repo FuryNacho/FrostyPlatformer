@@ -17,4 +17,12 @@ namespace FrostyPlatformer.Models
         /// Returnerar tile-indexet på position (x, y) i kartan.
         /// Returnerar 0 för koordinater utanför kartgränserna.
         /// </summary>
-        int GetIndex(int x,
+        int GetIndex(int x, int y);
+
+        /// <summary>
+        /// Returnerar true om tilen på (x, y) är solid (blockerar rörelse).
+        /// Returnerar true för koordinater utanför kartgränserna (behandla kanten som solid).
+        /// </summary>
+        bool GetSolid(int x, int y);
+    }
+}

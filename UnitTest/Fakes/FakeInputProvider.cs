@@ -49,4 +49,7 @@ namespace UnitTest.Fakes
         public bool ButtonsHasGoneIdle { get; set; }
         public void ResetIdle()        => ButtonsHasGoneIdle = false;
 
-        // Poll gör in
+        // Poll gör ingenting i fake – tillståndet sätts manuellt
+        public void Poll() { }
+    }
+}

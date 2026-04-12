@@ -101,5 +101,11 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FrostyPlatformer\FrostyPlatformer.csproj">
+      <Project>{F454886E-DF75-47C7-B2C7-F211321A723C}</Project>
+      <Name>FrostyPlatformer</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -126,4 +126,28 @@ namespace FrostyPlatformer.Models.Objects
 
         /// <summary>
         /// Elapsed time
-        /// </summ
+        /// </summary>
+        /// <param name="el"></param>
+        public virtual void Update(float elapsedTime, DynamicGameObject? player = null) { }
+
+        public virtual void OnInteract(DynamicGameObject? player = null) { }
+
+        /// <summary>
+        /// Anropas efter horisontell vägkollision. No-op i basklassen.
+        /// Subklasser som behöver reagera på väggträff (patrolväxling, hopp) overridar denna.
+        /// </summary>
+        /// <param name="newX">Föreslagen ny X-position — kan justeras av metoden.</param>
+        /// <param name="turnPatrol">Sant om kollisionssystemet avgjorde att patrullen ska vändas.</param>
+        /// <param name="movingLeft">Sant om objektet rörde sig åt vänster vid träffen.</param>
+        /// <param name="map">Kartdata för att kontrollera marktiles.</param>
+        /// <param name="fBorder">Kollisionsgräns (precision).</param>
+        public virtual void OnWallCollision(ref float newX, bool turnPatrol, bool movingLeft, IMapData map, float fBorder) { }
+
+        /// <summary>
+        /// Anropas varje tick för fast-detektion. No-op i basklassen.
+        /// Subklasser som kan fastna (t.ex. Frost) overridar denna.
+        /// </summary>
+        public virtual void OnStuckCheck() { }
+
+    }
+}

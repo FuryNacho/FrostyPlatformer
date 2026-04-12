@@ -116,4 +116,7 @@ namespace FrostyPlatformer.Global
         // ─────────────────────────────────────────────
         // Stridsvärden
         // ─────────────────────────────────────────────
-        public const float Knock
+        public const float KnockbackMultiplierX = 3.0f;
+        public const float KnockbackMultiplierY = 2.0f;
+    }
+}

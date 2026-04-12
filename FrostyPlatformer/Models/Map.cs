@@ -2226,4 +2226,21 @@ namespace FrostyPlatformer.Models
         public override bool OnInteraction(List<DynamicGameObject> ListDynamicObjs, DynamicGameObject target, Enum.NATURE nature)
         {
 
-            if (tar
+            if (target.Name == "Teleport")
+            {
+                if (Core.Aggregate.Instance.Settings!.ActivePlayer.StageCompleted < 9)
+                {
+                    Core.Aggregate.Instance.Settings!.ActivePlayer.StageCompleted = 9;
+
+                    // Flag this is final stage
+                    Core.Aggregate.Instance.Settings!.ActivePlayer.ShowEnd = true;
+                }
+                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 8;
+                Script.AddCommand(new CommandChangeMap((target as Teleport)!.MapName, (target as Teleport)!.MapPosX, (target as Teleport)!.MapPosY));
+            }
+
+            return false;
+        }
+    }
+
+}

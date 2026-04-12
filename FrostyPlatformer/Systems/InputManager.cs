@@ -149,4 +149,30 @@ namespace FrostyPlatformer.Systems
         public bool IsSelectDown     => _iip.Button6;   // gamepad Select-knapp
         public bool IsRunPressed     => _game.GetKey(Key.Z).Pressed || _iip.Button1;
 
-     
+        public bool IsAnyKeyPressed  => _game.GetKey(Key.Any).Pressed;
+
+        // ─────────────────────────────────────────────
+        // Fönsterfokus
+        // ─────────────────────────────────────────────
+        public bool IsWindowFocused  => _game.Focus;
+
+        // ─────────────────────────────────────────────
+        // Dev / debug
+        // ─────────────────────────────────────────────
+        public bool IsDevSkipPressed => _game.GetKey(Key.F1).Pressed;
+
+        // ─────────────────────────────────────────────
+        // Idle-hjälpare (används i menylogik)
+        // ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Returnerar true om gamepad är i vila och ingen tangent är nedtryckt.
+        /// </summary>
+        public bool IsIdle => _iip.idle && !_game.GetKey(Key.Any).Pressed;
+
+        /// <summary>
+        /// Nollställer idle-flaggan (anropas när en åtgärd registreras i menyerna).
+        /// </summary>
+        public void ResetIdle() => ButtonsHasGoneIdle = false;
+    }
+}

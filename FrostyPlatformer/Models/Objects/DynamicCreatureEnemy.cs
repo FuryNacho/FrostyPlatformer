@@ -813,4 +813,168 @@ namespace FrostyPlatformer.Models.Objects
                     }
                     else // Right
                     {
-                   
+                        sheetOffsetY = 0 * 16;
+                        sheetOffsetX = 3 * 16;
+                    }
+                }
+                else
+                {
+                    // Flaxa lite på vägen upp
+                    GraphicCounter--;
+                    sheetOffsetY = 0 * 16;
+                    sheetOffsetX = GraphicCounter * 16;
+                }
+            }
+            // State == MovingDown: sheetOffset (0,0) — bevarar ursprungsbeteendet
+
+            int screenX = (int)((px - ox) * 16.0f);
+            int screenY = (int)((py - oy) * 16.0f);
+            gfx.DrawPartialSprite(SpriteId, screenX, screenY, sheetOffsetX, sheetOffsetY, 16, 16);
+        }
+    }
+
+    public class DynamicCreatureOverlayWorldMap : Creature
+    {
+
+        //public DynamicCreatureOverlayWorldMap() : base("overlayworldmap", Core.Aggregate.Instance.GetSprite("worldmap"))
+        public DynamicCreatureOverlayWorldMap() : base("overlayworldmap", SpriteId.WorldMapTileSheet)
+        {
+            Friendly = true;
+            Health = 100;
+            MaxHealth = 100;
+            SolidVsDynamic = false;
+            SolidVsMap = true;
+            DamageGiven = 0;
+        }
+
+        
+
+        public override void DrawSelf(IRenderContext gfx, float ox, float oy)
+        {
+            int sheetOffsetX = 0 * 16;
+            int sheetOffsetY = 1 * 16;
+
+            if (StageStatus == Enum.StageStatus.NotPassed)
+            {
+                sheetOffsetX = 2 * 16;
+            }
+            else if (StageStatus == Enum.StageStatus.Current)
+            {
+                sheetOffsetX = 1 * 16;
+            }
+
+            int screenX = (int)((px - ox) * 16.0f);
+            int screenY = (int)((py - oy) * 16.0f);
+            gfx.DrawPartialSprite(SpriteId, screenX, screenY, sheetOffsetX, sheetOffsetY, 16, 32);
+        }
+
+        // Passivt overlagobjekt — inget autonomt beteende.
+        public override void Behaviour(float fElapsedTime, DynamicGameObject? player = null) { }
+    }
+
+    public class DynamicCreatureOverlay : Creature
+    {
+
+        public DynamicCreatureOverlay() : base("overlay", SpriteId.EnemyBoss)
+        {
+            Friendly = true;
+            Health = 100;
+            MaxHealth = 100;
+            SolidVsDynamic = false;
+            SolidVsMap = true;
+            DamageGiven = 0;
+        }
+
+        // Passivt overlagobjekt — inget autonomt beteende.
+        public override void Behaviour(float fElapsedTime, DynamicGameObject? player = null) { }
+
+        public override void DrawSelf(IRenderContext gfx, float ox, float oy)
+        {
+            int screenX = (int)((px - ox) * 16.0f);
+            int screenY = (int)((py - oy) * 16.0f);
+            gfx.DrawPartialSprite(SpriteId, screenX, screenY, 4 * 16, 3 * 16, 16, 16);
+        }
+    }
+
+    /// <summary>
+    /// Isöverläggsgrafikens egna typ — separerad från DynamicCreatureOverlay
+    /// så att typbaserad dispatch ersätter namnbaserad (OCP).
+    /// </summary>
+    public class DynamicCreatureOverlayIce : Creature
+    {
+        public DynamicCreatureOverlayIce() : base("overlayice", SpriteId.EnemyBoss)
+        {
+            Friendly = true;
+            Health = 100;
+            MaxHealth = 100;
+            SolidVsDynamic = false;
+            SolidVsMap = true;
+            DamageGiven = 0;
+        }
+
+        // Passivt overlagobjekt — inget autonomt beteende.
+        public override void Behaviour(float fElapsedTime, DynamicGameObject? player = null) { }
+
+        public override void DrawSelf(IRenderContext gfx, float ox, float oy)
+        {
+            int screenX = (int)((px - ox) * 16.0f);
+            int screenY = (int)((py - oy) * 16.0f);
+            gfx.DrawPartialSprite(SpriteId, screenX, screenY, 3 * 16, 3 * 16, 16, 16);
+        }
+    }
+
+    public class DynamicCreatureEnemyWind : Creature
+    {
+
+        public DynamicCreatureEnemyWind() : base("enemywind", SpriteId.EnemyWind)
+        {
+            Friendly = true;
+            Health = 50;
+            MaxHealth = 50;
+            SolidVsDynamic = true;
+            SolidVsMap = true;
+            DamageGiven = 0;
+        }
+
+        public override void Behaviour(float fElapsedTime, DynamicGameObject? player = null)
+        {
+            if (Health <= 0)
+            {
+                vx = 0;
+                vy = 0;
+                SolidVsDynamic = false;
+                IsAttackable = false;
+                // Patrol = Enum.Actions.Left;
+                return;
+            }
+
+            if (player != null)
+            {
+                // patrol (and fear of heights)
+
+                StateTick -= fElapsedTime;
+
+                if (StateTick <= 0.0f) // för att inte göra beslut så ofta. 
+                {
+                    if (Patrol == Enum.Actions.Left)
+                    {
+                        vx = -2;
+                    }
+                    else if (Patrol == Enum.Actions.Right)
+                    {
+                        vx = 2;
+                    }
+                    else
+                    {
+                        vx = 0;
+                        vy = 0;
+                    }
+
+                    StateTick += 1.0f;
+                }
+            }
+
+        }
+    }
+
+}

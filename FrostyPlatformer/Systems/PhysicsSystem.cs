@@ -160,4 +160,19 @@ namespace FrostyPlatformer.Systems
 
             // Vertikalt – neråt (fall)
             if (obj.vy > GameConstants.FallSpeedThreshold)
-       
+            {
+                if (obj.vy > GameConstants.FallSpeedMax) { obj.vy = 0.0f; ballat = true; }
+                else obj.vy = GameConstants.FallSpeedThreshold;
+            }
+
+            // Vertikalt – uppåt (hopp)
+            if (obj.vy < -GameConstants.MaxVelocityYUp)
+            {
+                if (obj.vy < -GameConstants.MaxVelocityYUpCrash) { obj.vy = 0.0f; ballat = true; }
+                else obj.vy = -GameConstants.MaxVelocityYUp;
+            }
+
+            return ballat;
+        }
+    }
+}

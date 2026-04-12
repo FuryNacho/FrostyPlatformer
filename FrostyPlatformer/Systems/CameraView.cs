@@ -44,4 +44,19 @@ namespace FrostyPlatformer.Systems
         public int TileHeight { get; init; }
 
         public CameraView(
-            float offsetX, float off
+            float offsetX, float offsetY,
+            float tileOffsetX, float tileOffsetY,
+            int visibleTilesX, int visibleTilesY,
+            int tileWidth, int tileHeight)
+        {
+            OffsetX       = offsetX;
+            OffsetY       = offsetY;
+            TileOffsetX   = tileOffsetX;
+            TileOffsetY   = tileOffsetY;
+            VisibleTilesX = visibleTilesX;
+            VisibleTilesY = visibleTilesY;
+            TileWidth     = tileWidth;
+            TileHeight    = tileHeight;
+        }
+    }
+}

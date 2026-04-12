@@ -68,4 +68,23 @@ namespace FrostyPlatformer.Systems
         bool ButtonsHasGoneIdle { get; set; }
         void ResetIdle();
 
-        // ─────────────────────────�
+        // ─────────────────────────────────────────────
+        // Fönsterfokus
+        // ─────────────────────────────────────────────
+
+        /// <summary>
+        /// True om spelfönstret är aktivt och har fokus.
+        /// Används för att undvika att hantera input när fönstret är minimerat.
+        /// </summary>
+        bool IsWindowFocused { get; }
+
+        // ─────────────────────────────────────────────
+        // Uppdatering
+        // ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Uppdaterar gamepad-tillståndet. Kallas en gång per frame.
+        /// </summary>
+        void Poll();
+    }
+}

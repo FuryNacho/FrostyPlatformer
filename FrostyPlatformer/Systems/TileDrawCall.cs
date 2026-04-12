@@ -32,4 +32,20 @@ namespace FrostyPlatformer.Systems
         /// <summary>Käll-Y i spritesheetet (pixlar).</summary>
         public int SpriteY { get; init; }
 
-  
+        /// <summary>Tile-bredd i pixlar.</summary>
+        public int TileWidth { get; init; }
+
+        /// <summary>Tile-höjd i pixlar.</summary>
+        public int TileHeight { get; init; }
+
+        public TileDrawCall(int screenX, int screenY, int spriteX, int spriteY, int tileWidth, int tileHeight)
+        {
+            ScreenX   = screenX;
+            ScreenY   = screenY;
+            SpriteX   = spriteX;
+            SpriteY   = spriteY;
+            TileWidth  = tileWidth;
+            TileHeight = tileHeight;
+        }
+    }
+}

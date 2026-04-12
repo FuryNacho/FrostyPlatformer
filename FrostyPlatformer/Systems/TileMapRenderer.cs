@@ -36,4 +36,13 @@ namespace FrostyPlatformer.Systems
                     int sy = idx / GameConstants.TileSheetColumns;
 
                     int screenX = (int)(x * cam.TileWidth  - cam.TileOffsetX);
-                    int screenY = (int)(y * cam.TileHeight - cam.Til
+                    int screenY = (int)(y * cam.TileHeight - cam.TileOffsetY);
+                    int spriteX = sx * cam.TileWidth;
+                    int spriteY = sy * cam.TileHeight;
+
+                    yield return new TileDrawCall(screenX, screenY, spriteX, spriteY, cam.TileWidth, cam.TileHeight);
+                }
+            }
+        }
+    }
+}

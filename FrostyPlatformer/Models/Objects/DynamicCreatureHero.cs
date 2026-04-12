@@ -17,4 +17,8 @@ namespace FrostyPlatformer.Models.Objects
         }
 
         /// <summary>
-        /// Hjältens beteende styrs av Program.cs via IInputProvider 
+        /// Hjältens beteende styrs av Program.cs via IInputProvider — inget autonomt AI-beteende.
+        /// </summary>
+        public override void Behaviour(float fElapsedTime, DynamicGameObject? player = null) { }
+    }
+}
