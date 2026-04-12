@@ -96,8 +96,8 @@ namespace FrostyPlatformer.Core
         /// <summary>Speltid vid avslutsskärmen — fryst när spelaren når slutet.</summary>
         public TimeSpan EndTotalTime { get; set; }
 
-        /// <summary>Räknare för inaktivitet i idle-detektion.</summary>
-        public int IdleCounter { get; set; }
+        /// <summary>Räknare för inaktivitet i idle-detektion (normaliserat till 60 fps-ekvivalenta enheter).</summary>
+        public float IdleCounter { get; set; }
 
         // ─────────────────────────────────────────────
         // Navigationsläge för menyer (delas mellan MenuState, SettingsState, PauseState)

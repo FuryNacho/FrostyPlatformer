@@ -298,14 +298,22 @@ namespace FrostyPlatformer.States
             }
 
             // Idle-animation
+            // IdleCounter normaliseras till 60 fps-ekvivalenta enheter (som DynamicItem._subTick)
+            // så att fördröjningen är korrekt oavsett bildfrekvens.
             if (_services.Input.IsIdle && !_services.Input.IsAnyKeyPressed)
             {
-                context.IdleCounter++;
+                context.IdleCounter += elapsed * 60f;
                 if (context.IdleCounter > GameConstants.IdleTimeout)
                 {
                     hero.IsIdle = true;
+                    // Lyft: applicera ett enda vertikalt impuls i starten av lyftzonen (220-221),
+                    // låt sedan gravitation ta vid naturligt. Den gamla varianten (vy -= 20.1f*elapsed)
+                    // tog ut sig nästan exakt mot GravityNormal i samma frame och gav ingen rörelse.
                     if (context.IdleCounter > 220 && context.IdleCounter < 245)
-                        hero.vy -= 20.1f * elapsed;
+                    {
+                        if (hero.vy >= -0.1f && hero.Grounded)
+                            hero.vy = -2.0f;
+                    }
                 }
                 if (context.IdleCounter > 250)
                 {

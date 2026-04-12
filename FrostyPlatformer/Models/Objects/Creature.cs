@@ -203,8 +203,10 @@ namespace FrostyPlatformer.Models.Objects
                             //    var qwer = true;
                             //}
 
+                            // Idle-flapp: Timer cyklar 0→0.4s. Dela halvt/halvt → 2.5 flap/sek.
+                            // Tidigare GraphicCounter % 2 gav 10 Hz (var 0.1s) — för snabbt och glitchigt.
                             int oscillera = (int)TurnedTo == 0 ? 0 : 2;
-                            if (GraphicCounter % 2 == 0)
+                            if (Timer < 0.2f)
                             {
                                 SheetOffsetY = 4 * 16;
                                 SheetOffsetX = (0 + oscillera) * 16;
