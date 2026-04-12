@@ -365,3 +365,6 @@ healthchecksdb
 
 # Claude-specifika filer (lokala AI-instruktioner, ska ej pushas)
 CLAUDE.md
+
+# Interna planeringsdokument – lokala, visas ej på GitHub
+ROADMAP.md
