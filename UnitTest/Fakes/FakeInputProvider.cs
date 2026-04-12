@@ -1,4 +1,4 @@
-using OlcSideScrollingConsoleGame.Systems;
+using FrostyPlatformer.Systems;
 
 namespace UnitTest.Fakes
 {
@@ -49,7 +49,4 @@ namespace UnitTest.Fakes
         public bool ButtonsHasGoneIdle { get; set; }
         public void ResetIdle()        => ButtonsHasGoneIdle = false;
 
-        // Poll gör ingenting i fake – tillståndet sätts manuellt
-        public void Poll() { }
-    }
-}
+        // Poll gör in

@@ -1,9 +1,9 @@
 #nullable enable
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OlcSideScrollingConsoleGame.Core;
-using OlcSideScrollingConsoleGame.Rendering;
-using OlcSideScrollingConsoleGame.States;
+using FrostyPlatformer.Core;
+using FrostyPlatformer.Rendering;
+using FrostyPlatformer.States;
 using UnitTest.Fakes;
 
 namespace UnitTest

@@ -1,6 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OlcSideScrollingConsoleGame.Models;
-using OlcSideScrollingConsoleGame.Systems;
+using FrostyPlatformer.Models;
+using FrostyPlatformer.Systems;
 
 namespace UnitTest
 {

@@ -1,10 +1,10 @@
 #nullable enable
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OlcSideScrollingConsoleGame.Commands;
-using OlcSideScrollingConsoleGame.Core;
-using OlcSideScrollingConsoleGame.Models.Objects;
-using OlcSideScrollingConsoleGame.Systems;
+using FrostyPlatformer.Commands;
+using FrostyPlatformer.Core;
+using FrostyPlatformer.Models.Objects;
+using FrostyPlatformer.Systems;
 
 [TestClass]
 public class QuestSystemTests

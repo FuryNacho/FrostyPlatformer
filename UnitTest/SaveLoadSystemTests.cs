@@ -2,10 +2,10 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OlcSideScrollingConsoleGame.Core;
-using OlcSideScrollingConsoleGame.Models;
-using OlcSideScrollingConsoleGame.Models.Objects;
-using OlcSideScrollingConsoleGame.Systems;
+using FrostyPlatformer.Core;
+using FrostyPlatformer.Models;
+using FrostyPlatformer.Models.Objects;
+using FrostyPlatformer.Systems;
 using UnitTest.Fakes;
 
 namespace UnitTest

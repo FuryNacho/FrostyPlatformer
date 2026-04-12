@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OlcSideScrollingConsoleGame.Models;
+using FrostyPlatformer.Models;
 using UnitTest.Fakes;
 
 namespace UnitTest

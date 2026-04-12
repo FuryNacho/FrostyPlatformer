@@ -2,8 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using OlcSideScrollingConsoleGame.Models;
-using OlcSideScrollingConsoleGame.Systems;
+using FrostyPlatformer.Models;
+using FrostyPlatformer.Systems;
 
 namespace UnitTest.Fakes
 {

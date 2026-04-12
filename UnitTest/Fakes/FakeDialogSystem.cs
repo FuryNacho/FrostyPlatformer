@@ -1,7 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
-using OlcSideScrollingConsoleGame.Rendering;
-using OlcSideScrollingConsoleGame.Systems;
+using FrostyPlatformer.Rendering;
+using FrostyPlatformer.Systems;
 
 namespace UnitTest.Fakes
 {

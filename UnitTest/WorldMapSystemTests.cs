@@ -1,6 +1,6 @@
 #nullable enable
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OlcSideScrollingConsoleGame.Systems;
+using FrostyPlatformer.Systems;
 
 [TestClass]
 public class WorldMapSystemTests

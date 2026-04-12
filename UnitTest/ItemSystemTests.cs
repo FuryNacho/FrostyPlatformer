@@ -1,9 +1,9 @@
 #nullable enable
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OlcSideScrollingConsoleGame.Core;
-using OlcSideScrollingConsoleGame.Models.Items;
-using OlcSideScrollingConsoleGame.Systems;
+using FrostyPlatformer.Core;
+using FrostyPlatformer.Models.Items;
+using FrostyPlatformer.Systems;
 
 [TestClass]
 public class ItemSystemTests

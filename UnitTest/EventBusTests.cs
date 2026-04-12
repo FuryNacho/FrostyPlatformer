@@ -1,7 +1,7 @@
 #nullable enable
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OlcSideScrollingConsoleGame.Core;
-using OlcSideScrollingConsoleGame.Events;
+using FrostyPlatformer.Core;
+using FrostyPlatformer.Events;
 
 namespace UnitTest
 {

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OlcSideScrollingConsoleGame.Core;
-using OlcSideScrollingConsoleGame.Models;
+using FrostyPlatformer.Core;
+using FrostyPlatformer.Models;
 
 namespace UnitTest
 {
@@ -14,7 +14,7 @@ namespace UnitTest
         public void TestWriteToLog()
         {
             //Arrange
-            var init = new OlcSideScrollingConsoleGame.Core.ReadWrite();
+            var init = new FrostyPlatformer.Core.ReadWrite();
             //Act
             init.WriteToLog("Unit test write to log");
             //Assert
@@ -60,7 +60,7 @@ namespace UnitTest
         public void TestWriteJson()
         {
             //Arrange
-            var rw = new OlcSideScrollingConsoleGame.Core.ReadWrite();
+            var rw = new FrostyPlatformer.Core.ReadWrite();
             string Path = "\\Resources\\Settings";
             string FileName = "\\settings";
             string FileExtension = ".json";
@@ -97,7 +97,7 @@ namespace UnitTest
         public void TestReadJson()
         {
             //Arrange
-            var init = new OlcSideScrollingConsoleGame.Core.ReadWrite();
+            var init = new FrostyPlatformer.Core.ReadWrite();
             string Path = "\\Resources\\Settings";
             string FileName = "\\settings";
             string FileExtension = ".json";

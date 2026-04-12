@@ -1,6 +1,6 @@
 #nullable enable
-using OlcSideScrollingConsoleGame.Models;
-using OlcSideScrollingConsoleGame.Systems;
+using FrostyPlatformer.Models;
+using FrostyPlatformer.Systems;
 
 namespace UnitTest.Fakes
 {

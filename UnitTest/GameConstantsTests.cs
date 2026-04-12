@@ -1,5 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OlcSideScrollingConsoleGame.Global;
+using FrostyPlatformer.Global;
 
 namespace UnitTest
 {

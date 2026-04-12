@@ -1,5 +1,5 @@
 #nullable enable
-using OlcSideScrollingConsoleGame.Systems;
+using FrostyPlatformer.Systems;
 
 namespace UnitTest.Fakes
 {

@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OlcSideScrollingConsoleGame.Global;
-using OlcSideScrollingConsoleGame.Models;
-using OlcSideScrollingConsoleGame.Systems;
+using FrostyPlatformer.Global;
+using FrostyPlatformer.Models;
+using FrostyPlatformer.Systems;
 
 namespace UnitTest
 {
@@ -140,7 +140,4 @@ namespace UnitTest
             }
 
             public int GetIndex(int x, int y) => _fixedIndex;
-            public bool GetSolid(int x, int y) => false;
-        }
-    }
-}
+            public
