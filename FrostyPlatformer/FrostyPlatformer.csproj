@@ -7,14 +7,12 @@
     <AssemblyName>FrostyPlatformer</AssemblyName>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>disable</ImplicitUsings>
     <ApplicationIcon>PAAIcon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4.1" />
-    <PackageReference Include="Raylib-cs" Version="7.0.2" />
   </ItemGroup>
 
   <ItemGroup>
