@@ -59,7 +59,9 @@ namespace FrostyPlatformer
     {
         // ── MonoGame-infrastruktur ────────────────────────────────────────────
         private readonly GraphicsDeviceManager _graphics;
-        private SpriteBatch                    _spriteBatch = null!;
+        private SpriteBatch                    _spriteBatch   = null!;
+        private RenderTarget2D                 _renderTarget  = null!;
+        private Microsoft.Xna.Framework.Input.KeyboardState _prevKeyboard;
 
         // ── Spelsystem ────────────────────────────────────────────────────────
         private MonoGameInputProvider   _input         = null!;
@@ -93,13 +95,13 @@ namespace FrostyPlatformer
         // ── Egenskaper som delegerar till _context ────────────────────────────
         private DynamicCreatureHero Hero
         {
-            get => _context.Player;
+            get => _context.Player!;
             set => _context.Player = value;
         }
         private List<DynamicGameObject> listDynamics => _context.ActiveObjects;
         private FrostyPlatformer.Models.Map CurrentMap
         {
-            get => _context.CurrentLevel;
+            get => _context.CurrentLevel!;
             set => _context.CurrentLevel = value;
         }
         private List<Quest> ListQuests
@@ -135,9 +137,11 @@ namespace FrostyPlatformer
             _graphics = new GraphicsDeviceManager(this);
             _graphics.PreferredBackBufferWidth  = ScreenW * PixW;
             _graphics.PreferredBackBufferHeight = ScreenH * PixH;
-            IsFixedTimeStep  = false;         // FrameRate = -1 (uncapped)
-            Content.RootDirectory = ".";
-            Window.Title = "Frosty Platformer";
+            IsFixedTimeStep        = true;
+            TargetElapsedTime      = TimeSpan.FromSeconds(1.0 / 60.0);
+            Window.AllowUserResizing = true;
+            Content.RootDirectory  = ".";
+            Window.Title           = "Frosty Platformer";
         }
 
         // ── Entry point ───────────────────────────────────────────────────────
@@ -191,7 +195,10 @@ namespace FrostyPlatformer
         protected override void LoadContent()
         {
             _spriteBatch   = new SpriteBatch(GraphicsDevice);
-            _renderContext = new MonoGameRenderContext(GraphicsDevice, _spriteBatch);
+            _renderTarget  = new RenderTarget2D(GraphicsDevice, ScreenW, ScreenH);
+            // Scale 1×1: spelet renderas i nativ upplösning (256×224) till render target.
+            // Uppskala till fönstret sker i Draw() via det andra SpriteBatch-passet.
+            _renderContext = new MonoGameRenderContext(GraphicsDevice, _spriteBatch, scaleX: 1, scaleY: 1);
             RegisterSprites();
 
             _audioSystem = new MonoGameAudioSystem();
@@ -222,35 +229,92 @@ namespace FrostyPlatformer
         }
 
         /// <summary>
-        /// Spårar förfluten tid. Logik och rendering sker i Draw() — se klassens remarks.
+        /// Spårar förfluten tid och hanterar fönsterkontrollen F11 (helskärm).
+        /// Logik och rendering sker i Draw() — se klassens remarks.
         /// </summary>
         protected override void Update(GameTime gameTime)
         {
             _elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
             _runningTime += TimeSpan.FromSeconds(_elapsed);
             _context.GameTotalTime = _runningTime + _context.ActualTotalTime;
+
+            var kb = Microsoft.Xna.Framework.Input.Keyboard.GetState();
+            if (kb.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.F11) &&
+                _prevKeyboard.IsKeyUp(Microsoft.Xna.Framework.Input.Keys.F11))
+                _graphics.ToggleFullScreen();
+            _prevKeyboard = kb;
+
             base.Update(gameTime);
         }
 
         /// <summary>
-        /// Rensar skärmen, öppnar SpriteBatch och delegerar logik + rendering till
-        /// StateManager. Se klassens remarks för varför allt sker härifrån.
+        /// Tvåstegsrendering: spelet renderas till en 256×224-render target (pass 1),
+        /// som sedan skalas upp till fönstret med PointClamp (pass 2).
+        /// Fönstret kan ha valfri storlek — aspektkvoten bevaras med pillarbox/letterbox.
         /// </summary>
         protected override void Draw(GameTime gameTime)
         {
-            // Clear måste ske FÖRE SpriteBatch.Begin — MonoGameRenderContext.Clear() är ett no-op.
+            // Pass 1 — spel → render target (256×224, scale 1×1)
+            GraphicsDevice.SetRenderTarget(_renderTarget);
             GraphicsDevice.Clear(Color.Black);
-
             _spriteBatch.Begin(
                 SpriteSortMode.Deferred,
                 BlendState.AlphaBlend,
                 SamplerState.PointClamp,
                 null, null, null, null);
-
             _stateManager.Update(_context, _elapsed);
-
             _spriteBatch.End();
+
+            // Pass 2 — render target → skärm (skalat, aspekttroget)
+            GraphicsDevice.SetRenderTarget(null);
+            GraphicsDevice.Clear(Color.Black);
+            _spriteBatch.Begin(
+                SpriteSortMode.Deferred,
+                BlendState.Opaque,
+                SamplerState.PointClamp,
+                null, null, null, null);
+            _spriteBatch.Draw(_renderTarget, CalculateDestRect(), Color.White);
+            _spriteBatch.End();
+
             base.Draw(gameTime);
+        }
+
+        /// <summary>
+        /// Beräknar destinationsrektangeln för render-target-uppskalan.
+        /// Bevarar 256:224-aspektkvoten med pillarbox/letterbox (svarta kanter) vid behov.
+        /// </summary>
+        /// <remarks>
+        /// STRÄCK TILL FULL BREDD (ingen aspektbevarelse):
+        /// Ersätt hela metodkroppen med:
+        ///   return new Rectangle(0, 0,
+        ///       GraphicsDevice.Viewport.Width,
+        ///       GraphicsDevice.Viewport.Height);
+        /// Spelet fyller då hela fönstret/skärmen utan svarta kanter,
+        /// men bilden töjs om aspektkvoten inte matchar 256:224.
+        /// </remarks>
+        private Rectangle CalculateDestRect()
+        {
+            float gameAspect   = (float)ScreenW / ScreenH;
+            float windowAspect = (float)GraphicsDevice.Viewport.Width / GraphicsDevice.Viewport.Height;
+
+            int destW, destH, destX, destY;
+            if (windowAspect > gameAspect)
+            {
+                // Fönstret är bredare — anpassa till höjd och centrera horisontellt.
+                destH = GraphicsDevice.Viewport.Height;
+                destW = (int)(destH * gameAspect);
+                destX = (GraphicsDevice.Viewport.Width - destW) / 2;
+                destY = 0;
+            }
+            else
+            {
+                // Fönstret är smalare eller kvadratiskt — anpassa till bredd och centrera vertikalt.
+                destW = GraphicsDevice.Viewport.Width;
+                destH = (int)(destW / gameAspect);
+                destX = 0;
+                destY = (GraphicsDevice.Viewport.Height - destH) / 2;
+            }
+            return new Rectangle(destX, destY, destW, destH);
         }
 
         /// <summary>Frigör GPU-texturer och ljud-resurser vid programavslut.</summary>
@@ -258,6 +322,7 @@ namespace FrostyPlatformer
         {
             _audioSystem?.CleanUp();
             _renderContext?.UnloadAll();
+            _renderTarget?.Dispose();
             base.UnloadContent();
         }
 

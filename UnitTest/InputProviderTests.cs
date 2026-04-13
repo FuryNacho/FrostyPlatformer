@@ -12,7 +12,7 @@ namespace UnitTest
     [TestClass]
     public class InputProviderTests
     {
-        private FakeInputProvider _input;
+        private FakeInputProvider _input = null!;
 
         [TestInitialize]
         public void Setup()

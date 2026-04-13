@@ -1,8 +1,6 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FrostyPlatformer.Models
 {
@@ -10,20 +8,19 @@ namespace FrostyPlatformer.Models
     { }
     public class CreateObj
     {
-        public string fileData { get; set; }
-        public string spritePath { get; set; }
-        public string name { get; set; }
-        public string fileDataJsonPath { get; set; }
-
-        public LevelObj levelObj { get;set;}
+        public string   fileData        { get; set; } = "";
+        public string?  spritePath      { get; set; }
+        public string   name            { get; set; } = "";
+        public string   fileDataJsonPath { get; set; } = "";
+        public LevelObj? levelObj       { get; set; }
     }
 
-    public class LevelObj 
+    public class LevelObj
     {
-        public int[] TileIndex { get; set; }
-        public int[] AttributeIndex { get; set; }
-        public int Width { get; set; }
-        public int Height { get; set; }
+        public int[] TileIndex      { get; set; } = System.Array.Empty<int>();
+        public int[] AttributeIndex { get; set; } = System.Array.Empty<int>();
+        public int   Width          { get; set; }
+        public int   Height         { get; set; }
     }
 
 
@@ -33,7 +30,7 @@ namespace FrostyPlatformer.Models
 
         //public int SpawnAtWorldMap { get; set; } = 1;
 
-        public SaveSlot ActivePlayer { get; set; }
+        public SaveSlot ActivePlayer { get; set; } = new SaveSlot();
 
         public bool AudioOn { get; set; } = true;
 
@@ -74,7 +71,7 @@ namespace FrostyPlatformer.Models
 
     public class HighScoreObj
     {
-        public string Handle { get; set; }
+        public string Handle { get; set; } = "";
         public TimeSpan TimeSpan { get; set; }
         public DateTime DateTime { get; set; }
 
@@ -85,14 +82,13 @@ namespace FrostyPlatformer.Models
 
     public class HighScoreEnterName
     {
-        public string letter;
-
-        public string MyProperty { get; set; }
+        public string letter      = "";
+        public string MyProperty  { get; set; } = "";
     }
 
     public class OptionsObj
     {
-        public string Display { get; set; }
+        public string Display { get; set; } = "";
         public bool OptionIsBack { get; set; }
 
         public bool OptionIsSlotOne { get; set; }

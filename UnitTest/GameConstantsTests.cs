@@ -1,3 +1,7 @@
+// MSTEST0032: GameConstants är compile-time-konstanter — villkoren är alltid sanna per definition.
+// Testerna är ändå meningsfulla: de fångar sign-fel vid framtida ändringar och fungerar som
+// levande dokumentation av vad varje konstant representerar.
+#pragma warning disable MSTEST0032
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using FrostyPlatformer.Global;
 
@@ -116,12 +120,12 @@ namespace UnitTest
         {
             float spacing = GameConstants.WorldMapStage2X - GameConstants.WorldMapStage1X;
 
-            Assert.AreEqual(spacing, GameConstants.WorldMapStage3X - GameConstants.WorldMapStage2X, 0.01f);
-            Assert.AreEqual(spacing, GameConstants.WorldMapStage4X - GameConstants.WorldMapStage3X, 0.01f);
-            Assert.AreEqual(spacing, GameConstants.WorldMapStage5X - GameConstants.WorldMapStage4X, 0.01f);
-            Assert.AreEqual(spacing, GameConstants.WorldMapStage6X - GameConstants.WorldMapStage5X, 0.01f);
-            Assert.AreEqual(spacing, GameConstants.WorldMapStage7X - GameConstants.WorldMapStage6X, 0.01f);
-            Assert.AreEqual(spacing, GameConstants.WorldMapStage8X - GameConstants.WorldMapStage7X, 0.01f);
+            Assert.AreEqual(GameConstants.WorldMapStage3X - GameConstants.WorldMapStage2X, spacing, 0.01f);
+            Assert.AreEqual(GameConstants.WorldMapStage4X - GameConstants.WorldMapStage3X, spacing, 0.01f);
+            Assert.AreEqual(GameConstants.WorldMapStage5X - GameConstants.WorldMapStage4X, spacing, 0.01f);
+            Assert.AreEqual(GameConstants.WorldMapStage6X - GameConstants.WorldMapStage5X, spacing, 0.01f);
+            Assert.AreEqual(GameConstants.WorldMapStage7X - GameConstants.WorldMapStage6X, spacing, 0.01f);
+            Assert.AreEqual(GameConstants.WorldMapStage8X - GameConstants.WorldMapStage7X, spacing, 0.01f);
         }
 
         [TestMethod]

@@ -13,10 +13,10 @@ namespace FrostyPlatformer.Commands
         {
 
         }
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
         public bool Completed { get; set; } = false;
-        public static ScriptProcessor Script { get; set; }
-        public static Program Engine { get; set; }
+        public static ScriptProcessor Script { get; set; } = null!;
+        public static Program Engine { get; set; } = null!;
 
         public virtual bool OnInteraction(List<DynamicGameObject> vecDynobs, DynamicGameObject target, Enum.NATURE nature) { return true; }
 

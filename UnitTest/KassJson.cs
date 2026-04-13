@@ -1,4 +1,7 @@
-﻿using System;
+﻿// KassJson är ett äldre JSON-hjälpbibliotek. Nullable-varningar och SYSLIB0050
+// (FormatterServices obsolet) suppressas — koden ska inte underhållas.
+#pragma warning disable CS8600, CS8601, CS8602, CS8603, CS8604, SYSLIB0050
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

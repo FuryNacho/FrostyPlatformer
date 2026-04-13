@@ -175,11 +175,8 @@ namespace FrostyPlatformer.Core
         #region High Score
         private void LoadHighScore()
         {
-            HighScoreList = ReadWrite.ReadJson <List<HighScoreObj>> (PathSettings, @"\highscore", ".json");
-
-            //High Score
-            if (HighScoreList == null)
-                HighScoreList = new List<HighScoreObj>();
+            HighScoreList = ReadWrite.ReadJson<List<HighScoreObj>>(PathSettings, @"\highscore", ".json")
+                            ?? new List<HighScoreObj>();
 
             if (HighScoreList.Count < 6)
             {
@@ -214,7 +211,7 @@ namespace FrostyPlatformer.Core
         }
         public bool IsNewFirstPlaceHS(TimeSpan TS)
         {
-            if (HighScoreList.FirstOrDefault().TimeSpan > TS)
+            if (HighScoreList.FirstOrDefault()!.TimeSpan > TS)
             {
                 return true;
             }

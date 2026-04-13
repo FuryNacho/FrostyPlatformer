@@ -44,7 +44,7 @@ namespace FrostyPlatformer.States
         private int   _tempMemJumpCounter;
         private int   _tempMemCoyoteCounter;
         private bool  _detHarBallatUrLog;
-        private float _maxR, _maxL, _maxY;
+        private float _maxR, _maxL;
 
         // Fiende-AI
         private int _enemyJump;
@@ -572,7 +572,7 @@ namespace FrostyPlatformer.States
             int max = _energiRain.NumberOfEnergi >= context.Player.Health ? context.Player.Health : _energiRain.NumberOfEnergi;
             int count = min >= max ? min : _rng.Next(min, max);
             for (int i = 0; i < count; i++)
-                context.ActiveObjects.Add(new DynamicItem(sx, sy, _services.Assets.GetItem("energi"), whenCollectable));
+                context.ActiveObjects.Add(new DynamicItem(sx, sy, _services.Assets.GetItem("energi")!, whenCollectable));
         }
     }
 }

@@ -25,11 +25,11 @@ namespace FrostyPlatformer.Engine.MonoGame
     ///   Springa   : Z / B
     ///
     /// GAMEPAD (Xbox-layout, PlayerIndex.One):
-    ///   D-Pad     : rörelseknappar
-    ///   A (hoppa/bekräfta) : Buttons.A
-    ///   B (springa)        : Buttons.B
-    ///   Select             : Buttons.Back
-    ///   Start (paus)       : Buttons.Start
+    ///   D-Pad / vänster analog : rörelseknappar (inkl. upp för meny/karta)
+    ///   A (hoppa/bekräfta)     : Buttons.A
+    ///   X (springa)            : Buttons.X  — ersätter NES-B
+    ///   Back  (select)         : Buttons.Back
+    ///   Start (paus)           : Buttons.Start
     ///
     /// PRESSED-LOGIK:
     /// MonoGame saknar direkt "just tryckt"-API. Klassen håller föregående frames
@@ -151,10 +151,10 @@ namespace FrostyPlatformer.Engine.MonoGame
 
         // ─── Actionknappar ────────────────────────────────────────────────────
         public bool IsJumpDown     => KeyDown(Keys.Up)    || KeyDown(Keys.Space)
-                                   || PadDown(Buttons.DPadUp) || PadDown(Buttons.A);
+                                   || PadDown(Buttons.A);
 
         public bool IsJumpPressed  => KeyPressed(Keys.Up) || KeyPressed(Keys.Space)
-                                   || PadPressed(Buttons.DPadUp) || PadPressed(Buttons.A);
+                                   || PadPressed(Buttons.A);
 
         public bool IsJumpReleased => KeyReleased(Keys.Up) || KeyReleased(Keys.Space);
 
@@ -168,7 +168,7 @@ namespace FrostyPlatformer.Engine.MonoGame
                                      || PadPressed(Buttons.Start);
 
         public bool IsRunDown        => KeyDown(Keys.Z)    || KeyDown(Keys.B)
-                                     || PadDown(Buttons.B);
+                                     || PadDown(Buttons.X);
 
         public bool IsSelectDown     => PadDown(Buttons.Back);
 

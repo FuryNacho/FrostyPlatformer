@@ -74,12 +74,12 @@ namespace FrostyPlatformer.Models
         public bool Create(CreateObj createObj)
         {
             Name = createObj.name;
-            SpritePath = createObj.spritePath;
-            Height = createObj.levelObj.Height;
+            SpritePath = createObj.spritePath!;
+            Height = createObj.levelObj!.Height;
             Width = createObj.levelObj.Width;
             Indices = createObj.levelObj.TileIndex;
 
-            // Only use solid or not solid for now. Might want other states in the future. 
+            // Only use solid or not solid for now. Might want other states in the future.
             Solids = new bool[Width * Height];
             var length = createObj.levelObj.AttributeIndex.Length;
             for (int i = 0; i < length; i++)

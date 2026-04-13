@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.IO;
 using System.Text.Json;
 
@@ -36,7 +37,7 @@ namespace FrostyPlatformer.Core
         }
 
 
-        public T ReadJson<T>(string FilePath, string FileName, string FileExtension, bool CreateFile = true)
+        public T? ReadJson<T>(string FilePath, string FileName, string FileExtension, bool CreateFile = true)
         {
             try
             {

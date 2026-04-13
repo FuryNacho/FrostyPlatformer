@@ -21,7 +21,7 @@ namespace UnitTest
         private const int VisX = ScreenW / TileSize;  // 16
         private const int VisY = ScreenH / TileSize;  // 14
 
-        private ICameraSystem _camera;
+        private ICameraSystem _camera = null!;
 
         [TestInitialize]
         public void Setup()

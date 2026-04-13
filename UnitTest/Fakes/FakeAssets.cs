@@ -1,3 +1,4 @@
+#nullable enable
 using FrostyPlatformer.Core;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Models.Items;
@@ -10,8 +11,8 @@ namespace UnitTest.Fakes
     /// </summary>
     public class FakeAssets : IAssets
     {
-        public string GetSpritePath(string name) => null;
-        public Item GetItem(string name) => null;
-        public LevelObj GetMapData(string name) => null;
+        public string?  GetSpritePath(string name) => null;
+        public Item?    GetItem(string name)        => null;
+        public LevelObj? GetMapData(string name)    => null;
     }
 }

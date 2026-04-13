@@ -17,7 +17,7 @@ namespace FrostyPlatformer.Commands
 
         public bool Completed { get; set; }
         public bool Started { get; set; }
-        public Quest Quest { get; set; }
+        public Quest? Quest { get; set; }
         public virtual void Start() { }
         public virtual void Update(float elapsedTime) { }
 
@@ -28,7 +28,7 @@ namespace FrostyPlatformer.Commands
         //public static Program Engine { get; set; }
         public static Program Engine { get
             {
-                return Core.Aggregate.Instance.ThisGame;
+                return Core.Aggregate.Instance.ThisGame!;
             }
         }
 
@@ -56,17 +56,17 @@ namespace FrostyPlatformer.Commands
 
             if (!UserControlEnabled) // Om det finns nåt i listan, gör nåt
             {
-                if (!listCommands.FirstOrDefault().Completed) // Om inte den första processen i listan är klar
+                if (!listCommands.FirstOrDefault()!.Completed) // Om inte den första processen i listan är klar
                 {
-                    if (!listCommands.FirstOrDefault().Started)// Om första objektet inte är startad, starta den
+                    if (!listCommands.FirstOrDefault()!.Started)// Om första objektet inte är startad, starta den
                     {
-                        listCommands.FirstOrDefault().Start();
-                        listCommands.FirstOrDefault().Started = true;
+                        listCommands.FirstOrDefault()!.Start();
+                        listCommands.FirstOrDefault()!.Started = true;
                     }
                     else
                     {
                         // currently in process
-                        listCommands.FirstOrDefault().Update(elapsedTime);
+                        listCommands.FirstOrDefault()!.Update(elapsedTime);
                     }
 
                 }
@@ -83,7 +83,7 @@ namespace FrostyPlatformer.Commands
         {
             if (listCommands.Any())
             {
-                listCommands.FirstOrDefault().Completed = true;
+                listCommands.FirstOrDefault()!.Completed = true;
             }
         }
     }

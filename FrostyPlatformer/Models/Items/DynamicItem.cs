@@ -79,7 +79,7 @@ namespace FrostyPlatformer.Models.Items
             graphics.DrawPartialSprite(SpriteId.Items, screenX, screenY, spriteX, spriteY, 16, 16);
         }
 
-        public override void Update(float elapsedTime, DynamicGameObject player)
+        public override void Update(float elapsedTime, DynamicGameObject? player = null)
         {
             if (!IsTempEnergi) return;
 
@@ -103,17 +103,17 @@ namespace FrostyPlatformer.Models.Items
             }
         }
 
-        public override void OnInteract(DynamicGameObject player = null)
+        public override void OnInteract(DynamicGameObject? player = null)
         {
             if (Collected || Collectable > 0)
                 return;
 
 
 
-            if (item.OnInteract(player))
+            if (item.OnInteract(player!))
             {
                 // Add item to inventory
-                Engine.GiveItem(item);
+                Engine!.GiveItem(item);
             }
 
             Collected = true;
