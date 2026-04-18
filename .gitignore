@@ -351,8 +351,10 @@ healthchecksdb
 **/Resources/Assets/Sprites/*.jpg
 **/Resources/Assets/Sprites/*.ico
 
-# Kartor (genereras av FurryNachoLevelEditor)
+# Kartor (genereras av FurryNachoLevelEditor / ConvertMaps-verktyget)
 **/Resources/Assets/MapData/*.json
+**/Resources/Assets/MapData/Tiled/*.json
+**/Resources/Assets/MapData/Tiled/*.tsx
 
 # Ljud och musik
 **/Resources/Assets/Sound/*.wav
@@ -369,3 +371,4 @@ CLAUDE.md
 # Interna planeringsdokument – lokala, visas ej på GitHub
 ROADMAP.md
 MONOGAME_PLAN.md
+TILED_PLAN.md

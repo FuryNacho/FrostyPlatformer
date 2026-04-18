@@ -30,3 +30,13 @@ with pillarbox/letterbox — no stretching.
 ## Assets
 Sprites, maps, and audio are excluded from version control (.gitignore).
 Add them locally to run the game.
+
+## Map format
+Maps are stored as Tiled JSON (`.json`) in `Resources/Assets/MapData/Tiled/`.
+Each map has two layers: `Tiles` (visual) and `Collision` (solid/non-solid).
+
+To regenerate maps from the original format:
+```
+cd Tools/ConvertMaps
+dotnet run
+```

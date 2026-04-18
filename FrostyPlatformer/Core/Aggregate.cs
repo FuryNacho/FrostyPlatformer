@@ -60,7 +60,8 @@ namespace FrostyPlatformer.Core
             ReadWrite = new ReadWrite(EnableWriteToLog);
             LoadSettings();
 
-            MapRepository = new FrostyPlatformer.Systems.MapRepository(ReadWrite);
+            string tiledMapPath = Path.Combine(ReadWrite.GetRoot, "Resources", "Assets", "MapData", "Tiled");
+            MapRepository = new FrostyPlatformer.Systems.TiledMapRepository(tiledMapPath);
             LoadSprites();
             LoadMaps();
             LoadItems();

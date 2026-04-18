@@ -17,7 +17,7 @@ namespace FrostyPlatformer.Systems
     /// bakom ett interface så att beroende kod kan testas med en in-memory-fake.
     ///
     /// ANVÄNDNING:
-    /// Skapas i Aggregate.Load() som new MapRepository(readWrite) och används internt
+    /// Skapas i Aggregate.Load() som new TiledMapRepository(basePath) och används internt
     /// för att ladda LevelObj-data. I tester används FakeMapRepository med förifyllda
     /// kartposter.
     /// </remarks>
