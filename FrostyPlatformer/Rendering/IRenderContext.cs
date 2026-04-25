@@ -29,6 +29,12 @@ namespace FrostyPlatformer.Rendering
         /// <summary>Skärmens bredd i pixlar.</summary>
         int ScreenWidth { get; }
 
+        /// <summary>
+        /// Laddar en bildfil och kopplar den till ett sprite-ID.
+        /// Anropas vid initialisering och vid kartbyte (MapTileSheet).
+        /// </summary>
+        void RegisterSprite(SpriteId id, string filePath);
+
         /// <summary>Skärmens höjd i pixlar.</summary>
         int ScreenHeight { get; }
 

@@ -34,6 +34,14 @@ namespace UnitTest.Fakes
         /// <summary>Antal gånger Clear() anropades.</summary>
         public int ClearCount { get; private set; }
 
+        /// <summary>Registrerade RegisterSprite-anrop.</summary>
+        public List<(SpriteId Id, string Path)> RegisteredSprites { get; }
+            = new List<(SpriteId, string)>();
+
+        /// <inheritdoc />
+        public void RegisterSprite(SpriteId id, string filePath)
+            => RegisteredSprites.Add((id, filePath));
+
         /// <inheritdoc />
         public int ScreenWidth { get; } = 256;
 

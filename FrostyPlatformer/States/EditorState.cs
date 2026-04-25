@@ -48,6 +48,8 @@ namespace FrostyPlatformer.States
             new RenderColor(220, 50, 50, 100);
         private static readonly RenderColor SpawnMarkerColor =
             new RenderColor(50, 220, 80, 200);
+        private static readonly RenderColor MapBoundsColor =
+            new RenderColor(255, 200, 0, 230);
 
         private readonly GameServices   _services;
         private readonly IRenderContext _rc;
@@ -148,6 +150,8 @@ namespace FrostyPlatformer.States
             if (noDialog && _services.Input.IsEditorNew)  HandleNewMapRequest();
 
             int mapAreaWidth = context.ScreenWidth - PaletteWidth;
+            int visX = mapAreaWidth / GameConstants.TileSize;
+            int visY = context.ScreenHeight / GameConstants.TileSize;
 
             // Kartväljare — hantera input och rita overlay, sedan avsluta framen
             if (_showMapPicker)
@@ -156,10 +160,11 @@ namespace FrostyPlatformer.States
                 if (_mapAdapter != null && _levelObj != null)
                 {
                     var bgCam = _services.Camera.Calculate(
-                        _camTargetX, _camTargetY,
+                        _camTargetX + visX / 2f, _camTargetY + visY / 2f,
                         _mapAdapter.Width, _mapAdapter.Height,
                         mapAreaWidth, context.ScreenHeight);
                     DrawTiles(bgCam);
+                    DrawMapBounds(bgCam, mapAreaWidth, context.ScreenHeight);
                     DrawGrid(bgCam, mapAreaWidth, context.ScreenHeight);
                     DrawPalette(context, mapAreaWidth);
                 }
@@ -174,10 +179,11 @@ namespace FrostyPlatformer.States
                 if (_mapAdapter != null && _levelObj != null)
                 {
                     var bgCam = _services.Camera.Calculate(
-                        _camTargetX, _camTargetY,
+                        _camTargetX + visX / 2f, _camTargetY + visY / 2f,
                         _mapAdapter.Width, _mapAdapter.Height,
                         mapAreaWidth, context.ScreenHeight);
                     DrawTiles(bgCam);
+                    DrawMapBounds(bgCam, mapAreaWidth, context.ScreenHeight);
                     DrawGrid(bgCam, mapAreaWidth, context.ScreenHeight);
                     DrawPalette(context, mapAreaWidth);
                 }
@@ -188,11 +194,11 @@ namespace FrostyPlatformer.States
             if (_mapAdapter == null || _levelObj == null) return;
 
             var cam = _services.Camera.Calculate(
-                _camTargetX, _camTargetY,
+                _camTargetX + visX / 2f, _camTargetY + visY / 2f,
                 _mapAdapter.Width, _mapAdapter.Height,
                 mapAreaWidth, context.ScreenHeight);
 
-            HandleCameraScroll(deltaTime);
+            HandleCameraScroll(deltaTime, _mapAdapter.Width, _mapAdapter.Height, visX, visY);
 
             if (_services.Input.IsEditorSave) HandleSave();
 
@@ -215,6 +221,7 @@ namespace FrostyPlatformer.States
             }
 
             DrawTiles(cam);
+            DrawMapBounds(cam, mapAreaWidth, context.ScreenHeight);
             if (_mode == EditorMode.Collision)
                 DrawCollisionOverlay(cam, mapAreaWidth, context.ScreenHeight);
             DrawGrid(cam, mapAreaWidth, context.ScreenHeight);
@@ -244,15 +251,18 @@ namespace FrostyPlatformer.States
 
         // ── Kameranavigering ─────────────────────────────────────────────────────
 
-        private void HandleCameraScroll(float deltaTime)
+        private void HandleCameraScroll(float deltaTime, int mapWidth, int mapHeight, int visX, int visY)
         {
             float d = ScrollSpeed * deltaTime;
             if (_services.Input.IsRightDown) _camTargetX += d;
             if (_services.Input.IsLeftDown)  _camTargetX -= d;
             if (_services.Input.IsDownDown)  _camTargetY += d;
             if (_services.Input.IsUpDown)    _camTargetY -= d;
-            if (_camTargetX < 0) _camTargetX = 0;
-            if (_camTargetY < 0) _camTargetY = 0;
+
+            float maxX = Math.Max(0f, mapWidth  - visX);
+            float maxY = Math.Max(0f, mapHeight - visY);
+            _camTargetX = Math.Clamp(_camTargetX, 0f, maxX);
+            _camTargetY = Math.Clamp(_camTargetY, 0f, maxY);
         }
 
         // ── Tile-palette ─────────────────────────────────────────────────────────
@@ -426,6 +436,20 @@ namespace FrostyPlatformer.States
             _isDirty    = false;
             _camTargetX = 0f;
             _camTargetY = 0f;
+
+            RegisterTilesheet(_levelObj.TilesetSource);
+        }
+
+        /// <summary>
+        /// Registrerar rätt tilesheet-sprite för MapTileSheet-ID:t.
+        /// Deriverar Aggregate-sprite-namnet från TilesetSource ("spring.tsx" → "tilesheetspring").
+        /// </summary>
+        private void RegisterTilesheet(string tilesetSource)
+        {
+            string stem = tilesetSource.Replace(".tsx", "");
+            string? path = _services.Assets.GetSpritePath("tilesheet" + stem);
+            if (path != null)
+                _rc.RegisterSprite(SpriteId.MapTileSheet, path);
         }
 
         // ── Kartväljare ──────────────────────────────────────────────────────────
@@ -526,6 +550,8 @@ namespace FrostyPlatformer.States
             _camTargetY     = 0f;
             _mode           = EditorMode.Tiles;
             _showNewMapDialog = false;
+
+            RegisterTilesheet(level.TilesetSource);
             ShowMessage($"New map '{mapId}' created — Ctrl+S to save.");
         }
 
@@ -658,21 +684,52 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Ritar ett rutnät inom kartans vy. Linjer förskjuts med kamerans sub-tile
-        /// offset så att de följer kartscrollen pixel för pixel.
+        /// Ritar ett rutnät inom kartans vy. Använder samma formel som TileMapRenderer
+        /// för pixel-perfekt justering mot tile-kanterna vid alla scroll-positioner.
         /// </summary>
         private void DrawGrid(CameraView cam, int mapAreaWidth, int screenHeight)
         {
             var color = RenderColor.DarkGrey;
             int ts    = GameConstants.TileSize;
 
-            float startX = -(int)cam.TileOffsetX % ts;
-            for (float x = startX; x <= mapAreaWidth; x += ts)
-                _rc.DrawLine((int)x, 0, (int)x, screenHeight, color);
+            for (int col = -1; col <= cam.VisibleTilesX + 1; col++)
+            {
+                int x = (int)(col * ts - cam.TileOffsetX);
+                if (x < 0 || x > mapAreaWidth) continue;
+                _rc.DrawLine(x, 0, x, screenHeight, color);
+            }
 
-            float startY = -(int)cam.TileOffsetY % ts;
-            for (float y = startY; y <= screenHeight; y += ts)
-                _rc.DrawLine(0, (int)y, mapAreaWidth, (int)y, color);
+            for (int row = -1; row <= cam.VisibleTilesY + 2; row++)
+            {
+                int y = (int)(row * ts - cam.TileOffsetY);
+                if (y < 0 || y > screenHeight) continue;
+                _rc.DrawLine(0, y, mapAreaWidth, y, color);
+            }
+        }
+
+        /// <summary>
+        /// Ritar en gul ram runt kartans faktiska tile-yta så att användaren
+        /// tydligt ser var kartan slutar och tomt utrymme börjar.
+        /// </summary>
+        private void DrawMapBounds(CameraView cam, int mapAreaWidth, int screenHeight)
+        {
+            if (_mapAdapter == null) return;
+
+            var (left, top)     = EditorMath.TileToScreen(0,                0,                cam);
+            var (right, bottom) = EditorMath.TileToScreen(_mapAdapter.Width, _mapAdapter.Height, cam);
+
+            int l = Math.Max(left,   0);
+            int t = Math.Max(top,    0);
+            int r = Math.Min(right,  mapAreaWidth - 1);
+            int b = Math.Min(bottom, screenHeight - 1);
+
+            if (l > r || t > b) return;
+
+            var c = MapBoundsColor;
+            _rc.DrawLine(l, t, r, t, c);
+            _rc.DrawLine(l, b, r, b, c);
+            _rc.DrawLine(l, t, l, b, c);
+            _rc.DrawLine(r, t, r, b, c);
         }
 
         /// <summary>
