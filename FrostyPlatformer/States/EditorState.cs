@@ -291,16 +291,24 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Ritar tile-palette som en sidebar till höger. Markerar vald tile med vit ram.
+        /// Ritar tile-palette som en sidebar till höger.
+        /// Vald tile markeras med vit ram, hovrad tile med gul ram.
         /// </summary>
         private void DrawPalette(GameContext context, int mapAreaWidth)
         {
             int ts = GameConstants.TileSize;
 
-            // Mörkgrå bakgrund för tydlig visuell separation
+            // Beräkna vilken palette-tile muspekaren är över
+            int relX      = _services.Input.MouseX - mapAreaWidth - PalettePadding;
+            int relY      = _services.Input.MouseY - PalettePadding;
+            int hoverCol  = relX >= 0 ? relX / ts : -1;
+            int hoverRow  = relY >= 0 ? relY / ts : -1;
+            bool hasHover = hoverCol >= 0 && hoverCol < GameConstants.TileSheetColumns
+                         && hoverRow >= 0 && hoverRow < GameConstants.TileSheetRows;
+            int hoverTile = hasHover ? hoverRow * GameConstants.TileSheetColumns + hoverCol : -1;
+
             _rc.FillRect(mapAreaWidth, 0, PaletteWidth, context.ScreenHeight, RenderColor.DarkGrey);
 
-            // Rita alla tiles i paletten
             for (int row = 0; row < GameConstants.TileSheetRows; row++)
             {
                 for (int col = 0; col < GameConstants.TileSheetColumns; col++)
@@ -308,23 +316,24 @@ namespace FrostyPlatformer.States
                     int tileId  = row * GameConstants.TileSheetColumns + col;
                     int screenX = mapAreaWidth + PalettePadding + col * ts;
                     int screenY = PalettePadding + row * ts;
-                    int spriteX = col * ts;
-                    int spriteY = row * ts;
 
                     _rc.DrawPartialSprite(SpriteId.MapTileSheet,
-                        screenX, screenY, spriteX, spriteY, ts, ts);
+                        screenX, screenY, col * ts, row * ts, ts, ts);
 
-                    // Vit ram runt vald tile
                     if (tileId == _selectedTileId)
-                    {
-                        var w = RenderColor.White;
-                        _rc.DrawLine(screenX,        screenY,        screenX + ts - 1, screenY,        w);
-                        _rc.DrawLine(screenX,        screenY + ts - 1, screenX + ts - 1, screenY + ts - 1, w);
-                        _rc.DrawLine(screenX,        screenY,        screenX,        screenY + ts - 1, w);
-                        _rc.DrawLine(screenX + ts - 1, screenY,        screenX + ts - 1, screenY + ts - 1, w);
-                    }
+                        DrawTileBorder(screenX, screenY, ts, RenderColor.White);
+                    else if (tileId == hoverTile)
+                        DrawTileBorder(screenX, screenY, ts, new RenderColor(255, 220, 0, 200));
                 }
             }
+        }
+
+        private void DrawTileBorder(int x, int y, int ts, RenderColor c)
+        {
+            _rc.DrawLine(x,          y,          x + ts - 1, y,          c);
+            _rc.DrawLine(x,          y + ts - 1, x + ts - 1, y + ts - 1, c);
+            _rc.DrawLine(x,          y,          x,          y + ts - 1, c);
+            _rc.DrawLine(x + ts - 1, y,          x + ts - 1, y + ts - 1, c);
         }
 
         // ── Tile-placering och kollisionsredigering ──────────────────────────────
@@ -794,42 +803,49 @@ namespace FrostyPlatformer.States
             _rc.DrawLine(cx + ts - 1, cy,          cx + ts - 1, cy + ts - 1, c);
         }
 
-        /// <summary>Statusrad: kartnamn, storlek och info om hovered tile (eller "palette"-läge).</summary>
+        /// <summary>
+        /// Tvåraders statusfält: rad 1 = karta/läge/tile-info, rad 2 = kortkommandon.
+        /// Mörkgrå bakgrundsremsa gör texten läsbar mot alla tile-färger.
+        /// </summary>
         private void DrawHud(GameContext context, int hoverTileX, int hoverTileY, int mapAreaWidth)
         {
             if (_mapAdapter == null || _levelObj == null) return;
 
             string modeLabel = _mode switch
             {
-                EditorMode.Collision => "COLLISION",
+                EditorMode.Collision => "COL",
                 EditorMode.Spawn     => "SPAWN",
                 _                   => "TILES"
             };
-            string tileInfo  = hoverTileX >= 0
-                ? $"({hoverTileX},{hoverTileY}) id:{_mapAdapter.GetIndex(hoverTileX, hoverTileY)} "
-                  + (_mapAdapter.GetSolid(hoverTileX, hoverTileY) ? "[solid]" : "[open]")
+
+            string tileInfo = hoverTileX >= 0
+                ? $"({hoverTileX},{hoverTileY}) id:{_mapAdapter.GetIndex(hoverTileX, hoverTileY)}"
+                  + (_mapAdapter.GetSolid(hoverTileX, hoverTileY) ? "[S]" : "[O]")
                 : "[palette]";
 
             string spawnInfo = _levelObj.HasSpawn
-                ? $"spawn:({_levelObj.SpawnX},{_levelObj.SpawnY})"
-                : "spawn:none";
+                ? $"sp:({_levelObj.SpawnX},{_levelObj.SpawnY})"
+                : "sp:none";
 
-            string controls = _mode switch
+            string mouseCtrl = _mode switch
             {
-                EditorMode.Collision => "LMB=solid  RMB=open",
-                EditorMode.Spawn     => "LMB=set  RMB=clear",
-                _                   => "LMB=paint  RMB=erase"
+                EditorMode.Collision => "LMB=solid RMB=open",
+                EditorMode.Spawn     => "LMB=set RMB=clear",
+                _                   => "LMB=paint RMB=erase"
             };
 
             string dirtyMark = _isDirty ? "*" : "";
-            string line = $"[{modeLabel}]  {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  "
-                        + $"brush:{_selectedTileId}  {tileInfo}  {spawnInfo}  "
-                        + $"{controls}  C=col  G=spawn  N=new  L=load  Ctrl+S=save  Arrows=scroll  Esc=exit";
+            string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}"
+                        + $"  b:{_selectedTileId}  {tileInfo}  {spawnInfo}";
+            string row2 = $"{mouseCtrl}  C=col G=spawn  N=new L=load Ctrl+S=save  Esc=exit";
 
-            _rc.DrawText(line, 2, 2);
+            // Mörkgrå remsa bakom HUD-texten
+            _rc.FillRect(0, 0, context.ScreenWidth, 22, new RenderColor(0, 0, 0, 170));
+            _rc.DrawText(row1, 2, 2);
+            _rc.DrawText(row2, 2, 12);
 
             if (_hudMessageTimer > 0f)
-                _rc.DrawText(_hudMessage, 2, 12);
+                _rc.DrawText(_hudMessage, 2, 23);
         }
     }
 }
