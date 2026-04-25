@@ -18,6 +18,8 @@ namespace UnitTest.Fakes
 
         public int LoadCallCount { get; private set; }
         public string? LastLoadedMapId { get; private set; }
+        public int SaveCallCount { get; private set; }
+        public string? LastSavedMapId { get; private set; }
 
         // ── Konstruktorer ────────────────────────────────────────────────────
 
@@ -50,5 +52,13 @@ namespace UnitTest.Fakes
 
         /// <summary>Returnerar de kart-ID:n som lagts till i faken.</summary>
         public IEnumerable<string> GetAvailableMapIds() => _maps.Keys;
+
+        /// <summary>Lagrar kartan i minnet — simulerar sparning utan fil-I/O.</summary>
+        public void Save(string mapId, LevelObj level)
+        {
+            SaveCallCount++;
+            LastSavedMapId = mapId;
+            _maps[mapId] = level;
+        }
     }
 }

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace FrostyPlatformer.Systems
 {
@@ -100,7 +101,8 @@ namespace FrostyPlatformer.Systems
                 Width          = map.Width,
                 Height         = map.Height,
                 TileIndex      = ConvertTileData(tilesLayer.Data, firstGid),
-                AttributeIndex = collisionLayer?.Data ?? new int[map.Width * map.Height]
+                AttributeIndex = collisionLayer?.Data ?? new int[map.Width * map.Height],
+                TilesetSource  = map.Tilesets.Count > 0 ? map.Tilesets[0].Source : "spring.tsx"
             };
 
             if (objectsLayer != null)
@@ -115,6 +117,86 @@ namespace FrostyPlatformer.Systems
             }
 
             return level;
+        }
+
+        /// <summary>
+        /// Sparar ett LevelObj till disk i Tiled JSON-format.
+        /// Skapar målmappen automatiskt om den inte finns.
+        /// </summary>
+        public void Save(string mapId, LevelObj level)
+        {
+            Directory.CreateDirectory(_basePath);
+            var filePath = Path.Combine(_basePath, mapId + ".json");
+            File.WriteAllText(filePath, BuildTiledJson(level));
+        }
+
+        // ── Konverteringslogik (internal för enhetstestning) ──────────────────
+
+        /// <summary>
+        /// Konverterar ett LevelObj till en Tiled JSON-sträng.
+        /// Omvänd operation mot ParseTiledJson — lägger tillbaka GID-offset.
+        /// </summary>
+        internal static string BuildTiledJson(LevelObj level)
+        {
+            var layers = new JsonArray();
+            layers.Add(BuildTileLayer("Tiles",     level.Width, level.Height,
+                level.TileIndex.Select(id => id > 0 ? id + 1 : 0).ToArray()));
+            layers.Add(BuildTileLayer("Collision", level.Width, level.Height,
+                level.AttributeIndex));
+
+            if (level.HasSpawn)
+                layers.Add(BuildObjectsLayer(level));
+
+            var root = new JsonObject
+            {
+                ["width"]      = level.Width,
+                ["height"]     = level.Height,
+                ["tilewidth"]  = GameConstants.TileSize,
+                ["tileheight"] = GameConstants.TileSize,
+                ["tilesets"]   = new JsonArray
+                {
+                    new JsonObject { ["firstgid"] = 1, ["source"] = level.TilesetSource }
+                },
+                ["layers"] = layers
+            };
+
+            return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        private static JsonObject BuildTileLayer(string name, int width, int height, int[] data)
+        {
+            var arr = new JsonArray();
+            foreach (var v in data) arr.Add(JsonValue.Create(v));
+            return new JsonObject
+            {
+                ["name"]   = name,
+                ["type"]   = "tilelayer",
+                ["width"]  = width,
+                ["height"] = height,
+                ["data"]   = arr
+            };
+        }
+
+        private static JsonObject BuildObjectsLayer(LevelObj level)
+        {
+            int px = level.SpawnX * GameConstants.TileSize;
+            int py = level.SpawnY * GameConstants.TileSize;
+            return new JsonObject
+            {
+                ["name"] = "Objects",
+                ["type"] = "objectgroup",
+                ["objects"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["name"]   = "PlayerSpawn",
+                        ["x"]      = px,
+                        ["y"]      = py,
+                        ["width"]  = GameConstants.TileSize,
+                        ["height"] = GameConstants.TileSize
+                    }
+                }
+            };
         }
 
         /// <summary>

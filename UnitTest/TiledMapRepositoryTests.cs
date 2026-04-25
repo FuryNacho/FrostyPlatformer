@@ -271,6 +271,180 @@ namespace UnitTest
             Assert.IsFalse(result!.HasSpawn);
         }
 
+        // ── BuildTiledJson — serialisering ───────────────────────────────────
+
+        [TestMethod]
+        public void BuildTiledJson_PreservesWidthAndHeight()
+        {
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 3,
+                Height         = 2,
+                TileIndex      = new int[6],
+                AttributeIndex = new int[6]
+            };
+
+            var json = TiledMapRepository.BuildTiledJson(level);
+            var result = TiledMapRepository.ParseTiledJson(json);
+
+            Assert.AreEqual(3, result!.Width);
+            Assert.AreEqual(2, result!.Height);
+        }
+
+        [TestMethod]
+        public void BuildTiledJson_GidRoundTrip_TileIndexPreserved()
+        {
+            // TileIndex [0, 7] → GID [0, 8] → TileIndex [0, 7]
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 2,
+                Height         = 1,
+                TileIndex      = new[] { 0, 7 },
+                AttributeIndex = new[] { 0, 1 }
+            };
+
+            var json   = TiledMapRepository.BuildTiledJson(level);
+            var result = TiledMapRepository.ParseTiledJson(json);
+
+            CollectionAssert.AreEqual(new[] { 0, 7 }, result!.TileIndex);
+        }
+
+        [TestMethod]
+        public void BuildTiledJson_AttributeIndexPreserved()
+        {
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 2,
+                Height         = 1,
+                TileIndex      = new[] { 0, 7 },
+                AttributeIndex = new[] { 0, 1 }
+            };
+
+            var json   = TiledMapRepository.BuildTiledJson(level);
+            var result = TiledMapRepository.ParseTiledJson(json);
+
+            CollectionAssert.AreEqual(new[] { 0, 1 }, result!.AttributeIndex);
+        }
+
+        [TestMethod]
+        public void BuildTiledJson_SpawnPointPreserved()
+        {
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 4,
+                Height         = 4,
+                TileIndex      = new int[16],
+                AttributeIndex = new int[16],
+                SpawnX         = 2,
+                SpawnY         = 3
+            };
+
+            var json   = TiledMapRepository.BuildTiledJson(level);
+            var result = TiledMapRepository.ParseTiledJson(json);
+
+            Assert.AreEqual(2, result!.SpawnX);
+            Assert.AreEqual(3, result!.SpawnY);
+        }
+
+        [TestMethod]
+        public void BuildTiledJson_NoSpawn_HasSpawnIsFalseAfterRoundTrip()
+        {
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 2,
+                Height         = 1,
+                TileIndex      = new int[2],
+                AttributeIndex = new int[2]
+                // SpawnX/Y = -1 som standard
+            };
+
+            var json   = TiledMapRepository.BuildTiledJson(level);
+            var result = TiledMapRepository.ParseTiledJson(json);
+
+            Assert.IsFalse(result!.HasSpawn);
+        }
+
+        [TestMethod]
+        public void BuildTiledJson_TilesetSourcePreserved()
+        {
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 1,
+                Height         = 1,
+                TileIndex      = new int[1],
+                AttributeIndex = new int[1],
+                TilesetSource  = "winter.tsx"
+            };
+
+            var json   = TiledMapRepository.BuildTiledJson(level);
+            var result = TiledMapRepository.ParseTiledJson(json);
+
+            Assert.AreEqual("winter.tsx", result!.TilesetSource);
+        }
+
+        // ── Save — fil-I/O ────────────────────────────────────────────────────
+
+        [TestMethod]
+        public void Save_WritesFileToBasePath()
+        {
+            Directory.CreateDirectory(_tempDir!);
+            var repo = new TiledMapRepository(_tempDir!);
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width = 2, Height = 1,
+                TileIndex = new[] { 0, 1 }, AttributeIndex = new int[2]
+            };
+
+            repo.Save("testmap", level);
+
+            Assert.IsTrue(File.Exists(Path.Combine(_tempDir!, "testmap.json")));
+        }
+
+        [TestMethod]
+        public void Save_CreatesDirectory_IfMissing()
+        {
+            // Mappen existerar inte vid start — Save ska skapa den
+            var subDir = Path.Combine(_tempDir!, "UserMaps");
+            var repo   = new TiledMapRepository(subDir);
+            var level  = new FrostyPlatformer.Models.LevelObj
+            {
+                Width = 1, Height = 1,
+                TileIndex = new int[1], AttributeIndex = new int[1]
+            };
+
+            repo.Save("newmap", level);
+
+            Assert.IsTrue(File.Exists(Path.Combine(subDir, "newmap.json")));
+        }
+
+        [TestMethod]
+        public void Save_ThenLoad_ProducesEquivalentLevelObj()
+        {
+            Directory.CreateDirectory(_tempDir!);
+            var repo  = new TiledMapRepository(_tempDir!);
+            var original = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 3,
+                Height         = 2,
+                TileIndex      = new[] { 0, 1, 2, 3, 4, 0 },
+                AttributeIndex = new[] { 0, 0, 1, 1, 0, 0 },
+                SpawnX         = 1,
+                SpawnY         = 0,
+                TilesetSource  = "spring.tsx"
+            };
+
+            repo.Save("roundtrip", original);
+            var loaded = repo.Load("roundtrip");
+
+            Assert.IsNotNull(loaded);
+            Assert.AreEqual(original.Width,  loaded!.Width);
+            Assert.AreEqual(original.Height, loaded!.Height);
+            Assert.AreEqual(original.SpawnX, loaded!.SpawnX);
+            Assert.AreEqual(original.SpawnY, loaded!.SpawnY);
+            CollectionAssert.AreEqual(original.TileIndex,      loaded!.TileIndex);
+            CollectionAssert.AreEqual(original.AttributeIndex, loaded!.AttributeIndex);
+        }
+
         // ── GetAvailableMapIds ────────────────────────────────────────────────
 
         [TestMethod]

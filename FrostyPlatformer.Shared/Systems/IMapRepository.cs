@@ -32,5 +32,11 @@ namespace FrostyPlatformer.Systems
         /// Returnerar de kart-ID:n som repositoryt känner till.
         /// </summary>
         IEnumerable<string> GetAvailableMapIds();
+
+        /// <summary>
+        /// Sparar en karta till disk under angiven kart-ID.
+        /// Skapar nödvändiga mappar om de inte finns.
+        /// </summary>
+        void Save(string mapId, LevelObj level);
     }
 }

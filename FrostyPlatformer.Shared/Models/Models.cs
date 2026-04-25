@@ -30,6 +30,9 @@ namespace FrostyPlatformer.Models
 
         /// <summary>True om en spawn-punkt är satt (SpawnX och SpawnY är giltiga).</summary>
         public bool HasSpawn => SpawnX >= 0 && SpawnY >= 0;
+
+        /// <summary>Relativ sökväg till tileset-filen (.tsx) som refereras i Tiled JSON.</summary>
+        public string TilesetSource { get; set; } = "spring.tsx";
     }
 
 
