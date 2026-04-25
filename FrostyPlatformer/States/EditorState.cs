@@ -804,8 +804,8 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Tvåraders statusfält: rad 1 = karta/läge/tile-info, rad 2 = kortkommandon.
-        /// Mörkgrå bakgrundsremsa gör texten läsbar mot alla tile-färger.
+        /// Treraders statusfält med mörkgrå bakgrundsremsa.
+        /// Rad 1: läge/karta/brush  Rad 2: tile-info/spawn/muskontroller  Rad 3: tangentbord
         /// </summary>
         private void DrawHud(GameContext context, int hoverTileX, int hoverTileY, int mapAreaWidth)
         {
@@ -835,17 +835,18 @@ namespace FrostyPlatformer.States
             };
 
             string dirtyMark = _isDirty ? "*" : "";
-            string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}"
-                        + $"  b:{_selectedTileId}  {tileInfo}  {spawnInfo}";
-            string row2 = $"{mouseCtrl}  C=col G=spawn  N=new L=load Ctrl+S=save  Esc=exit";
+            // Rad 1: ~30 tecken  Rad 2: ~50 tecken  Rad 3: ~55 tecken (alla < 60 vid 480px logisk bredd)
+            string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  b:{_selectedTileId}";
+            string row2 = $"{tileInfo}  {spawnInfo}  {mouseCtrl}";
+            string row3 = "C=col  G=spawn  N=new  L=load  Ctrl+S=save  Esc=exit";
 
-            // Mörkgrå remsa bakom HUD-texten
-            _rc.FillRect(0, 0, context.ScreenWidth, 22, new RenderColor(0, 0, 0, 170));
+            _rc.FillRect(0, 0, context.ScreenWidth, 33, new RenderColor(0, 0, 0, 170));
             _rc.DrawText(row1, 2, 2);
             _rc.DrawText(row2, 2, 12);
+            _rc.DrawText(row3, 2, 22);
 
             if (_hudMessageTimer > 0f)
-                _rc.DrawText(_hudMessage, 2, 23);
+                _rc.DrawText(_hudMessage, 2, 34);
         }
     }
 }
