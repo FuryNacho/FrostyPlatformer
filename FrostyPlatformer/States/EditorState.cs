@@ -29,7 +29,7 @@ namespace FrostyPlatformer.States
     /// mönster som alla andra states. Escape leder tillbaka till MenuState.
     /// </remarks>
     /// <summary>Redigeringsläge i editorn — styr vad musklick gör.</summary>
-    internal enum EditorMode { Tiles, Collision }
+    internal enum EditorMode { Tiles, Collision, Spawn }
 
     internal sealed class EditorState : IGameState
     {
@@ -44,16 +44,24 @@ namespace FrostyPlatformer.States
         // ── Kollisionsoverlay ───────────────────────────────────────────────────
         private static readonly RenderColor CollisionOverlayColor =
             new RenderColor(220, 50, 50, 100);
+        private static readonly RenderColor SpawnMarkerColor =
+            new RenderColor(50, 220, 80, 200);
 
         private readonly GameServices   _services;
         private readonly IRenderContext _rc;
 
         private LevelObj?           _levelObj;
         private LevelObjMapAdapter? _mapAdapter;
+        private string              _mapId = "mapone";
         private float               _camTargetX;
         private float               _camTargetY;
         private int                 _selectedTileId;   // 0-baserat sprite-sheet-index
         private EditorMode          _mode;
+
+        // ── HUD-meddelanden ─────────────────────────────────────────────────────
+        private string _hudMessage     = "";
+        private float  _hudMessageTimer;
+        private const float HudMessageDuration = 2.0f;
 
         /// <summary>Skapar ett nytt EditorState.</summary>
         /// <param name="services">Gemensamma speltjänster (input, kamera, renderer m.m.).</param>
@@ -95,6 +103,12 @@ namespace FrostyPlatformer.States
                 return;
             }
 
+            if (_hudMessageTimer > 0f)
+                _hudMessageTimer -= deltaTime;
+
+            if (_services.Input.IsEditorSave)
+                HandleSave();
+
             if (_mapAdapter == null || _levelObj == null) return;
 
             var cam = _services.Camera.Calculate(
@@ -102,9 +116,11 @@ namespace FrostyPlatformer.States
                 _mapAdapter.Width, _mapAdapter.Height,
                 mapAreaWidth, context.ScreenHeight);
 
-            // Lägestoggle (C-tangent)
+            // Lägestoggle (C = kollision, G = spawn)
             if (_services.Input.IsEditorToggleCollision)
-                _mode = _mode == EditorMode.Tiles ? EditorMode.Collision : EditorMode.Tiles;
+                _mode = _mode == EditorMode.Collision ? EditorMode.Tiles : EditorMode.Collision;
+            if (_services.Input.IsEditorToggleSpawn)
+                _mode = _mode == EditorMode.Spawn ? EditorMode.Tiles : EditorMode.Spawn;
 
             bool mouseInMap = _services.Input.MouseX < mapAreaWidth;
 
@@ -112,8 +128,10 @@ namespace FrostyPlatformer.States
             {
                 if (_mode == EditorMode.Tiles)
                     HandleTilePainting(cam);
-                else
+                else if (_mode == EditorMode.Collision)
                     HandleCollisionPainting(cam);
+                else
+                    HandleSpawnPlacement(cam);
             }
             else
             {
@@ -126,6 +144,9 @@ namespace FrostyPlatformer.States
             if (_mode == EditorMode.Collision)
                 DrawCollisionOverlay(cam, mapAreaWidth, context.ScreenHeight);
             DrawGrid(cam, mapAreaWidth, context.ScreenHeight);
+
+            if (_levelObj!.HasSpawn)
+                DrawSpawnMarker(cam, mapAreaWidth);
 
             if (mouseInMap)
             {
@@ -255,6 +276,54 @@ namespace FrostyPlatformer.States
             _mapAdapter!.SetSolid(tx, ty, leftDown);
         }
 
+        /// <summary>
+        /// Validerar och sparar kartan till UserMaps/ via services.UserMaps.
+        /// Visar felmeddelande om spawn-punkt saknas. Visar bekräftelse i HUD vid lyckat sparande.
+        /// </summary>
+        private void HandleSave()
+        {
+            if (_levelObj == null) return;
+
+            if (!_levelObj.HasSpawn)
+            {
+                ShowMessage("No spawn set — place spawn (G) before saving!");
+                return;
+            }
+
+            _services.UserMaps.Save(_mapId, _levelObj);
+            ShowMessage($"Saved to UserMaps/{_mapId}.json");
+        }
+
+        private void ShowMessage(string message)
+        {
+            _hudMessage      = message;
+            _hudMessageTimer = HudMessageDuration;
+        }
+
+        /// <summary>
+        /// Sätter spawn-positionen till den tile som vänster musknapp klickar på.
+        /// Höger musknapp rensar spawn-positionen (SpawnX/Y = -1).
+        /// </summary>
+        private void HandleSpawnPlacement(CameraView cam)
+        {
+            if (!_services.Input.IsMouseLeftPressed && !_services.Input.IsMouseRightPressed) return;
+
+            if (_services.Input.IsMouseRightPressed)
+            {
+                _levelObj!.SpawnX = -1;
+                _levelObj!.SpawnY = -1;
+                return;
+            }
+
+            var (tx, ty) = EditorMath.ScreenToTile(
+                _services.Input.MouseX, _services.Input.MouseY, cam);
+
+            if (tx < 0 || tx >= _mapAdapter!.Width || ty < 0 || ty >= _mapAdapter!.Height) return;
+
+            _levelObj!.SpawnX = tx;
+            _levelObj!.SpawnY = ty;
+        }
+
         // ── Rendering ────────────────────────────────────────────────────────────
 
         private void DrawTiles(CameraView cam)
@@ -311,6 +380,25 @@ namespace FrostyPlatformer.States
             }
         }
 
+        /// <summary>
+        /// Ritar ett grönt kryss (+) mitt i spawn-tilen. Visas alltid när ett spawn är satt,
+        /// oavsett vilket redigeringsläge som är aktivt.
+        /// </summary>
+        private void DrawSpawnMarker(CameraView cam, int mapAreaWidth)
+        {
+            var (sx, sy) = EditorMath.TileToScreen(_levelObj!.SpawnX, _levelObj!.SpawnY, cam);
+            if (sx >= mapAreaWidth) return;
+
+            int ts  = GameConstants.TileSize;
+            int cx  = sx + ts / 2;
+            int cy  = sy + ts / 2;
+            int arm = ts / 2 - 1;
+            var c   = SpawnMarkerColor;
+
+            _rc.DrawLine(cx - arm, cy,       cx + arm, cy,       c);
+            _rc.DrawLine(cx,       cy - arm, cx,       cy + arm, c);
+        }
+
         private void DrawCursor(int tileX, int tileY, CameraView cam)
         {
             var (cx, cy) = EditorMath.TileToScreen(tileX, tileY, cam);
@@ -327,21 +415,36 @@ namespace FrostyPlatformer.States
         {
             if (_mapAdapter == null || _levelObj == null) return;
 
-            string modeLabel = _mode == EditorMode.Tiles ? "TILES" : "COLLISION";
+            string modeLabel = _mode switch
+            {
+                EditorMode.Collision => "COLLISION",
+                EditorMode.Spawn     => "SPAWN",
+                _                   => "TILES"
+            };
             string tileInfo  = hoverTileX >= 0
                 ? $"({hoverTileX},{hoverTileY}) id:{_mapAdapter.GetIndex(hoverTileX, hoverTileY)} "
                   + (_mapAdapter.GetSolid(hoverTileX, hoverTileY) ? "[solid]" : "[open]")
                 : "[palette]";
 
-            string controls = _mode == EditorMode.Tiles
-                ? "LMB=paint  RMB=erase"
-                : "LMB=solid  RMB=open";
+            string spawnInfo = _levelObj.HasSpawn
+                ? $"spawn:({_levelObj.SpawnX},{_levelObj.SpawnY})"
+                : "spawn:none";
 
-            string line = $"[{modeLabel}]  mapone {_mapAdapter.Width}x{_mapAdapter.Height}  "
-                        + $"brush:{_selectedTileId}  {tileInfo}  "
-                        + $"{controls}  C=toggle  Arrows=scroll  Esc=exit";
+            string controls = _mode switch
+            {
+                EditorMode.Collision => "LMB=solid  RMB=open",
+                EditorMode.Spawn     => "LMB=set  RMB=clear",
+                _                   => "LMB=paint  RMB=erase"
+            };
+
+            string line = $"[{modeLabel}]  {_mapId} {_mapAdapter.Width}x{_mapAdapter.Height}  "
+                        + $"brush:{_selectedTileId}  {tileInfo}  {spawnInfo}  "
+                        + $"{controls}  C=collision  G=spawn  Ctrl+S=save  Arrows=scroll  Esc=exit";
 
             _rc.DrawText(line, 2, 2);
+
+            if (_hudMessageTimer > 0f)
+                _rc.DrawText(_hudMessage, 2, 12);
         }
     }
 }

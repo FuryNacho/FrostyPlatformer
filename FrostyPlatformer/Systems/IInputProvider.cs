@@ -78,6 +78,17 @@ namespace FrostyPlatformer.Systems
         /// </summary>
         bool IsEditorToggleCollision { get; }
 
+        /// <summary>
+        /// True den frame som G-tangenten trycks ned. Används av EditorState
+        /// för att växla till spawn-redigeringsläge.
+        /// </summary>
+        bool IsEditorToggleSpawn { get; }
+
+        /// <summary>
+        /// True den frame som Ctrl+S trycks ned. Används av EditorState för att spara kartan.
+        /// </summary>
+        bool IsEditorSave { get; }
+
         // ─────────────────────────────────────────────
         // Mus-input
         // ─────────────────────────────────────────────

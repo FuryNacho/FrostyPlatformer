@@ -205,6 +205,11 @@ namespace FrostyPlatformer
             RegisterSounds();
 
             _stateManager = new States.GameStateManager();
+
+            string userMapsPath = System.IO.Path.Combine(
+                Core.Aggregate.Instance.ReadWrite.GetRoot,
+                "Resources", "Assets", "MapData", "UserMaps");
+
             _services = new States.GameServices(
                 _input, _camera, _tileRenderer, _renderContext, _stateManager,
                 _audioSystem,
@@ -212,6 +217,7 @@ namespace FrostyPlatformer
                 new ScriptSystem(),
                 new SettingsService(),
                 Core.Aggregate.Instance,
+                new Systems.TiledMapRepository(userMapsPath),
                 _dialog,
                 _questSystem,
                 _itemSystem,
