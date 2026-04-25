@@ -45,6 +45,7 @@ namespace UnitTest.Fakes
         public bool IsEditorToggleCollision { get; set; }
         public bool IsEditorToggleSpawn     { get; set; }
         public bool IsEditorSave            { get; set; }
+        public bool IsEditorLoad            { get; set; }
 
         // Mus-input
         public int  MouseX              { get; set; }

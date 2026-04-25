@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using FrostyPlatformer.Core;
 using FrostyPlatformer.Global;
 using FrostyPlatformer.Models;
@@ -63,6 +64,30 @@ namespace FrostyPlatformer.States
         private float  _hudMessageTimer;
         private const float HudMessageDuration = 2.0f;
 
+        // ── Dirty-flagga ────────────────────────────────────────────────────────
+        private bool _isDirty;
+
+        // ── Kartväljare ─────────────────────────────────────────────────────────
+        private bool              _showMapPicker;
+        private int               _pickerIndex;
+        private List<MapPickerEntry>? _pickerEntries;
+        private bool              _pickerPendingDirty;
+
+        private const int PickerLineHeight = 10;
+        private const int PickerX          = 16;
+        private const int PickerStartY     = 24;
+
+        private static readonly RenderColor PickerOverlayColor  = new RenderColor(0,   0,   0,  180);
+        private static readonly RenderColor PickerSelectColor   = new RenderColor(50,  80, 160, 220);
+        private static readonly RenderColor PickerHeaderBgColor = new RenderColor(30,  30,  30, 200);
+
+        private sealed class MapPickerEntry
+        {
+            public string  Label    { get; init; } = "";
+            public string? MapId    { get; init; }   // null = avdelningsrubrik (ej valbar)
+            public bool    IsUserMap { get; init; }
+        }
+
         /// <summary>Skapar ett nytt EditorState.</summary>
         /// <param name="services">Gemensamma speltjänster (input, kamera, renderer m.m.).</param>
         public EditorState(GameServices services)
@@ -74,16 +99,14 @@ namespace FrostyPlatformer.States
         /// <summary>Laddar standardkartan och placerar kameran i kartans övre vänstra hörn.</summary>
         public void Enter(GameContext context)
         {
-            _levelObj       = _services.Assets.GetMapData("mapone");
-            _mapAdapter     = _levelObj != null ? new LevelObjMapAdapter(_levelObj) : null;
-            _camTargetX     = 0f;
-            _camTargetY     = 0f;
+            LoadMap("mapone", isUserMap: false);
             _selectedTileId = 0;
             _mode           = EditorMode.Tiles;
+            _showMapPicker  = false;
         }
 
         /// <summary>
-        /// Hanterar input, ritar kartan med rutnät och palette, och tar emot redigeringsinput.
+        /// Hanterar input, ritar kartan med rutnät, palette och kartväljare.
         /// </summary>
         public void Update(GameContext context, float deltaTime)
         {
@@ -92,22 +115,41 @@ namespace FrostyPlatformer.States
 
             if (!_services.Input.IsWindowFocused) return;
 
-            int mapAreaWidth = context.ScreenWidth - PaletteWidth;
+            if (_hudMessageTimer > 0f)
+                _hudMessageTimer -= deltaTime;
 
-            HandleCameraScroll(deltaTime);
-
+            // Escape: stäng kartväljaren om öppen, annars lämna editorn
             if (_services.Input.IsCancelPressed)
             {
+                if (_showMapPicker) { CloseMapPicker(); return; }
                 context.MenuNavigation = Enum.MenuState.StartMenu;
                 _services.StateManager.Transition(new MenuState(_services), context);
                 return;
             }
 
-            if (_hudMessageTimer > 0f)
-                _hudMessageTimer -= deltaTime;
+            // Öppna kartväljaren (L)
+            if (!_showMapPicker && _services.Input.IsEditorLoad)
+                OpenMapPicker();
 
-            if (_services.Input.IsEditorSave)
-                HandleSave();
+            int mapAreaWidth = context.ScreenWidth - PaletteWidth;
+
+            // Kartväljare — hantera input och rita overlay, sedan avsluta framen
+            if (_showMapPicker)
+            {
+                UpdateMapPicker(context);
+                if (_mapAdapter != null && _levelObj != null)
+                {
+                    var bgCam = _services.Camera.Calculate(
+                        _camTargetX, _camTargetY,
+                        _mapAdapter.Width, _mapAdapter.Height,
+                        mapAreaWidth, context.ScreenHeight);
+                    DrawTiles(bgCam);
+                    DrawGrid(bgCam, mapAreaWidth, context.ScreenHeight);
+                    DrawPalette(context, mapAreaWidth);
+                }
+                DrawMapPickerOverlay(context);
+                return;
+            }
 
             if (_mapAdapter == null || _levelObj == null) return;
 
@@ -116,6 +158,10 @@ namespace FrostyPlatformer.States
                 _mapAdapter.Width, _mapAdapter.Height,
                 mapAreaWidth, context.ScreenHeight);
 
+            HandleCameraScroll(deltaTime);
+
+            if (_services.Input.IsEditorSave) HandleSave();
+
             // Lägestoggle (C = kollision, G = spawn)
             if (_services.Input.IsEditorToggleCollision)
                 _mode = _mode == EditorMode.Collision ? EditorMode.Tiles : EditorMode.Collision;
@@ -123,29 +169,23 @@ namespace FrostyPlatformer.States
                 _mode = _mode == EditorMode.Spawn ? EditorMode.Tiles : EditorMode.Spawn;
 
             bool mouseInMap = _services.Input.MouseX < mapAreaWidth;
-
             if (mouseInMap)
             {
-                if (_mode == EditorMode.Tiles)
-                    HandleTilePainting(cam);
-                else if (_mode == EditorMode.Collision)
-                    HandleCollisionPainting(cam);
-                else
-                    HandleSpawnPlacement(cam);
+                if (_mode == EditorMode.Tiles)          HandleTilePainting(cam);
+                else if (_mode == EditorMode.Collision) HandleCollisionPainting(cam);
+                else                                    HandleSpawnPlacement(cam);
             }
-            else
+            else if (_mode == EditorMode.Tiles)
             {
-                if (_mode == EditorMode.Tiles)
-                    HandlePaletteClick(context, mapAreaWidth);
+                HandlePaletteClick(context, mapAreaWidth);
             }
 
-            // Rita
             DrawTiles(cam);
             if (_mode == EditorMode.Collision)
                 DrawCollisionOverlay(cam, mapAreaWidth, context.ScreenHeight);
             DrawGrid(cam, mapAreaWidth, context.ScreenHeight);
 
-            if (_levelObj!.HasSpawn)
+            if (_levelObj.HasSpawn)
                 DrawSpawnMarker(cam, mapAreaWidth);
 
             if (mouseInMap)
@@ -258,6 +298,7 @@ namespace FrostyPlatformer.States
                 _mapAdapter!.SetTile(tx, ty, _selectedTileId);
             else
                 _mapAdapter!.SetTile(tx, ty, 0);
+            _isDirty = true;
         }
 
         /// <summary>
@@ -274,6 +315,7 @@ namespace FrostyPlatformer.States
                 _services.Input.MouseX, _services.Input.MouseY, cam);
 
             _mapAdapter!.SetSolid(tx, ty, leftDown);
+            _isDirty = true;
         }
 
         /// <summary>
@@ -291,6 +333,7 @@ namespace FrostyPlatformer.States
             }
 
             _services.UserMaps.Save(_mapId, _levelObj);
+            _isDirty = false;
             ShowMessage($"Saved to UserMaps/{_mapId}.json");
         }
 
@@ -322,6 +365,138 @@ namespace FrostyPlatformer.States
 
             _levelObj!.SpawnX = tx;
             _levelObj!.SpawnY = ty;
+            _isDirty = true;
+        }
+
+        // ── Kartladdning ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Laddar en karta från rätt repository och återställer kameran.
+        /// Nollställer dirty-flaggan — kartan är i synk med disk.
+        /// </summary>
+        private void LoadMap(string mapId, bool isUserMap)
+        {
+            var level = isUserMap
+                ? _services.UserMaps.Load(mapId)
+                : _services.GameMaps.Load(mapId);
+
+            if (level == null)
+            {
+                ShowMessage($"Could not load '{mapId}'");
+                return;
+            }
+
+            _levelObj   = level;
+            _mapAdapter = new LevelObjMapAdapter(_levelObj);
+            _mapId      = mapId;
+            _isDirty    = false;
+            _camTargetX = 0f;
+            _camTargetY = 0f;
+        }
+
+        // ── Kartväljare ──────────────────────────────────────────────────────────
+
+        private void OpenMapPicker()
+        {
+            _pickerEntries = new List<MapPickerEntry>();
+
+            _pickerEntries.Add(new MapPickerEntry { Label = "-- GAME MAPS --" });
+            foreach (var id in _services.GameMaps.GetAvailableMapIds())
+                _pickerEntries.Add(new MapPickerEntry { Label = id, MapId = id, IsUserMap = false });
+
+            var userIds = new List<string>(_services.UserMaps.GetAvailableMapIds());
+            if (userIds.Count > 0)
+            {
+                _pickerEntries.Add(new MapPickerEntry { Label = "-- USER MAPS --" });
+                foreach (var id in userIds)
+                    _pickerEntries.Add(new MapPickerEntry { Label = id, MapId = id, IsUserMap = true });
+            }
+
+            _pickerIndex        = _pickerEntries.FindIndex(e => e.MapId != null);
+            _pickerPendingDirty = false;
+            _showMapPicker      = true;
+        }
+
+        private void CloseMapPicker()
+        {
+            _showMapPicker      = false;
+            _pickerPendingDirty = false;
+        }
+
+        private void UpdateMapPicker(GameContext context)
+        {
+            if (_pickerEntries == null) return;
+
+            if (_services.Input.IsUpPressed)   MovePicker(-1);
+            if (_services.Input.IsDownPressed) MovePicker(+1);
+
+            if (_services.Input.IsConfirmPressed)
+                ConfirmPickerLoad();
+        }
+
+        private void MovePicker(int delta)
+        {
+            if (_pickerEntries == null) return;
+            int count = _pickerEntries.Count;
+            int next  = _pickerIndex + delta;
+            while (next >= 0 && next < count && _pickerEntries[next].MapId == null)
+                next += delta;
+            if (next >= 0 && next < count)
+                _pickerIndex = next;
+        }
+
+        private void ConfirmPickerLoad()
+        {
+            if (_pickerEntries == null) return;
+            var entry = _pickerEntries[_pickerIndex];
+            if (entry.MapId == null) return;
+
+            if (_isDirty && !_pickerPendingDirty)
+            {
+                ShowMessage("Unsaved changes! Press Enter again to discard.");
+                _pickerPendingDirty = true;
+                return;
+            }
+
+            LoadMap(entry.MapId, entry.IsUserMap);
+            CloseMapPicker();
+            _mode = EditorMode.Tiles;
+        }
+
+        private void DrawMapPickerOverlay(GameContext context)
+        {
+            if (_pickerEntries == null) return;
+
+            _rc.FillRect(0, 0, context.ScreenWidth, context.ScreenHeight, PickerOverlayColor);
+            _rc.DrawText("SELECT MAP   Up/Down=navigate   Enter=load   Esc=cancel", PickerX, 8);
+
+            int y = PickerStartY;
+            for (int i = 0; i < _pickerEntries.Count; i++)
+            {
+                var entry = _pickerEntries[i];
+
+                if (entry.MapId == null)
+                {
+                    // Avdelningsrubrik
+                    _rc.FillRect(PickerX - 2, y - 1, 160, PickerLineHeight, PickerHeaderBgColor);
+                    _rc.DrawText(entry.Label, PickerX, y);
+                }
+                else if (i == _pickerIndex)
+                {
+                    // Valt alternativ — markerad bakgrund
+                    _rc.FillRect(PickerX - 2, y - 1, 160, PickerLineHeight, PickerSelectColor);
+                    _rc.DrawText("> " + entry.Label, PickerX, y);
+                }
+                else
+                {
+                    _rc.DrawText("  " + entry.Label, PickerX, y);
+                }
+
+                y += PickerLineHeight;
+            }
+
+            if (_hudMessageTimer > 0f)
+                _rc.DrawText(_hudMessage, PickerX, y + PickerLineHeight);
         }
 
         // ── Rendering ────────────────────────────────────────────────────────────
@@ -437,9 +612,10 @@ namespace FrostyPlatformer.States
                 _                   => "LMB=paint  RMB=erase"
             };
 
-            string line = $"[{modeLabel}]  {_mapId} {_mapAdapter.Width}x{_mapAdapter.Height}  "
+            string dirtyMark = _isDirty ? "*" : "";
+            string line = $"[{modeLabel}]  {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  "
                         + $"brush:{_selectedTileId}  {tileInfo}  {spawnInfo}  "
-                        + $"{controls}  C=collision  G=spawn  Ctrl+S=save  Arrows=scroll  Esc=exit";
+                        + $"{controls}  C=col  G=spawn  L=load  Ctrl+S=save  Arrows=scroll  Esc=exit";
 
             _rc.DrawText(line, 2, 2);
 

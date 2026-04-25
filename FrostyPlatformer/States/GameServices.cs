@@ -55,6 +55,9 @@ namespace FrostyPlatformer.States
         /// <summary>Sprites, items och kartdata via Aggregates IAssets-implementation.</summary>
         public Core.IAssets Assets { get; }
 
+        /// <summary>Repository för inbyggda spelkartor (Tiled/). Editorn läser härifrån, sparar aldrig hit.</summary>
+        public Systems.IMapRepository GameMaps { get; }
+
         /// <summary>Repository för editorskapade kartor (UserMaps/). Editorn sparar alltid hit.</summary>
         public Systems.IMapRepository UserMaps { get; }
 
@@ -120,6 +123,7 @@ namespace FrostyPlatformer.States
             IScriptSystem script,
             ISettingsService settings,
             Core.IAssets assets,
+            Systems.IMapRepository gameMaps,
             Systems.IMapRepository userMaps,
             IDialogSystem dialog,
             IQuestSystem quests,
@@ -144,6 +148,7 @@ namespace FrostyPlatformer.States
             Script                   = script;
             Settings                 = settings;
             Assets                   = assets;
+            GameMaps                 = gameMaps;
             UserMaps                 = userMaps;
             Dialog                   = dialog;
             Quests                   = quests;

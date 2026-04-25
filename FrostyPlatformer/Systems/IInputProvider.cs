@@ -89,6 +89,11 @@ namespace FrostyPlatformer.Systems
         /// </summary>
         bool IsEditorSave { get; }
 
+        /// <summary>
+        /// True den frame som L-tangenten trycks ned. Öppnar kartväljaren i EditorState.
+        /// </summary>
+        bool IsEditorLoad { get; }
+
         // ─────────────────────────────────────────────
         // Mus-input
         // ─────────────────────────────────────────────

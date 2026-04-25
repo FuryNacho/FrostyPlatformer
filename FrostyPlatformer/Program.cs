@@ -206,9 +206,11 @@ namespace FrostyPlatformer
 
             _stateManager = new States.GameStateManager();
 
-            string userMapsPath = System.IO.Path.Combine(
+            string mapDataRoot  = System.IO.Path.Combine(
                 Core.Aggregate.Instance.ReadWrite.GetRoot,
-                "Resources", "Assets", "MapData", "UserMaps");
+                "Resources", "Assets", "MapData");
+            string gameMapsPath = System.IO.Path.Combine(mapDataRoot, "Tiled");
+            string userMapsPath = System.IO.Path.Combine(mapDataRoot, "UserMaps");
 
             _services = new States.GameServices(
                 _input, _camera, _tileRenderer, _renderContext, _stateManager,
@@ -217,6 +219,7 @@ namespace FrostyPlatformer
                 new ScriptSystem(),
                 new SettingsService(),
                 Core.Aggregate.Instance,
+                new Systems.TiledMapRepository(gameMapsPath),
                 new Systems.TiledMapRepository(userMapsPath),
                 _dialog,
                 _questSystem,
