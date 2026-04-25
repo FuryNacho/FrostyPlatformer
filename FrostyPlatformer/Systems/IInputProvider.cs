@@ -69,6 +69,34 @@ namespace FrostyPlatformer.Systems
         void ResetIdle();
 
         // ─────────────────────────────────────────────
+        // Mus-input
+        // ─────────────────────────────────────────────
+
+        /// <summary>Muspekarens X-koordinat i skärmpixlar.</summary>
+        int MouseX { get; }
+
+        /// <summary>Muspelarens Y-koordinat i skärmpixlar.</summary>
+        int MouseY { get; }
+
+        /// <summary>True medan vänster musknapp är nedtryckt.</summary>
+        bool IsMouseLeftDown { get; }
+
+        /// <summary>True medan höger musknapp är nedtryckt.</summary>
+        bool IsMouseRightDown { get; }
+
+        /// <summary>True den frame vänster musknapp precis trycktes ned.</summary>
+        bool IsMouseLeftPressed { get; }
+
+        /// <summary>True den frame höger musknapp precis trycktes ned.</summary>
+        bool IsMouseRightPressed { get; }
+
+        /// <summary>
+        /// Scrollhjulets rörelse sedan förra framen (positiv = uppåt, negativ = nedåt).
+        /// Noll om scrollhjulet inte rördes.
+        /// </summary>
+        int MouseScrollDelta { get; }
+
+        // ─────────────────────────────────────────────
         // Fönsterfokus
         // ─────────────────────────────────────────────
 

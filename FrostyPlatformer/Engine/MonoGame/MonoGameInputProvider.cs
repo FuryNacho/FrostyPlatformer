@@ -47,6 +47,8 @@ namespace FrostyPlatformer.Engine.MonoGame
         private KeyboardState _previous;
         private GamePadState  _pad;
         private GamePadState  _prevPad;
+        private MouseState    _mouse;
+        private MouseState    _prevMouse;
 
         private readonly Func<bool> _isWindowActive;
 
@@ -69,10 +71,12 @@ namespace FrostyPlatformer.Engine.MonoGame
         public MonoGameInputProvider(Func<bool> isWindowActive)
         {
             _isWindowActive = isWindowActive;
-            _current  = Keyboard.GetState();
-            _previous = _current;
-            _pad      = GamePad.GetState(PlayerIndex.One);
-            _prevPad  = _pad;
+            _current    = Keyboard.GetState();
+            _previous   = _current;
+            _pad        = GamePad.GetState(PlayerIndex.One);
+            _prevPad    = _pad;
+            _mouse      = Mouse.GetState();
+            _prevMouse  = _mouse;
         }
 
         // ─── Uppdatering ──────────────────────────────────────────────────────
@@ -83,10 +87,12 @@ namespace FrostyPlatformer.Engine.MonoGame
         /// </summary>
         public void Poll()
         {
-            _previous = _current;
-            _current  = Keyboard.GetState();
-            _prevPad  = _pad;
-            _pad      = GamePad.GetState(PlayerIndex.One);
+            _previous   = _current;
+            _current    = Keyboard.GetState();
+            _prevPad    = _pad;
+            _pad        = GamePad.GetState(PlayerIndex.One);
+            _prevMouse  = _mouse;
+            _mouse      = Mouse.GetState();
             UpdateJumpButtonState();
         }
 
@@ -185,6 +191,19 @@ namespace FrostyPlatformer.Engine.MonoGame
                 return false;
             }
         }
+
+        // ─── Mus-input ────────────────────────────────────────────────────────
+        public int  MouseX             => _mouse.X;
+        public int  MouseY             => _mouse.Y;
+        public bool IsMouseLeftDown    => _mouse.LeftButton  == ButtonState.Pressed;
+        public bool IsMouseRightDown   => _mouse.RightButton == ButtonState.Pressed;
+        public bool IsMouseLeftPressed =>
+            _mouse.LeftButton  == ButtonState.Pressed &&
+            _prevMouse.LeftButton  == ButtonState.Released;
+        public bool IsMouseRightPressed =>
+            _mouse.RightButton == ButtonState.Pressed &&
+            _prevMouse.RightButton == ButtonState.Released;
+        public int  MouseScrollDelta   => _mouse.ScrollWheelValue - _prevMouse.ScrollWheelValue;
 
         // ─── Fönsterfokus ─────────────────────────────────────────────────────
         public bool IsWindowFocused => _isWindowActive();

@@ -132,5 +132,88 @@ namespace UnitTest
             Assert.AreEqual(1, _input.JumpButtonState);
             Assert.AreEqual(1, _input.JumpButtonCounter);
         }
+
+        // ─────────────────────────────────────────────
+        // Mus-input (E1a)
+        // ─────────────────────────────────────────────
+
+        [TestMethod]
+        public void MouseProperties_AreZeroOrFalse_ByDefault()
+        {
+            Assert.AreEqual(0, _input.MouseX);
+            Assert.AreEqual(0, _input.MouseY);
+            Assert.IsFalse(_input.IsMouseLeftDown);
+            Assert.IsFalse(_input.IsMouseRightDown);
+            Assert.IsFalse(_input.IsMouseLeftPressed);
+            Assert.IsFalse(_input.IsMouseRightPressed);
+            Assert.AreEqual(0, _input.MouseScrollDelta);
+        }
+
+        [TestMethod]
+        public void MousePosition_CanBeSet_AndReadBack()
+        {
+            _input.MouseX = 320;
+            _input.MouseY = 240;
+
+            Assert.AreEqual(320, _input.MouseX);
+            Assert.AreEqual(240, _input.MouseY);
+        }
+
+        [TestMethod]
+        public void IsMouseLeftDown_CanBeSimulated()
+        {
+            _input.IsMouseLeftDown = true;
+            Assert.IsTrue(_input.IsMouseLeftDown);
+            Assert.IsFalse(_input.IsMouseRightDown);
+        }
+
+        [TestMethod]
+        public void IsMouseRightDown_CanBeSimulated()
+        {
+            _input.IsMouseRightDown = true;
+            Assert.IsTrue(_input.IsMouseRightDown);
+            Assert.IsFalse(_input.IsMouseLeftDown);
+        }
+
+        [TestMethod]
+        public void IsMouseLeftPressed_CanBeSimulated_IndependentlyOfDown()
+        {
+            // Pressed är en edge-trigger — kan vara true utan att Down är true (fast osannolikt i prod)
+            _input.IsMouseLeftPressed = true;
+            Assert.IsTrue(_input.IsMouseLeftPressed);
+            Assert.IsFalse(_input.IsMouseLeftDown);
+        }
+
+        [TestMethod]
+        public void IsMouseRightPressed_CanBeSimulated()
+        {
+            _input.IsMouseRightPressed = true;
+            Assert.IsTrue(_input.IsMouseRightPressed);
+        }
+
+        [TestMethod]
+        public void MouseScrollDelta_CanBePositive_And_Negative()
+        {
+            _input.MouseScrollDelta = 120;
+            Assert.AreEqual(120, _input.MouseScrollDelta);
+
+            _input.MouseScrollDelta = -120;
+            Assert.AreEqual(-120, _input.MouseScrollDelta);
+        }
+
+        [TestMethod]
+        public void FakeInputProvider_ImplementsMousePropertiesOfIInputProvider()
+        {
+            IInputProvider provider = _input;
+            _input.MouseX = 100;
+            _input.MouseY = 200;
+            _input.IsMouseLeftDown = true;
+            _input.MouseScrollDelta = 40;
+
+            Assert.AreEqual(100, provider.MouseX);
+            Assert.AreEqual(200, provider.MouseY);
+            Assert.IsTrue(provider.IsMouseLeftDown);
+            Assert.AreEqual(40, provider.MouseScrollDelta);
+        }
     }
 }

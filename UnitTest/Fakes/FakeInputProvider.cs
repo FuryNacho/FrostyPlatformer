@@ -41,6 +41,15 @@ namespace UnitTest.Fakes
         public bool JumpButtonDownReleaseOnce { get; set; }
         public int  JumpButtonCounter         { get; set; }
 
+        // Mus-input
+        public int  MouseX              { get; set; }
+        public int  MouseY              { get; set; }
+        public bool IsMouseLeftDown     { get; set; }
+        public bool IsMouseRightDown    { get; set; }
+        public bool IsMouseLeftPressed  { get; set; }
+        public bool IsMouseRightPressed { get; set; }
+        public int  MouseScrollDelta    { get; set; }
+
         // Fönsterfokus
         public bool IsWindowFocused    { get; set; } = true;
 
