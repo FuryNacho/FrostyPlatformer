@@ -28,6 +28,9 @@ namespace FrostyPlatformer.States
     /// GameStateManager.Transition(). Konstruktorn tar bara GameServices — samma
     /// mönster som alla andra states. Escape leder tillbaka till MenuState.
     /// </remarks>
+    /// <summary>Redigeringsläge i editorn — styr vad musklick gör.</summary>
+    internal enum EditorMode { Tiles, Collision }
+
     internal sealed class EditorState : IGameState
     {
         // ── Kamerakonstanter ────────────────────────────────────────────────────
@@ -38,6 +41,10 @@ namespace FrostyPlatformer.States
         private const int PaletteWidth   =
             GameConstants.TileSheetColumns * GameConstants.TileSize + PalettePadding * 2;
 
+        // ── Kollisionsoverlay ───────────────────────────────────────────────────
+        private static readonly RenderColor CollisionOverlayColor =
+            new RenderColor(220, 50, 50, 100);
+
         private readonly GameServices   _services;
         private readonly IRenderContext _rc;
 
@@ -46,6 +53,7 @@ namespace FrostyPlatformer.States
         private float               _camTargetX;
         private float               _camTargetY;
         private int                 _selectedTileId;   // 0-baserat sprite-sheet-index
+        private EditorMode          _mode;
 
         /// <summary>Skapar ett nytt EditorState.</summary>
         /// <param name="services">Gemensamma speltjänster (input, kamera, renderer m.m.).</param>
@@ -63,6 +71,7 @@ namespace FrostyPlatformer.States
             _camTargetX     = 0f;
             _camTargetY     = 0f;
             _selectedTileId = 0;
+            _mode           = EditorMode.Tiles;
         }
 
         /// <summary>
@@ -93,15 +102,29 @@ namespace FrostyPlatformer.States
                 _mapAdapter.Width, _mapAdapter.Height,
                 mapAreaWidth, context.ScreenHeight);
 
+            // Lägestoggle (C-tangent)
+            if (_services.Input.IsEditorToggleCollision)
+                _mode = _mode == EditorMode.Tiles ? EditorMode.Collision : EditorMode.Tiles;
+
             bool mouseInMap = _services.Input.MouseX < mapAreaWidth;
 
             if (mouseInMap)
-                HandleTilePainting(cam);
+            {
+                if (_mode == EditorMode.Tiles)
+                    HandleTilePainting(cam);
+                else
+                    HandleCollisionPainting(cam);
+            }
             else
-                HandlePaletteClick(context, mapAreaWidth);
+            {
+                if (_mode == EditorMode.Tiles)
+                    HandlePaletteClick(context, mapAreaWidth);
+            }
 
             // Rita
             DrawTiles(cam);
+            if (_mode == EditorMode.Collision)
+                DrawCollisionOverlay(cam, mapAreaWidth, context.ScreenHeight);
             DrawGrid(cam, mapAreaWidth, context.ScreenHeight);
 
             if (mouseInMap)
@@ -195,7 +218,7 @@ namespace FrostyPlatformer.States
             }
         }
 
-        // ── Tile-placering ───────────────────────────────────────────────────────
+        // ── Tile-placering och kollisionsredigering ──────────────────────────────
 
         /// <summary>
         /// Hanterar tile-målning (vänster musknapp) och radering (höger musknapp).
@@ -214,6 +237,22 @@ namespace FrostyPlatformer.States
                 _mapAdapter!.SetTile(tx, ty, _selectedTileId);
             else
                 _mapAdapter!.SetTile(tx, ty, 0);
+        }
+
+        /// <summary>
+        /// Hanterar kollisionsredigering: vänster = solid, höger = icke-solid.
+        /// Penseldragning stöds som i tile-läget.
+        /// </summary>
+        private void HandleCollisionPainting(CameraView cam)
+        {
+            bool leftDown  = _services.Input.IsMouseLeftDown;
+            bool rightDown = _services.Input.IsMouseRightDown;
+            if (!leftDown && !rightDown) return;
+
+            var (tx, ty) = EditorMath.ScreenToTile(
+                _services.Input.MouseX, _services.Input.MouseY, cam);
+
+            _mapAdapter!.SetSolid(tx, ty, leftDown);
         }
 
         // ── Rendering ────────────────────────────────────────────────────────────
@@ -245,6 +284,33 @@ namespace FrostyPlatformer.States
                 _rc.DrawLine(0, (int)y, mapAreaWidth, (int)y, color);
         }
 
+        /// <summary>
+        /// Ritar en halvtransparent röd overlay över alla solida tiles.
+        /// Visas bara i kollisionsläge. Ritas ovanpå tiles men under rutnätet.
+        /// </summary>
+        private void DrawCollisionOverlay(CameraView cam, int mapAreaWidth, int screenHeight)
+        {
+            int ts = GameConstants.TileSize;
+
+            for (int x = -1; x < cam.VisibleTilesX + 1; x++)
+            {
+                for (int y = -1; y < cam.VisibleTilesY + 2; y++)
+                {
+                    int mapX = (int)(x + cam.OffsetX);
+                    int mapY = (int)(y + cam.OffsetY);
+                    if (!_mapAdapter!.GetSolid(mapX, mapY)) continue;
+
+                    int screenX = (int)(x * ts - cam.TileOffsetX);
+                    int screenY = (int)(y * ts - cam.TileOffsetY);
+
+                    // Klipp mot kartvy för att inte rita in i paletten
+                    if (screenX >= mapAreaWidth) continue;
+
+                    _rc.FillRect(screenX, screenY, ts, ts, CollisionOverlayColor);
+                }
+            }
+        }
+
         private void DrawCursor(int tileX, int tileY, CameraView cam)
         {
             var (cx, cy) = EditorMath.TileToScreen(tileX, tileY, cam);
@@ -261,14 +327,19 @@ namespace FrostyPlatformer.States
         {
             if (_mapAdapter == null || _levelObj == null) return;
 
-            string tileInfo = hoverTileX >= 0
+            string modeLabel = _mode == EditorMode.Tiles ? "TILES" : "COLLISION";
+            string tileInfo  = hoverTileX >= 0
                 ? $"({hoverTileX},{hoverTileY}) id:{_mapAdapter.GetIndex(hoverTileX, hoverTileY)} "
                   + (_mapAdapter.GetSolid(hoverTileX, hoverTileY) ? "[solid]" : "[open]")
                 : "[palette]";
 
-            string line = $"mapone {_mapAdapter.Width}x{_mapAdapter.Height}  "
+            string controls = _mode == EditorMode.Tiles
+                ? "LMB=paint  RMB=erase"
+                : "LMB=solid  RMB=open";
+
+            string line = $"[{modeLabel}]  mapone {_mapAdapter.Width}x{_mapAdapter.Height}  "
                         + $"brush:{_selectedTileId}  {tileInfo}  "
-                        + "[Arrows=scroll  LMB=paint  RMB=erase  Esc=exit]";
+                        + $"{controls}  C=toggle  Arrows=scroll  Esc=exit";
 
             _rc.DrawText(line, 2, 2);
         }

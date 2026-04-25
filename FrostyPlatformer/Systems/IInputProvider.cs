@@ -69,6 +69,16 @@ namespace FrostyPlatformer.Systems
         void ResetIdle();
 
         // ─────────────────────────────────────────────
+        // Editorn
+        // ─────────────────────────────────────────────
+
+        /// <summary>
+        /// True den frame som C-tangenten trycks ned. Används av EditorState
+        /// för att växla mellan tile- och kollisionsredigeringsläge.
+        /// </summary>
+        bool IsEditorToggleCollision { get; }
+
+        // ─────────────────────────────────────────────
         // Mus-input
         // ─────────────────────────────────────────────
 

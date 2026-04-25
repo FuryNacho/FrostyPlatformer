@@ -192,6 +192,9 @@ namespace FrostyPlatformer.Engine.MonoGame
             }
         }
 
+        // ─── Editorn ──────────────────────────────────────────────────────────
+        public bool IsEditorToggleCollision => KeyPressed(Keys.C);
+
         // ─── Mus-input ────────────────────────────────────────────────────────
         public int  MouseX             => _mouse.X;
         public int  MouseY             => _mouse.Y;

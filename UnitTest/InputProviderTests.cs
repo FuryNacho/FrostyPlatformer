@@ -134,6 +134,23 @@ namespace UnitTest
         }
 
         // ─────────────────────────────────────────────
+        // Editorn (E2c)
+        // ─────────────────────────────────────────────
+
+        [TestMethod]
+        public void IsEditorToggleCollision_IsFalse_ByDefault()
+        {
+            Assert.IsFalse(_input.IsEditorToggleCollision);
+        }
+
+        [TestMethod]
+        public void IsEditorToggleCollision_CanBeSimulated()
+        {
+            _input.IsEditorToggleCollision = true;
+            Assert.IsTrue(_input.IsEditorToggleCollision);
+        }
+
+        // ─────────────────────────────────────────────
         // Mus-input (E1a)
         // ─────────────────────────────────────────────
 

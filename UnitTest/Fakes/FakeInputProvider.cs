@@ -41,6 +41,9 @@ namespace UnitTest.Fakes
         public bool JumpButtonDownReleaseOnce { get; set; }
         public int  JumpButtonCounter         { get; set; }
 
+        // Editorn
+        public bool IsEditorToggleCollision { get; set; }
+
         // Mus-input
         public int  MouseX              { get; set; }
         public int  MouseY              { get; set; }
