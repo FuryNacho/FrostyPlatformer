@@ -2,6 +2,7 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using FrostyPlatformer.Global;
 using FrostyPlatformer.Systems;
 
 namespace FrostyPlatformer.Engine.MonoGame
@@ -200,8 +201,10 @@ namespace FrostyPlatformer.Engine.MonoGame
         public bool IsEditorNew             => KeyPressed(Keys.N);
 
         // ─── Mus-input ────────────────────────────────────────────────────────
-        public int  MouseX             => _mouse.X;
-        public int  MouseY             => _mouse.Y;
+        // Mouse.GetState() returnerar fysiska skärmpixlar. Spellogiken arbetar i
+        // logiska pixlar (fysisk / PixelWidth). Dela med scale-faktorn för att matcha.
+        public int  MouseX             => _mouse.X / GameConstants.PixelWidth;
+        public int  MouseY             => _mouse.Y / GameConstants.PixelHeight;
         public bool IsMouseLeftDown    => _mouse.LeftButton  == ButtonState.Pressed;
         public bool IsMouseRightDown   => _mouse.RightButton == ButtonState.Pressed;
         public bool IsMouseLeftPressed =>
