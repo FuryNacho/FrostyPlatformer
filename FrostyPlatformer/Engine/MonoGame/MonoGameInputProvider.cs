@@ -165,8 +165,9 @@ namespace FrostyPlatformer.Engine.MonoGame
 
         public bool IsJumpReleased => KeyReleased(Keys.Up) || KeyReleased(Keys.Space);
 
-        public bool IsConfirmPressed => KeyPressed(Keys.Space) || KeyPressed(Keys.X)
-                                     || KeyPressed(Keys.S)     || PadPressed(Buttons.A);
+        public bool IsConfirmPressed => KeyPressed(Keys.Enter) || KeyPressed(Keys.Space)
+                                     || KeyPressed(Keys.X)     || KeyPressed(Keys.S)
+                                     || PadPressed(Buttons.A);
 
         public bool IsCancelPressed  => KeyPressed(Keys.Escape) || KeyPressed(Keys.P)
                                      || PadPressed(Buttons.Start);

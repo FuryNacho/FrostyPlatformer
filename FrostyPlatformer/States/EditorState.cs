@@ -12,7 +12,7 @@ namespace FrostyPlatformer.States
     /// <summary>
     /// Spelläge för den inbyggda level editorn. Visar en karta med fri
     /// kamerascrollning, tile-palette och direktredigering av tile-data.
-    /// Kollisionsredigering och spawn-punkt tillkommer i E2c–E2d.
+    /// Arbetar uteslutande mot UserMaps/ — spelets egna kartor rörs aldrig.
     /// </summary>
     /// <remarks>
     /// MÖNSTER: State Machine (konkret tillstånd)
@@ -43,7 +43,11 @@ namespace FrostyPlatformer.States
         private const int PaletteWidth   =
             GameConstants.TileSheetColumns * GameConstants.TileSize + PalettePadding * 2;
 
-        // ── Kollisionsoverlay ───────────────────────────────────────────────────
+        // ── Användarkartor — 7 fasta slots ──────────────────────────────────────
+        private const int MaxUserSlots = 7;
+        private static string SlotId(int n) => $"slot{n}";   // "slot1" .. "slot7"
+
+        // ── Färgkonstanter ──────────────────────────────────────────────────────
         private static readonly RenderColor CollisionOverlayColor =
             new RenderColor(220, 50, 50, 100);
         private static readonly RenderColor SpawnMarkerColor =
@@ -56,10 +60,10 @@ namespace FrostyPlatformer.States
 
         private LevelObj?           _levelObj;
         private LevelObjMapAdapter? _mapAdapter;
-        private string              _mapId = "mapone";
+        private string              _mapId = "";
         private float               _camTargetX;
         private float               _camTargetY;
-        private int                 _selectedTileId;   // 0-baserat sprite-sheet-index
+        private int                 _selectedTileId;
         private EditorMode          _mode;
 
         // ── HUD-meddelanden ─────────────────────────────────────────────────────
@@ -70,7 +74,7 @@ namespace FrostyPlatformer.States
         // ── Dirty-flagga ────────────────────────────────────────────────────────
         private bool _isDirty;
 
-        // ── Kartväljare ─────────────────────────────────────────────────────────
+        // ── Slot-picker ─────────────────────────────────────────────────────────
         private bool              _showMapPicker;
         private int               _pickerIndex;
         private List<MapPickerEntry>? _pickerEntries;
@@ -80,24 +84,24 @@ namespace FrostyPlatformer.States
         private const int PickerX          = 16;
         private const int PickerStartY     = 24;
 
-        private static readonly RenderColor PickerOverlayColor  = new RenderColor(0,   0,   0,  180);
-        private static readonly RenderColor PickerSelectColor   = new RenderColor(50,  80, 160, 220);
-        private static readonly RenderColor PickerHeaderBgColor = new RenderColor(30,  30,  30, 200);
+        private static readonly RenderColor PickerOverlayColor = new RenderColor(0,   0,   0,  180);
+        private static readonly RenderColor PickerSelectColor  = new RenderColor(50,  80, 160, 220);
 
         private sealed class MapPickerEntry
         {
-            public string  Label    { get; init; } = "";
-            public string? MapId    { get; init; }   // null = avdelningsrubrik (ej valbar)
-            public bool    IsUserMap { get; init; }
+            public string Label   { get; init; } = "";
+            public string SlotId  { get; init; } = "";
+            public bool   IsEmpty { get; init; }
         }
 
         // ── Ny-karta-dialog ──────────────────────────────────────────────────────
-        private bool _showNewMapDialog;
-        private int  _newMapWidthIdx    = 3;   // index i WidthPresets  → 32
-        private int  _newMapHeightIdx   = 3;   // index i HeightPresets → 24
-        private int  _newMapTilesetIdx;        // index i KnownTilesets → spring.tsx
-        private int  _newMapDialogField;       // 0=bredd, 1=höjd, 2=tileset
-        private bool _newMapPendingDirty;
+        private bool    _showNewMapDialog;
+        private int     _newMapWidthIdx    = 3;   // index i WidthPresets  → 32
+        private int     _newMapHeightIdx   = 3;   // index i HeightPresets → 24
+        private int     _newMapTilesetIdx;         // index i KnownTilesets → tilesheetspring
+        private int     _newMapDialogField;        // 0=bredd, 1=höjd, 2=tileset
+        private bool    _newMapPendingDirty;
+        private string? _pendingNewSlotId;         // vilket slot N-dialogen ska spara till
 
         private static readonly int[]    WidthPresets  = { 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 192, 256 };
         private static readonly int[]    HeightPresets = { 14, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 192, 256 };
@@ -115,17 +119,16 @@ namespace FrostyPlatformer.States
             _rc       = services.RenderContext;
         }
 
-        /// <summary>Laddar standardkartan och placerar kameran i kartans övre vänstra hörn.</summary>
+        /// <summary>Öppnar slot-pickern direkt vid start — ingen spelkarta laddas automatiskt.</summary>
         public void Enter(GameContext context)
         {
-            LoadMap("mapone", isUserMap: false);
             _selectedTileId = 0;
             _mode           = EditorMode.Tiles;
-            _showMapPicker  = false;
+            OpenMapPicker();
         }
 
         /// <summary>
-        /// Hanterar input, ritar kartan med rutnät, palette och kartväljare.
+        /// Hanterar input, ritar kartan med rutnät, palette och slot-picker.
         /// </summary>
         public void Update(GameContext context, float deltaTime)
         {
@@ -137,11 +140,31 @@ namespace FrostyPlatformer.States
             if (_hudMessageTimer > 0f)
                 _hudMessageTimer -= deltaTime;
 
-            // Escape: stäng öppna dialoger, annars lämna editorn
+            // Escape: stäng öppen dialog, eller lämna editorn
             if (_services.Input.IsCancelPressed)
             {
-                if (_showMapPicker)    { CloseMapPicker(); return; }
-                if (_showNewMapDialog) { _showNewMapDialog = false; _newMapPendingDirty = false; return; }
+                if (_showNewMapDialog)
+                {
+                    _showNewMapDialog    = false;
+                    _newMapPendingDirty  = false;
+                    _pendingNewSlotId    = null;
+                    OpenMapPicker();      // gå tillbaka till pickern
+                    return;
+                }
+                if (_showMapPicker)
+                {
+                    // Ingen karta laddad = lämna editorn, annars stäng bara pickern
+                    if (_mapAdapter == null)
+                    {
+                        context.MenuNavigation = Enum.MenuState.StartMenu;
+                        _services.StateManager.Transition(new MenuState(_services), context);
+                    }
+                    else
+                    {
+                        CloseMapPicker();
+                    }
+                    return;
+                }
                 context.MenuNavigation = Enum.MenuState.StartMenu;
                 _services.StateManager.Transition(new MenuState(_services), context);
                 return;
@@ -149,15 +172,15 @@ namespace FrostyPlatformer.States
 
             bool noDialog = !_showMapPicker && !_showNewMapDialog;
 
-            // Öppna kartväljaren (L) eller ny-karta-dialog (N)
-            if (noDialog && _services.Input.IsEditorLoad) OpenMapPicker();
-            if (noDialog && _services.Input.IsEditorNew)  HandleNewMapRequest();
+            // L eller N öppnar slot-pickern
+            if (noDialog && (_services.Input.IsEditorLoad || _services.Input.IsEditorNew))
+                OpenMapPicker();
 
             int mapAreaWidth = context.ScreenWidth - PaletteWidth;
             int visX = mapAreaWidth / GameConstants.TileSize;
             int visY = context.ScreenHeight / GameConstants.TileSize;
 
-            // Kartväljare — hantera input och rita overlay, sedan avsluta framen
+            // Slot-picker — hantera input och rita overlay
             if (_showMapPicker)
             {
                 UpdateMapPicker(context);
@@ -176,7 +199,7 @@ namespace FrostyPlatformer.States
                 return;
             }
 
-            // Ny-karta-dialog — hantera input och rita overlay
+            // Ny-karta-dialog
             if (_showNewMapDialog)
             {
                 UpdateNewMapDialog();
@@ -206,7 +229,6 @@ namespace FrostyPlatformer.States
 
             if (_services.Input.IsEditorSave) HandleSave();
 
-            // Lägestoggle (C = kollision, G = spawn)
             if (_services.Input.IsEditorToggleCollision)
                 _mode = _mode == EditorMode.Collision ? EditorMode.Tiles : EditorMode.Collision;
             if (_services.Input.IsEditorToggleSpawn)
@@ -247,10 +269,10 @@ namespace FrostyPlatformer.States
             DrawPalette(context, mapAreaWidth);
         }
 
-        /// <summary>Rendering sker i Update — Draw är avsiktligt tom (se GameplayState).</summary>
+        /// <summary>Rendering sker i Update — Draw är avsiktligt tom.</summary>
         public void Draw(IRenderContext renderContext) { }
 
-        /// <summary>Ingen städning krävs i v1.</summary>
+        /// <summary>Ingen städning krävs.</summary>
         public void Exit(GameContext context) { }
 
         // ── Kameranavigering ─────────────────────────────────────────────────────
@@ -273,7 +295,6 @@ namespace FrostyPlatformer.States
 
         /// <summary>
         /// Väljer tile när användaren klickar i palette-sidebaren.
-        /// Tile-ID är 0-baserat (0 = lufttile, 1 = första sprite-sheet-tilen).
         /// </summary>
         private void HandlePaletteClick(GameContext context, int mapAreaWidth)
         {
@@ -298,7 +319,6 @@ namespace FrostyPlatformer.States
         {
             int ts = GameConstants.TileSize;
 
-            // Beräkna vilken palette-tile muspekaren är över
             int relX      = _services.Input.MouseX - mapAreaWidth - PalettePadding;
             int relY      = _services.Input.MouseY - PalettePadding;
             int hoverCol  = relX >= 0 ? relX / ts : -1;
@@ -339,8 +359,8 @@ namespace FrostyPlatformer.States
         // ── Tile-placering och kollisionsredigering ──────────────────────────────
 
         /// <summary>
-        /// Hanterar tile-målning (vänster musknapp) och radering (höger musknapp).
-        /// Aktiv så länge knappen hålls ned — "penseldragning" fungerar automatiskt.
+        /// Hanterar tile-målning (vänster) och radering (höger).
+        /// Penseldragning fungerar automatiskt medan knappen hålls ned.
         /// </summary>
         private void HandleTilePainting(CameraView cam)
         {
@@ -351,16 +371,12 @@ namespace FrostyPlatformer.States
             var (tx, ty) = EditorMath.ScreenToTile(
                 _services.Input.MouseX, _services.Input.MouseY, cam);
 
-            if (leftDown)
-                _mapAdapter!.SetTile(tx, ty, _selectedTileId);
-            else
-                _mapAdapter!.SetTile(tx, ty, 0);
+            _mapAdapter!.SetTile(tx, ty, leftDown ? _selectedTileId : 0);
             _isDirty = true;
         }
 
         /// <summary>
-        /// Hanterar kollisionsredigering: vänster = solid, höger = icke-solid.
-        /// Penseldragning stöds som i tile-läget.
+        /// Hanterar kollisionsredigering: vänster = solid, höger = öppen.
         /// </summary>
         private void HandleCollisionPainting(CameraView cam)
         {
@@ -376,8 +392,7 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Validerar och sparar kartan till UserMaps/ via services.UserMaps.
-        /// Visar felmeddelande om spawn-punkt saknas. Visar bekräftelse i HUD vid lyckat sparande.
+        /// Sparar kartan till UserMaps/. Kräver att spawn-punkt är satt.
         /// </summary>
         private void HandleSave()
         {
@@ -391,7 +406,7 @@ namespace FrostyPlatformer.States
 
             _services.UserMaps.Save(_mapId, _levelObj);
             _isDirty = false;
-            ShowMessage($"Saved to UserMaps/{_mapId}.json");
+            ShowMessage($"Saved: UserMaps/{_mapId}.json");
         }
 
         private void ShowMessage(string message)
@@ -401,8 +416,7 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Sätter spawn-positionen till den tile som vänster musknapp klickar på.
-        /// Höger musknapp rensar spawn-positionen (SpawnX/Y = -1).
+        /// Sätter spawn-positionen till klickad tile. Höger musknapp rensar spawn.
         /// </summary>
         private void HandleSpawnPlacement(CameraView cam)
         {
@@ -428,8 +442,7 @@ namespace FrostyPlatformer.States
         // ── Kartladdning ─────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Laddar en karta från rätt repository och återställer kameran.
-        /// Nollställer dirty-flaggan — kartan är i synk med disk.
+        /// Laddar en karta från UserMaps/ och återställer kameran.
         /// </summary>
         private void LoadMap(string mapId, bool isUserMap)
         {
@@ -453,10 +466,6 @@ namespace FrostyPlatformer.States
             RegisterTilesheet(_levelObj.TilesetSource);
         }
 
-        /// <summary>
-        /// Registrerar rätt tilesheet-sprite för MapTileSheet-ID:t.
-        /// Deriverar Aggregate-sprite-namnet från TilesetSource ("spring.tsx" → "tilesheetspring").
-        /// </summary>
         private void RegisterTilesheet(string tilesetSource)
         {
             // TilesetSource är t.ex. "tilesheetspring.tsx" — Aggregate-nyckeln är samma utan ".tsx"
@@ -466,25 +475,31 @@ namespace FrostyPlatformer.States
                 _rc.RegisterSprite(SpriteId.MapTileSheet, path);
         }
 
-        // ── Kartväljare ──────────────────────────────────────────────────────────
+        // ── Slot-picker ──────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Öppnar slot-pickern med de 7 fasta användarkartorna.
+        /// Slottar utan sparad fil visas som tomma.
+        /// </summary>
         private void OpenMapPicker()
         {
             _pickerEntries = new List<MapPickerEntry>();
+            var existing   = new System.Collections.Generic.HashSet<string>(
+                _services.UserMaps.GetAvailableMapIds());
 
-            _pickerEntries.Add(new MapPickerEntry { Label = "-- GAME MAPS --" });
-            foreach (var id in _services.GameMaps.GetAvailableMapIds())
-                _pickerEntries.Add(new MapPickerEntry { Label = id, MapId = id, IsUserMap = false });
-
-            var userIds = new List<string>(_services.UserMaps.GetAvailableMapIds());
-            if (userIds.Count > 0)
+            for (int i = 1; i <= MaxUserSlots; i++)
             {
-                _pickerEntries.Add(new MapPickerEntry { Label = "-- USER MAPS --" });
-                foreach (var id in userIds)
-                    _pickerEntries.Add(new MapPickerEntry { Label = id, MapId = id, IsUserMap = true });
+                string slotId  = SlotId(i);
+                bool   isEmpty = !existing.Contains(slotId);
+                _pickerEntries.Add(new MapPickerEntry
+                {
+                    Label   = isEmpty ? $"Slot {i}  [Empty]" : $"Slot {i}  [{slotId}]",
+                    SlotId  = slotId,
+                    IsEmpty = isEmpty
+                });
             }
 
-            _pickerIndex        = _pickerEntries.FindIndex(e => e.MapId != null);
+            _pickerIndex        = 0;
             _pickerPendingDirty = false;
             _showMapPicker      = true;
         }
@@ -496,19 +511,6 @@ namespace FrostyPlatformer.States
         }
 
         // ── Ny-karta-dialog ──────────────────────────────────────────────────────
-
-        private void HandleNewMapRequest()
-        {
-            if (_isDirty && !_newMapPendingDirty)
-            {
-                ShowMessage("Unsaved changes! Press N again to discard and create new.");
-                _newMapPendingDirty = true;
-                return;
-            }
-            _newMapPendingDirty  = false;
-            _newMapDialogField   = 0;
-            _showNewMapDialog    = true;
-        }
 
         private void UpdateNewMapDialog()
         {
@@ -541,6 +543,14 @@ namespace FrostyPlatformer.States
 
         private void ConfirmNewMap()
         {
+            // Om en karta redan är öppen och osparad — varna en gång
+            if (_isDirty && _mapAdapter != null && !_newMapPendingDirty)
+            {
+                ShowMessage("Unsaved changes! Press Enter again to discard.");
+                _newMapPendingDirty = true;
+                return;
+            }
+
             int w = WidthPresets[_newMapWidthIdx];
             int h = HeightPresets[_newMapHeightIdx];
 
@@ -555,28 +565,20 @@ namespace FrostyPlatformer.States
                 SpawnY         = 1
             };
 
-            string mapId    = GenerateNewMapId();
-            _levelObj       = level;
-            _mapAdapter     = new LevelObjMapAdapter(_levelObj);
-            _mapId          = mapId;
-            _isDirty        = true;
-            _camTargetX     = 0f;
-            _camTargetY     = 0f;
-            _mode           = EditorMode.Tiles;
-            _showNewMapDialog = false;
+            string mapId        = _pendingNewSlotId ?? SlotId(1);
+            _levelObj           = level;
+            _mapAdapter         = new LevelObjMapAdapter(_levelObj);
+            _mapId              = mapId;
+            _isDirty            = true;
+            _camTargetX         = 0f;
+            _camTargetY         = 0f;
+            _mode               = EditorMode.Tiles;
+            _showNewMapDialog   = false;
+            _newMapPendingDirty = false;
+            _pendingNewSlotId   = null;
 
             RegisterTilesheet(level.TilesetSource);
             ShowMessage($"New map '{mapId}' created — Ctrl+S to save.");
-        }
-
-        private string GenerateNewMapId()
-        {
-            var existing = new System.Collections.Generic.HashSet<string>(
-                _services.UserMaps.GetAvailableMapIds());
-            if (!existing.Contains("newmap")) return "newmap";
-            int n = 2;
-            while (existing.Contains($"newmap{n}")) n++;
-            return $"newmap{n}";
         }
 
         private void DrawNewMapDialogOverlay(GameContext context)
@@ -588,7 +590,10 @@ namespace FrostyPlatformer.States
             _rc.FillRect(0, 0, context.ScreenWidth, context.ScreenHeight, PickerOverlayColor);
             _rc.FillRect(boxX, boxY, boxW, boxH, new RenderColor(20, 20, 30, 240));
 
-            _rc.DrawText("NEW MAP", labelX, boxY + 4);
+            string title = _pendingNewSlotId != null
+                ? $"NEW MAP  ({_pendingNewSlotId})"
+                : "NEW MAP";
+            _rc.DrawText(title, labelX, boxY + 4);
 
             string[] labels = { "Width:", "Height:", "Tileset:" };
             string[] values =
@@ -603,40 +608,41 @@ namespace FrostyPlatformer.States
                 int y = boxY + 20 + i * lineH;
                 if (i == _newMapDialogField)
                     _rc.FillRect(labelX - 2, y - 1, boxW - 12, lineH, PickerSelectColor);
-                _rc.DrawText(labels[i], labelX,  y);
-                _rc.DrawText(values[i], valueX,  y);
+                _rc.DrawText(labels[i], labelX, y);
+                _rc.DrawText(values[i], valueX, y);
             }
 
-            _rc.DrawText("Enter=create   Esc=cancel", labelX, boxY + boxH - 12);
+            _rc.DrawText("Enter=create   Esc=back", labelX, boxY + boxH - 12);
         }
 
         private void UpdateMapPicker(GameContext context)
         {
             if (_pickerEntries == null) return;
 
-            if (_services.Input.IsUpPressed)   MovePicker(-1);
-            if (_services.Input.IsDownPressed) MovePicker(+1);
+            if (_services.Input.IsUpPressed)
+                _pickerIndex = Math.Max(0, _pickerIndex - 1);
+            if (_services.Input.IsDownPressed)
+                _pickerIndex = Math.Min(_pickerEntries.Count - 1, _pickerIndex + 1);
 
             if (_services.Input.IsConfirmPressed)
                 ConfirmPickerLoad();
-        }
-
-        private void MovePicker(int delta)
-        {
-            if (_pickerEntries == null) return;
-            int count = _pickerEntries.Count;
-            int next  = _pickerIndex + delta;
-            while (next >= 0 && next < count && _pickerEntries[next].MapId == null)
-                next += delta;
-            if (next >= 0 && next < count)
-                _pickerIndex = next;
         }
 
         private void ConfirmPickerLoad()
         {
             if (_pickerEntries == null) return;
             var entry = _pickerEntries[_pickerIndex];
-            if (entry.MapId == null) return;
+
+            if (entry.IsEmpty)
+            {
+                // Tomt slot — öppna N-dialogen för att konfigurera den nya kartan
+                _pendingNewSlotId   = entry.SlotId;
+                _showMapPicker      = false;
+                _newMapDialogField  = 0;
+                _newMapPendingDirty = false;
+                _showNewMapDialog   = true;
+                return;
+            }
 
             if (_isDirty && !_pickerPendingDirty)
             {
@@ -645,7 +651,7 @@ namespace FrostyPlatformer.States
                 return;
             }
 
-            LoadMap(entry.MapId, entry.IsUserMap);
+            LoadMap(entry.SlotId, isUserMap: true);
             CloseMapPicker();
             _mode = EditorMode.Tiles;
         }
@@ -655,28 +661,24 @@ namespace FrostyPlatformer.States
             if (_pickerEntries == null) return;
 
             _rc.FillRect(0, 0, context.ScreenWidth, context.ScreenHeight, PickerOverlayColor);
-            _rc.DrawText("SELECT MAP   Up/Down=navigate   Enter=load   Esc=cancel", PickerX, 8);
+            _rc.DrawText("YOUR MAPS   Up/Down=navigate   Enter=open/create   Esc=exit", PickerX, 8);
 
             int y = PickerStartY;
             for (int i = 0; i < _pickerEntries.Count; i++)
             {
-                var entry = _pickerEntries[i];
+                var  entry    = _pickerEntries[i];
+                bool selected = i == _pickerIndex;
 
-                if (entry.MapId == null)
+                if (selected)
                 {
-                    // Avdelningsrubrik
-                    _rc.FillRect(PickerX - 2, y - 1, 160, PickerLineHeight, PickerHeaderBgColor);
-                    _rc.DrawText(entry.Label, PickerX, y);
-                }
-                else if (i == _pickerIndex)
-                {
-                    // Valt alternativ — markerad bakgrund
-                    _rc.FillRect(PickerX - 2, y - 1, 160, PickerLineHeight, PickerSelectColor);
-                    _rc.DrawText("> " + entry.Label, PickerX, y);
+                    string action = entry.IsEmpty ? "[Enter = new map]" : "[Enter = load]";
+                    _rc.FillRect(PickerX - 2, y - 1, context.ScreenWidth - PickerX * 2,
+                                 PickerLineHeight, PickerSelectColor);
+                    _rc.DrawText($"> {entry.Label}  {action}", PickerX, y);
                 }
                 else
                 {
-                    _rc.DrawText("  " + entry.Label, PickerX, y);
+                    _rc.DrawText($"  {entry.Label}", PickerX, y);
                 }
 
                 y += PickerLineHeight;
@@ -722,8 +724,7 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Ritar en gul ram runt kartans faktiska tile-yta så att användaren
-        /// tydligt ser var kartan slutar och tomt utrymme börjar.
+        /// Ritar en gul ram runt kartans faktiska tile-yta.
         /// </summary>
         private void DrawMapBounds(CameraView cam, int mapAreaWidth, int screenHeight)
         {
@@ -747,8 +748,7 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Ritar en halvtransparent röd overlay över alla solida tiles.
-        /// Visas bara i kollisionsläge. Ritas ovanpå tiles men under rutnätet.
+        /// Ritar halvtransparent röd overlay över solida tiles (visas bara i kollisionsläge).
         /// </summary>
         private void DrawCollisionOverlay(CameraView cam, int mapAreaWidth, int screenHeight)
         {
@@ -765,7 +765,6 @@ namespace FrostyPlatformer.States
                     int screenX = (int)(x * ts - cam.TileOffsetX);
                     int screenY = (int)(y * ts - cam.TileOffsetY);
 
-                    // Klipp mot kartvy för att inte rita in i paletten
                     if (screenX >= mapAreaWidth) continue;
 
                     _rc.FillRect(screenX, screenY, ts, ts, CollisionOverlayColor);
@@ -774,8 +773,7 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Ritar ett grönt kryss (+) mitt i spawn-tilen. Visas alltid när ett spawn är satt,
-        /// oavsett vilket redigeringsläge som är aktivt.
+        /// Ritar ett grönt kryss mitt i spawn-tilen.
         /// </summary>
         private void DrawSpawnMarker(CameraView cam, int mapAreaWidth)
         {
@@ -804,8 +802,7 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Treraders statusfält med mörkgrå bakgrundsremsa.
-        /// Rad 1: läge/karta/brush  Rad 2: tile-info/spawn/muskontroller  Rad 3: tangentbord
+        /// Treraders statusfält: läge/karta/brush — tile-info/spawn — tangentbord.
         /// </summary>
         private void DrawHud(GameContext context, int hoverTileX, int hoverTileY, int mapAreaWidth)
         {
@@ -835,10 +832,9 @@ namespace FrostyPlatformer.States
             };
 
             string dirtyMark = _isDirty ? "*" : "";
-            // Rad 1: ~30 tecken  Rad 2: ~50 tecken  Rad 3: ~55 tecken (alla < 60 vid 480px logisk bredd)
             string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  b:{_selectedTileId}";
             string row2 = $"{tileInfo}  {spawnInfo}  {mouseCtrl}";
-            string row3 = "C=col  G=spawn  N=new  L=load  Ctrl+S=save  Esc=exit";
+            string row3 = "C=col  G=spawn  L=maps  Ctrl+S=save  Esc=exit";
 
             _rc.FillRect(0, 0, context.ScreenWidth, 33, new RenderColor(0, 0, 0, 170));
             _rc.DrawText(row1, 2, 2);
