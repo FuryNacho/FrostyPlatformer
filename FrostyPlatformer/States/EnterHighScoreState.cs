@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using FrostyPlatformer.Core;
-using FrostyPlatformer.Global;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Rendering;
 
@@ -28,7 +27,6 @@ namespace FrostyPlatformer.States
     {
         private readonly GameServices _services;
         private readonly IRenderContext _rc;
-        private const int ScreenW = GameConstants.ScreenWidth;
 
         private int _hsSelectX;
         private int _hsSelectY = 1;
@@ -60,20 +58,22 @@ namespace FrostyPlatformer.States
 
             bool newTop = _services.Score.IsNewFirstPlace(context.EndTotalTime);
 
+            int sw = context.ScreenWidth;
+
             // Rita rubriker
             if (newTop)
             {
                 string gratz = "Congratulations!";
-                _rc.DrawText(gratz, (ScreenW / 2) - ((gratz.Length * 8) / 2), 8);
+                _rc.DrawText(gratz, (sw / 2) - ((gratz.Length * 8) / 2), 8);
             }
             string header = newTop ? "You've Beaten The Top High Score" : "New High Score";
-            _rc.DrawText(header, (ScreenW / 2) - ((header.Length * 8) / 2), 20);
+            _rc.DrawText(header, (sw / 2) - ((header.Length * 8) / 2), 20);
 
             string endTime = context.EndTotalTime.ToString("hh':'mm':'ss");
-            _rc.DrawText(endTime, (ScreenW / 2) - ((endTime.Length * 8) / 2), 35);
+            _rc.DrawText(endTime, (sw / 2) - ((endTime.Length * 8) / 2), 35);
 
             string inst = "Enter Your Tag";
-            _rc.DrawText(inst, (ScreenW / 2) - ((inst.Length * 8) / 2), 58);
+            _rc.DrawText(inst, (sw / 2) - ((inst.Length * 8) / 2), 58);
 
             // Rita ASCII-väljaren
             for (int i = 0; i < ActionList.Count; i++)
@@ -84,7 +84,8 @@ namespace FrostyPlatformer.States
 
                 if (_hsSelectX == x) _select = x;
 
-                int fx = (8 + x * 20) + 90;
+                const int AsciiChooserCenterOffset = 30; // Halvspann för 4 kolumner med 20px mellanrum: 3*20/2
+                int fx = (sw / 2) + (x * 20 - AsciiChooserCenterOffset);
                 int fy = (20 + y * 20) + 55;
 
                 int sx = 0, sy = 0;
@@ -115,7 +116,8 @@ namespace FrostyPlatformer.States
                 }
             }
 
-            _rc.DrawText("Press OK when done", 8, 210);
+            const int BottomTextMargin = 14; // Pixlar från skärmens nederkant till textens överkant
+            _rc.DrawText("Press OK when done", 8, context.ScreenHeight - BottomTextMargin);
 
             // Input
             if (!_services.Input.IsWindowFocused) return;

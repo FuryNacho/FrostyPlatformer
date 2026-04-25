@@ -1,6 +1,5 @@
 #nullable enable
 using FrostyPlatformer.Core;
-using FrostyPlatformer.Global;
 using FrostyPlatformer.Rendering;
 
 namespace FrostyPlatformer.States
@@ -24,8 +23,6 @@ namespace FrostyPlatformer.States
     {
         private readonly GameServices _services;
         private readonly IRenderContext _rc;
-        private const int ScreenW = GameConstants.ScreenWidth;
-        private const int ScreenH = GameConstants.ScreenHeight;
 
         private int _animCount = 10;
 
@@ -67,8 +64,8 @@ namespace FrostyPlatformer.States
             }
 
             var color = RenderColor.Random();
-            int hw = ScreenW / 2;
-            int hh = ScreenH / 2;
+            int hw = context.ScreenWidth  / 2;
+            int hh = context.ScreenHeight / 2;
 
             if (_animCount >= 7)
             {
@@ -102,7 +99,8 @@ namespace FrostyPlatformer.States
             {
                 _rc.Clear(RenderColor.Black);
                 _rc.DrawText("Player Dead", 8, 4);
-                _rc.DrawText("Press any button", 8, 217);
+                const int BottomTextMargin = 7; // Pixlar från skärmens nederkant till textens överkant
+                _rc.DrawText("Press any button", 8, context.ScreenHeight - BottomTextMargin);
             }
 
             _animCount--;

@@ -125,5 +125,23 @@ namespace FrostyPlatformer.Core
         /// </summary>
         public bool RightToAccessPodium { get; set; } = true;
 
+        // ─────────────────────────────────────────────
+        // Skärmdimensioner (dynamiska — uppdateras vid fönsterändring)
+        // ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Skärmens bredd i logiska spelpixlar. Uppdateras av Program.cs vid
+        /// fönsterändring. States använder denna istället för GameConstants.ScreenWidth
+        /// för att stödja dynamisk upplösning (Fas 4b+).
+        /// </summary>
+        public int ScreenWidth  { get; set; } = Global.GameConstants.ScreenWidth;
+
+        /// <summary>
+        /// Skärmens höjd i logiska spelpixlar. Uppdateras av Program.cs vid
+        /// fönsterändring. States använder denna istället för GameConstants.ScreenHeight
+        /// för att stödja dynamisk upplösning (Fas 4b+).
+        /// </summary>
+        public int ScreenHeight { get; set; } = Global.GameConstants.ScreenHeight;
+
     }
 }

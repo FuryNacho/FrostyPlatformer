@@ -1,6 +1,5 @@
 #nullable enable
 using FrostyPlatformer.Core;
-using FrostyPlatformer.Global;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Rendering;
 
@@ -25,7 +24,6 @@ namespace FrostyPlatformer.States
     {
         private readonly GameServices _services;
         private readonly IRenderContext _rc;
-        private const int ScreenW = GameConstants.ScreenWidth;
 
         public HighScoreState(GameServices services)
         {
@@ -66,7 +64,7 @@ namespace FrostyPlatformer.States
             }
 
             string header = "Penguin After All High Score";
-            int hx = (ScreenW / 2) - ((header.Length * 8) / 2);
+            int hx = (context.ScreenWidth / 2) - ((header.Length * 8) / 2);
             _rc.DrawText(header, hx, 10);
             _rc.DrawText("    Name  Time        %", 8, 45);
 
@@ -81,7 +79,8 @@ namespace FrostyPlatformer.States
                              "    " + row.Percent, 8, y);
             }
 
-            _rc.DrawText("Press any button", 8, 210);
+            const int BottomTextMargin = 14; // Pixlar från skärmens nederkant till textens överkant
+            _rc.DrawText("Press any button", 8, context.ScreenHeight - BottomTextMargin);
         }
 
         public void Draw(IRenderContext renderContext) { }

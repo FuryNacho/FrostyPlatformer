@@ -1,6 +1,5 @@
 #nullable enable
 using FrostyPlatformer.Core;
-using FrostyPlatformer.Global;
 using FrostyPlatformer.Rendering;
 
 namespace FrostyPlatformer.States
@@ -23,8 +22,6 @@ namespace FrostyPlatformer.States
     /// </remarks>
     internal static class HudRenderer
     {
-        private const int ScreenW = GameConstants.ScreenWidth;
-
         /// <summary>
         /// Ritar HUD-baren med hälsomätare och tid. Om mode är "pause" visas
         /// paus-instruktioner.
@@ -34,7 +31,7 @@ namespace FrostyPlatformer.States
             if (context.Player == null) return;
 
             // Bakgrunds-rektangel
-            rc.FillRect(2, 2, ScreenW - 4, 7, RenderColor.Brown);
+            rc.FillRect(2, 2, context.ScreenWidth - 4, 7, RenderColor.Brown);
 
             // HUD-sprite (energimätarens ram)
             rc.DrawPartialSprite(SpriteId.Items, 3, 3, 0, 16 * 4, 16, 4);

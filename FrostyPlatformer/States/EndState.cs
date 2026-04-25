@@ -30,7 +30,6 @@ namespace FrostyPlatformer.States
     {
         private readonly GameServices _services;
         private readonly IRenderContext _rc;
-        private const int ScreenW = GameConstants.ScreenWidth;
 
         // Sluttyp
         private Enum.TypeOfEnding _typeOfEnding = Enum.TypeOfEnding.None;
@@ -155,17 +154,20 @@ namespace FrostyPlatformer.States
                 }
             }
 
-            // Rita slutskärms-bakgrunden
-            _rc.DrawSprite(SpriteId.SplashEnd, 0, 0);
+            // Rita slutskärms-bakgrunden centrerad (256×224 sprite på dynamisk skärm)
+            int cx = (context.ScreenWidth  - GameConstants.ScreenWidth)  / 2;
+            int cy = (context.ScreenHeight - GameConstants.ScreenHeight) / 2;
+            _rc.DrawSprite(SpriteId.SplashEnd, cx, cy);
 
             // Snöeffekt
-            MakeItSnow(elapsed, 220);
+            const int SnowScreenMargin = 4; // Lämnar en tunn kant nedtill utanför snöeffekten
+            MakeItSnow(elapsed, context.ScreenHeight - SnowScreenMargin);
 
             // Hero/igloo-animation
-            AnimationEnd(elapsed);
+            AnimationEnd(elapsed, context);
 
             // Skriv-animerad sluttext
-            DrawEndTextList(elapsed);
+            DrawEndTextList(elapsed, cx, cy);
         }
 
         public void Draw(IRenderContext renderContext) { }
@@ -201,17 +203,17 @@ namespace FrostyPlatformer.States
         }
 
         // ── Hero/igloo-animation (ekvivalent med Program.AnimationEnd) ────────────
-        private void AnimationEnd(float elapsed)
+        private void AnimationEnd(float elapsed, GameContext context)
         {
             if (_typeOfEnding == Enum.TypeOfEnding.Done)
-                AnimateDone(elapsed);
+                AnimateDone(elapsed, context);
             else if (_typeOfEnding == Enum.TypeOfEnding.NerePerfect)
-                AnimateNearPerfect(elapsed);
+                AnimateNearPerfect(elapsed, context);
             else if (_typeOfEnding == Enum.TypeOfEnding.Perfect)
-                AnimatePerfect(elapsed);
+                AnimatePerfect(elapsed, context);
         }
 
-        private void AnimateDone(float elapsed)
+        private void AnimateDone(float elapsed, GameContext context)
         {
             _time += elapsed;
             if (_time <= 0.3f)       _graphicCounter = 1;
@@ -235,10 +237,11 @@ namespace FrostyPlatformer.States
                     { _worldPosIncrement++; _doGest = 1; }
             }
 
-            DrawHero(_worldPosIncrement, 202);
+            const int HeroBottomMargin = 22; // Hero-spritens Y-avstånd från skärmens nederkant
+            DrawHero(_worldPosIncrement, context.ScreenHeight - HeroBottomMargin);
         }
 
-        private void AnimateNearPerfect(float elapsed)
+        private void AnimateNearPerfect(float elapsed, GameContext context)
         {
             float speed1 = _drawHeroEnd ? 0.3f : 0.1f;
             float speed2 = _drawHeroEnd ? 0.6f : 0.2f;
@@ -274,19 +277,27 @@ namespace FrostyPlatformer.States
                 }
             }
 
+            const int HeroBottomMargin      = 22; // Hero-spritens Y-avstånd från skärmens nederkant
+            const int IglooPortBottomMargin = 40; // Igloo-portens Y-avstånd från skärmens nederkant
+            const int IglooPortCenterOffset =  9; // Igloo-portens X-offset från skärmens mitt
+            const int IglooBodyBottomMargin = 81; // Igloo-kropp Y-avstånd från skärmens nederkant
+            const int IglooBodyCenterOffset = 18; // Igloo-kropp X-offset från skärmens mitt
+
+            int sw = context.ScreenWidth;
+            int sh = context.ScreenHeight;
             if (_drawHeroEnd)
             {
-                DrawHero(_worldPosIncrement, 202);
+                DrawHero(_worldPosIncrement, sh - HeroBottomMargin);
             }
             else
             {
                 int iglooPos = _timeTotalCounter < 120 ? 120 - _timeTotalCounter : 0;
-                _rc.DrawPartialSprite(SpriteId.EndArt, 137 + iglooPos, 184, 0,  0,  24,  34);
-                _rc.DrawPartialSprite(SpriteId.EndArt, 146 + iglooPos, 143, 48, 0, 160, 160);
+                _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooPortCenterOffset + iglooPos, sh - IglooPortBottomMargin, 0,  0,  24,  34);
+                _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooBodyCenterOffset + iglooPos, sh - IglooBodyBottomMargin, 48, 0, 160, 160);
             }
         }
 
-        private void AnimatePerfect(float elapsed)
+        private void AnimatePerfect(float elapsed, GameContext context)
         {
             _time += elapsed;
             if (_time <= 0.3f)       _graphicCounter = 1;
@@ -310,16 +321,25 @@ namespace FrostyPlatformer.States
                 if (_timeTotalCounter > 179) _drawHeroEnd = false;
             }
 
-            // Igloo-port (alltid synlig)
+            const int HeroBottomMargin      = 22;
+            const int IglooPortBottomMargin = 40;
+            const int IglooPortCenterOffset =  9;
+            const int IglooBodyBottomMargin = 81;
+            const int IglooBodyCenterOffset = 18;
+
+            int sw = context.ScreenWidth;
+            int sh = context.ScreenHeight;
             int iglooPos = _worldPosIncrementIgloo;
-            _rc.DrawPartialSprite(SpriteId.EndArt, 137 + iglooPos, 184, 0,  0,  24,  34);
+
+            // Igloo-port (alltid synlig)
+            _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooPortCenterOffset + iglooPos, sh - IglooPortBottomMargin, 0,  0,  24,  34);
 
             // Hero (döljs när den går in i iglooporten)
             if (_drawHeroEnd)
-                DrawHero(_worldPosIncrement, 202);
+                DrawHero(_worldPosIncrement, sh - HeroBottomMargin);
 
             // Igloo
-            _rc.DrawPartialSprite(SpriteId.EndArt, 146 + iglooPos, 143, 48, 0, 160, 160);
+            _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooBodyCenterOffset + iglooPos, sh - IglooBodyBottomMargin, 48, 0, 160, 160);
         }
 
         /// <summary>Ritar hero-spriten med rätt gesture-frame vid angiven skärmposition.</summary>
@@ -334,7 +354,7 @@ namespace FrostyPlatformer.States
         }
 
         // ── Skriv-animerad sluttext (ekvivalent med Program.DrawEndTextList) ──────
-        private void DrawEndTextList(float elapsed)
+        private void DrawEndTextList(float elapsed, int cx, int cy)
         {
             var template = BuildEndTextTemplate();
 
@@ -360,7 +380,8 @@ namespace FrostyPlatformer.States
 
                 string text = _listEndText[row];
                 if (text.StartsWith(" ")) text = text.Substring(1);
-                _rc.DrawText(text, 4, 4 + rowNumberActual * 10);
+                const int TextMargin = 4; // Marginal från splash-sprites kant till sluttextens start
+                _rc.DrawText(text, cx + TextMargin, cy + TextMargin + rowNumberActual * 10);
                 rowNumberActual++;
             }
         }

@@ -60,7 +60,6 @@ namespace FrostyPlatformer
         // ── MonoGame-infrastruktur ────────────────────────────────────────────
         private readonly GraphicsDeviceManager _graphics;
         private SpriteBatch                    _spriteBatch   = null!;
-        private RenderTarget2D                 _renderTarget  = null!;
         private Microsoft.Xna.Framework.Input.KeyboardState _prevKeyboard;
 
         // ── Spelsystem ────────────────────────────────────────────────────────
@@ -166,6 +165,8 @@ namespace FrostyPlatformer
         /// </summary>
         protected override void Initialize()
         {
+            Window.ClientSizeChanged += OnClientSizeChanged;
+
             Core.Aggregate.Instance.Load(this);
 
             _questSystem    = new QuestSystem(_context);
@@ -195,10 +196,9 @@ namespace FrostyPlatformer
         protected override void LoadContent()
         {
             _spriteBatch   = new SpriteBatch(GraphicsDevice);
-            _renderTarget  = new RenderTarget2D(GraphicsDevice, ScreenW, ScreenH);
-            // Scale 1×1: spelet renderas i nativ upplösning (256×224) till render target.
-            // Uppskala till fönstret sker i Draw() via det andra SpriteBatch-passet.
-            _renderContext = new MonoGameRenderContext(GraphicsDevice, _spriteBatch, scaleX: 1, scaleY: 1);
+            // PixW×PixH (4×4): varje logisk spelpixel ritas som ett 4×4-block direkt
+            // mot backbuffer — inget render-target-mellansteg behövs.
+            _renderContext = new MonoGameRenderContext(GraphicsDevice, _spriteBatch, scaleX: PixW, scaleY: PixH);
             RegisterSprites();
 
             _audioSystem = new MonoGameAudioSystem();
@@ -226,6 +226,7 @@ namespace FrostyPlatformer
                 id  => Core.Aggregate.Instance.GetMyX(id)
             );
             _stateManager.SetInitial(new States.SplashState(_services), _context);
+            UpdateScreenDimensions();
         }
 
         /// <summary>
@@ -248,14 +249,12 @@ namespace FrostyPlatformer
         }
 
         /// <summary>
-        /// Tvåstegsrendering: spelet renderas till en 256×224-render target (pass 1),
-        /// som sedan skalas upp till fönstret med PointClamp (pass 2).
-        /// Fönstret kan ha valfri storlek — aspektkvoten bevaras med pillarbox/letterbox.
+        /// Enkelt-pass-rendering: spelet ritas direkt mot backbuffer med PointClamp.
+        /// Ingen render target används — koordinater skalas med PixW×PixH (4×4).
+        /// Fas 4b utökar detta med dynamisk fönsterstorlek via GameContext.
         /// </summary>
         protected override void Draw(GameTime gameTime)
         {
-            // Pass 1 — spel → render target (256×224, scale 1×1)
-            GraphicsDevice.SetRenderTarget(_renderTarget);
             GraphicsDevice.Clear(Color.Black);
             _spriteBatch.Begin(
                 SpriteSortMode.Deferred,
@@ -265,56 +264,7 @@ namespace FrostyPlatformer
             _stateManager.Update(_context, _elapsed);
             _spriteBatch.End();
 
-            // Pass 2 — render target → skärm (skalat, aspekttroget)
-            GraphicsDevice.SetRenderTarget(null);
-            GraphicsDevice.Clear(Color.Black);
-            _spriteBatch.Begin(
-                SpriteSortMode.Deferred,
-                BlendState.Opaque,
-                SamplerState.PointClamp,
-                null, null, null, null);
-            _spriteBatch.Draw(_renderTarget, CalculateDestRect(), Color.White);
-            _spriteBatch.End();
-
             base.Draw(gameTime);
-        }
-
-        /// <summary>
-        /// Beräknar destinationsrektangeln för render-target-uppskalan.
-        /// Bevarar 256:224-aspektkvoten med pillarbox/letterbox (svarta kanter) vid behov.
-        /// </summary>
-        /// <remarks>
-        /// STRÄCK TILL FULL BREDD (ingen aspektbevarelse):
-        /// Ersätt hela metodkroppen med:
-        ///   return new Rectangle(0, 0,
-        ///       GraphicsDevice.Viewport.Width,
-        ///       GraphicsDevice.Viewport.Height);
-        /// Spelet fyller då hela fönstret/skärmen utan svarta kanter,
-        /// men bilden töjs om aspektkvoten inte matchar 256:224.
-        /// </remarks>
-        private Rectangle CalculateDestRect()
-        {
-            float gameAspect   = (float)ScreenW / ScreenH;
-            float windowAspect = (float)GraphicsDevice.Viewport.Width / GraphicsDevice.Viewport.Height;
-
-            int destW, destH, destX, destY;
-            if (windowAspect > gameAspect)
-            {
-                // Fönstret är bredare — anpassa till höjd och centrera horisontellt.
-                destH = GraphicsDevice.Viewport.Height;
-                destW = (int)(destH * gameAspect);
-                destX = (GraphicsDevice.Viewport.Width - destW) / 2;
-                destY = 0;
-            }
-            else
-            {
-                // Fönstret är smalare eller kvadratiskt — anpassa till bredd och centrera vertikalt.
-                destW = GraphicsDevice.Viewport.Width;
-                destH = (int)(destW / gameAspect);
-                destX = 0;
-                destY = (GraphicsDevice.Viewport.Height - destH) / 2;
-            }
-            return new Rectangle(destX, destY, destW, destH);
         }
 
         /// <summary>Frigör GPU-texturer och ljud-resurser vid programavslut.</summary>
@@ -322,8 +272,36 @@ namespace FrostyPlatformer
         {
             _audioSystem?.CleanUp();
             _renderContext?.UnloadAll();
-            _renderTarget?.Dispose();
             base.UnloadContent();
+        }
+
+        // ── Fönsterhantering ──────────────────────────────────────────────────
+
+        /// <summary>
+        /// Anropas av MonoGame när fönstrets klientyta ändrar storlek.
+        /// Uppdaterar backbuffern och <see cref="Core.GameContext.ScreenWidth/Height"/>
+        /// så att alla states alltid arbetar med faktiska skärmdimensioner.
+        /// </summary>
+        private void OnClientSizeChanged(object? sender, EventArgs e)
+        {
+            int w = Window.ClientBounds.Width;
+            int h = Window.ClientBounds.Height;
+            if (w <= 0 || h <= 0) return; // ignorera minimering
+
+            _graphics.PreferredBackBufferWidth  = w;
+            _graphics.PreferredBackBufferHeight = h;
+            _graphics.ApplyChanges();
+            UpdateScreenDimensions();
+        }
+
+        /// <summary>
+        /// Synkroniserar <see cref="Core.GameContext.ScreenWidth/Height"/> med
+        /// den aktuella viewport-storleken i logiska spelpixlar (pixlar / PixW|PixH).
+        /// </summary>
+        private void UpdateScreenDimensions()
+        {
+            _context.ScreenWidth  = GraphicsDevice.Viewport.Width  / PixW;
+            _context.ScreenHeight = GraphicsDevice.Viewport.Height / PixH;
         }
 
         // ── Sprite- och ljudregistrering ──────────────────────────────────────

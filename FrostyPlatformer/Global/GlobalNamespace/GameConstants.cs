@@ -17,6 +17,8 @@ namespace FrostyPlatformer.Global
 
         public const int TileSize          = 16;   // Tile-storlek i pixlar
         public const int TileSheetColumns  = 5;    // Antal kolumner i tile-spritesheet
+        public const int FontCharWidth     = 8;    // Bitmappsteckensnittets bredd per tecken (pixlar)
+        public const int FontCharHeight    = 8;    // Bitmappsteckensnittets höjd per tecken (pixlar)
 
 
         // ─────────────────────────────────────────────

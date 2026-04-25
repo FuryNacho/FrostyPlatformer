@@ -28,13 +28,19 @@ namespace FrostyPlatformer.Systems
         {
             for (int x = -1; x < cam.VisibleTilesX + 1; x++)
             {
-                for (int y = -1; y < cam.VisibleTilesY + 1; y++)
+                // +2 instead of +1: screenHeight is rarely a multiple of tileHeight, so the
+                // extra row at VisibleTilesY may not reach the screen bottom when TileOffsetY
+                // is large. The second extra row guarantees full coverage at all scroll positions.
+                for (int y = -1; y < cam.VisibleTilesY + 2; y++)
                 {
-                    int idx = map.GetIndex((int)(x + cam.OffsetX), (int)(y + cam.OffsetY));
+                    int mapX = (int)(x + cam.OffsetX);
+                    int mapY = (int)(y + cam.OffsetY);
+                    if (mapX < 0 || mapX >= map.Width || mapY < 0 || mapY >= map.Height)
+                        continue;
 
-                    int sx = idx % GameConstants.TileSheetColumns;
-                    int sy = idx / GameConstants.TileSheetColumns;
-
+                    int idx     = map.GetIndex(mapX, mapY);
+                    int sx      = idx % GameConstants.TileSheetColumns;
+                    int sy      = idx / GameConstants.TileSheetColumns;
                     int screenX = (int)(x * cam.TileWidth  - cam.TileOffsetX);
                     int screenY = (int)(y * cam.TileHeight - cam.TileOffsetY);
                     int spriteX = sx * cam.TileWidth;

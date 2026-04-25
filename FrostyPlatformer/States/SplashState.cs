@@ -72,14 +72,20 @@ namespace FrostyPlatformer.States
                 }
             }
 
-            // Rita splash-bakgrunden
-            _rc.DrawSprite(SpriteId.SplashStart, 0, 0);
+            // Rita splash-bakgrunden centrerad (256×224 sprite på dynamisk skärm)
+            int cx = (context.ScreenWidth  - GameConstants.ScreenWidth)  / 2;
+            int cy = (context.ScreenHeight - GameConstants.ScreenHeight) / 2;
+            _rc.DrawSprite(SpriteId.SplashStart, cx, cy);
 
             if (_countDown <= 0)
-                _rc.DrawText("Press any button", 4, 100);
+            {
+                const int TextLeftMargin    = 4;   // Vänstermarginal relativt splash-sprites vänsterkant
+                const int PressAnyButtonRelY = 100; // Y-position relativt splash-sprites överkant
+                _rc.DrawText("Press any button", cx + TextLeftMargin, cy + PressAnyButtonRelY);
+            }
 
-            // Snöeffekt
-            MakeItSnow(elapsed, 59);
+            // Snöeffekt — offset matchar splashens position
+            MakeItSnow(elapsed, 59, cx, cy);
         }
 
         public void Draw(IRenderContext renderContext) { }
@@ -87,7 +93,7 @@ namespace FrostyPlatformer.States
         public void Exit(GameContext context) { }
 
         // ── Snöeffekt (ekvivalent med Program.MakeItSnow) ──────────────────────
-        private void MakeItSnow(float elapsed, int height)
+        private void MakeItSnow(float elapsed, int height, int offsetX = 0, int offsetY = 0)
         {
             if (_snowSlow == null || _snowFast == null ||
                 _snowSlow.arrayList.Count <= height - 1)
@@ -116,7 +122,7 @@ namespace FrostyPlatformer.States
                 if (absI < 1) absI = 1;
                 if (absI > height - 1) absI = height - 1;
                 foreach (var x in _snowSlow.arrayList[absI])
-                    _rc.DrawPixel(x, i, RenderColor.White);
+                    _rc.DrawPixel(offsetX + x, offsetY + i, RenderColor.White);
             }
             for (int i = height; i > 0; i--)
             {
@@ -124,7 +130,7 @@ namespace FrostyPlatformer.States
                 if (absI < 1) absI = 1;
                 if (absI > height - 1) absI = height - 1;
                 foreach (var x in _snowFast.arrayList[absI])
-                    _rc.DrawPixel(x, i, RenderColor.White);
+                    _rc.DrawPixel(offsetX + x, offsetY + i, RenderColor.White);
             }
         }
     }

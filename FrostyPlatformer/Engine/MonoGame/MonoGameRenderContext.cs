@@ -88,10 +88,12 @@ namespace FrostyPlatformer.Engine.MonoGame
         }
 
         /// <inheritdoc />
-        public int ScreenWidth  => GameConstants.ScreenWidth;
+        /// <remarks>Läser från aktuell viewport — uppdateras automatiskt vid fönsterändring.</remarks>
+        public int ScreenWidth  => _gd.Viewport.Width  / _scaleX;
 
         /// <inheritdoc />
-        public int ScreenHeight => GameConstants.ScreenHeight;
+        /// <remarks>Läser från aktuell viewport — uppdateras automatiskt vid fönsterändring.</remarks>
+        public int ScreenHeight => _gd.Viewport.Height / _scaleY;
 
         /// <inheritdoc />
         /// <remarks>

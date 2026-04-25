@@ -28,7 +28,6 @@ namespace FrostyPlatformer.States
     {
         private readonly GameServices _services;
         private readonly IRenderContext _rc;
-        private const int ScreenW = GameConstants.ScreenWidth;
 
         private int _selectedItem = 1;
 
@@ -54,12 +53,18 @@ namespace FrostyPlatformer.States
             var menuList  = BuildMenuList(context, ref header);
 
             // Rita
-            int hx = (ScreenW / 2) - ((header.Length * 8) / 2);
+            int hx = (context.ScreenWidth / 2) - ((header.Length * 8) / 2);
             _rc.DrawText(header, hx, 4);
+
+            // Centrera hela menyblocket baserat på det längsta alternativet
+            const int IconToTextGap = 25; // Avstånd från ikonens vänsterkant till textens vänsterkant
+            int maxLen = 0;
+            foreach (var item in menuList)
+                if (item.Length > maxLen) maxLen = item.Length;
+            int screenX = (context.ScreenWidth / 2) - (IconToTextGap + maxLen * GameConstants.FontCharWidth) / 2;
 
             for (int i = 0; i < menuList.Count; i++)
             {
-                int screenX = 8 + 1 * 20;
                 int screenY = 20 + i * 20;
                 int srcX    = (i + 1 == _selectedItem) ? 0 : 16;
                 _rc.DrawPartialSprite(SpriteId.Items, screenX, screenY, srcX, 48, 16, 16);

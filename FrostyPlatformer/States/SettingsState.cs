@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using FrostyPlatformer.Core;
-using FrostyPlatformer.Global;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Rendering;
 
@@ -27,7 +26,6 @@ namespace FrostyPlatformer.States
     {
         private readonly GameServices _services;
         private readonly IRenderContext _rc;
-        private const int ScreenW = GameConstants.ScreenWidth;
 
         private int _selectIndex = 1;
 
@@ -52,10 +50,10 @@ namespace FrostyPlatformer.States
             var options    = BuildOptions(context, ref header, ref bread);
 
             // Rita
-            int hx = (ScreenW / 2) - ((header.Length * 8) / 2);
+            int hx = (context.ScreenWidth / 2) - ((header.Length * 8) / 2);
             _rc.DrawText(header, hx, 4);
 
-            int bx = (ScreenW / 2) - ((bread.Length * 8) / 2);
+            int bx = (context.ScreenWidth / 2) - ((bread.Length * 8) / 2);
             _rc.DrawText(bread, bx, 18);
 
             for (int idx = 0; idx < options.Count; idx++)
@@ -63,7 +61,7 @@ namespace FrostyPlatformer.States
                 string row = options[idx].Display;
                 if (_selectIndex == idx + 1)
                     row = "> " + row + " <";
-                int ox = (ScreenW / 2) - ((row.Length * 8) / 2);
+                int ox = (context.ScreenWidth / 2) - ((row.Length * 8) / 2);
                 _rc.DrawText(row, ox, 26 + (idx + 1) * 12);
             }
 

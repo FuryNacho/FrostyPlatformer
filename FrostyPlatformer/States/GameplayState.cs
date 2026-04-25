@@ -32,8 +32,6 @@ namespace FrostyPlatformer.States
     {
         private readonly GameServices _services;
         private readonly IRenderContext _rc;
-        private const int ScreenW = GameConstants.ScreenWidth;
-        private const int ScreenH = GameConstants.ScreenHeight;
 
         // Fysik-tillstånd
         private bool  _bPower;
@@ -176,7 +174,10 @@ namespace FrostyPlatformer.States
                 var cam = _services.Camera.Calculate(
                     context.Player.px, context.Player.py,
                     context.CurrentLevel.Width, context.CurrentLevel.Height,
-                    ScreenW, ScreenH);
+                    context.ScreenWidth, context.ScreenHeight);
+
+                // Fyll bakgrunden för områden utanför kartgränsen (t.ex. smala kartor på bred skärm).
+                _rc.FillRect(0, 0, context.ScreenWidth, context.ScreenHeight, RenderColor.Black);
 
                 foreach (var call in _services.TileRenderer.GetDrawCalls(cam, context.CurrentLevel))
                     _rc.DrawPartialSprite(SpriteId.MapTileSheet,
