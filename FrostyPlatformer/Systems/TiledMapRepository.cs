@@ -30,6 +30,7 @@ namespace FrostyPlatformer.Systems
     public class TiledMapRepository : IMapRepository
     {
         private readonly string _basePath;
+        private readonly bool   _scanDirectory;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -43,10 +44,19 @@ namespace FrostyPlatformer.Systems
             "mapsix", "mapseven", "mapeight", "mapnine"
         };
 
-        /// <summary>Initierar repositoryt med sökvägen till mappen med Tiled JSON-kartor.</summary>
-        public TiledMapRepository(string basePath)
+        /// <summary>
+        /// Initierar repositoryt med sökvägen till mappen med Tiled JSON-kartor.
+        /// </summary>
+        /// <param name="basePath">Sökväg till kartmappen.</param>
+        /// <param name="scanDirectory">
+        /// True = <see cref="GetAvailableMapIds"/> skannar filsystemet istället för
+        /// att returnera den hårdkodade listan. Används för UserMaps/ där innehållet
+        /// varierar beroende på vad användaren har sparat.
+        /// </param>
+        public TiledMapRepository(string basePath, bool scanDirectory = false)
         {
-            _basePath = basePath;
+            _basePath      = basePath;
+            _scanDirectory = scanDirectory;
         }
 
         /// <summary>
@@ -70,8 +80,17 @@ namespace FrostyPlatformer.Systems
             }
         }
 
-        /// <summary>Returnerar samtliga kart-ID:n som repositoryt känner till.</summary>
-        public IEnumerable<string> GetAvailableMapIds() => KnownMapIds;
+        /// <summary>
+        /// Returnerar samtliga kart-ID:n. Om <c>scanDirectory</c> är satt skannas
+        /// filsystemet efter .json-filer; annars returneras den hårdkodade listan.
+        /// </summary>
+        public IEnumerable<string> GetAvailableMapIds()
+        {
+            if (!_scanDirectory) return KnownMapIds;
+            if (!Directory.Exists(_basePath)) return Array.Empty<string>();
+            return Directory.GetFiles(_basePath, "*.json")
+                .Select(Path.GetFileNameWithoutExtension)!;
+        }
 
         // ── Konverteringslogik (internal för enhetstestning) ──────────────────
 

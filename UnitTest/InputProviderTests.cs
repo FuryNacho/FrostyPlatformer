@@ -150,6 +150,32 @@ namespace UnitTest
             Assert.IsTrue(_input.IsEditorToggleCollision);
         }
 
+        [TestMethod]
+        public void IsEditorToggleSpawn_IsFalse_ByDefault()
+        {
+            Assert.IsFalse(_input.IsEditorToggleSpawn);
+        }
+
+        [TestMethod]
+        public void IsEditorToggleSpawn_CanBeSimulated()
+        {
+            _input.IsEditorToggleSpawn = true;
+            Assert.IsTrue(_input.IsEditorToggleSpawn);
+        }
+
+        [TestMethod]
+        public void IsEditorNew_IsFalse_ByDefault()
+        {
+            Assert.IsFalse(_input.IsEditorNew);
+        }
+
+        [TestMethod]
+        public void IsEditorNew_CanBeSimulated()
+        {
+            _input.IsEditorNew = true;
+            Assert.IsTrue(_input.IsEditorNew);
+        }
+
         // ─────────────────────────────────────────────
         // Mus-input (E1a)
         // ─────────────────────────────────────────────

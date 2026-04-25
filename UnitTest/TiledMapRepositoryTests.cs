@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using FrostyPlatformer.Systems;
@@ -443,6 +444,55 @@ namespace UnitTest
             Assert.AreEqual(original.SpawnY, loaded!.SpawnY);
             CollectionAssert.AreEqual(original.TileIndex,      loaded!.TileIndex);
             CollectionAssert.AreEqual(original.AttributeIndex, loaded!.AttributeIndex);
+        }
+
+        // ── GetAvailableMapIds — scanDirectory-läge (E3d) ────────────────────
+
+        [TestMethod]
+        public void GetAvailableMapIds_ScanMode_ReturnsJsonFilesInDirectory()
+        {
+            Directory.CreateDirectory(_tempDir!);
+            File.WriteAllText(Path.Combine(_tempDir!, "alpha.json"), MinimalJson);
+            File.WriteAllText(Path.Combine(_tempDir!, "beta.json"),  MinimalJson);
+            var repo = new TiledMapRepository(_tempDir!, scanDirectory: true);
+
+            var ids = new List<string>(repo.GetAvailableMapIds());
+
+            CollectionAssert.Contains(ids, "alpha");
+            CollectionAssert.Contains(ids, "beta");
+            Assert.AreEqual(2, ids.Count);
+        }
+
+        [TestMethod]
+        public void GetAvailableMapIds_ScanMode_MissingDirectory_ReturnsEmpty()
+        {
+            var missing = Path.Combine(_tempDir!, "does_not_exist");
+            var repo    = new TiledMapRepository(missing, scanDirectory: true);
+
+            var ids = new List<string>(repo.GetAvailableMapIds());
+
+            Assert.AreEqual(0, ids.Count);
+        }
+
+        [TestMethod]
+        public void GetAvailableMapIds_ScanMode_EmptyDirectory_ReturnsEmpty()
+        {
+            Directory.CreateDirectory(_tempDir!);
+            var repo = new TiledMapRepository(_tempDir!, scanDirectory: true);
+
+            var ids = new List<string>(repo.GetAvailableMapIds());
+
+            Assert.AreEqual(0, ids.Count);
+        }
+
+        [TestMethod]
+        public void GetAvailableMapIds_DefaultMode_ReturnsKnownMapIds()
+        {
+            // Utan scanDirectory ska den hårdkodade listan returneras oavsett disk
+            var repo = new TiledMapRepository(_tempDir ?? ".");
+            var ids  = new List<string>(repo.GetAvailableMapIds());
+
+            Assert.AreEqual(10, ids.Count);
         }
 
         // ── GetAvailableMapIds ────────────────────────────────────────────────

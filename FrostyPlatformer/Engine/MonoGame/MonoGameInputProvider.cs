@@ -197,6 +197,7 @@ namespace FrostyPlatformer.Engine.MonoGame
         public bool IsEditorToggleSpawn     => KeyPressed(Keys.G);
         public bool IsEditorSave            => KeyPressed(Keys.S) && KeyDown(Keys.LeftControl);
         public bool IsEditorLoad            => KeyPressed(Keys.L);
+        public bool IsEditorNew             => KeyPressed(Keys.N);
 
         // ─── Mus-input ────────────────────────────────────────────────────────
         public int  MouseX             => _mouse.X;

@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using FrostyPlatformer.Core;
 using FrostyPlatformer.Global;
@@ -88,6 +89,18 @@ namespace FrostyPlatformer.States
             public bool    IsUserMap { get; init; }
         }
 
+        // ── Ny-karta-dialog ──────────────────────────────────────────────────────
+        private bool _showNewMapDialog;
+        private int  _newMapWidthIdx    = 3;   // index i WidthPresets  → 32
+        private int  _newMapHeightIdx   = 3;   // index i HeightPresets → 24
+        private int  _newMapTilesetIdx;        // index i KnownTilesets → spring.tsx
+        private int  _newMapDialogField;       // 0=bredd, 1=höjd, 2=tileset
+        private bool _newMapPendingDirty;
+
+        private static readonly int[]    WidthPresets  = { 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 192, 256 };
+        private static readonly int[]    HeightPresets = { 14, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 192, 256 };
+        private static readonly string[] KnownTilesets = { "spring.tsx", "summer.tsx", "fall.tsx", "winter.tsx" };
+
         /// <summary>Skapar ett nytt EditorState.</summary>
         /// <param name="services">Gemensamma speltjänster (input, kamera, renderer m.m.).</param>
         public EditorState(GameServices services)
@@ -118,18 +131,21 @@ namespace FrostyPlatformer.States
             if (_hudMessageTimer > 0f)
                 _hudMessageTimer -= deltaTime;
 
-            // Escape: stäng kartväljaren om öppen, annars lämna editorn
+            // Escape: stäng öppna dialoger, annars lämna editorn
             if (_services.Input.IsCancelPressed)
             {
-                if (_showMapPicker) { CloseMapPicker(); return; }
+                if (_showMapPicker)    { CloseMapPicker(); return; }
+                if (_showNewMapDialog) { _showNewMapDialog = false; _newMapPendingDirty = false; return; }
                 context.MenuNavigation = Enum.MenuState.StartMenu;
                 _services.StateManager.Transition(new MenuState(_services), context);
                 return;
             }
 
-            // Öppna kartväljaren (L)
-            if (!_showMapPicker && _services.Input.IsEditorLoad)
-                OpenMapPicker();
+            bool noDialog = !_showMapPicker && !_showNewMapDialog;
+
+            // Öppna kartväljaren (L) eller ny-karta-dialog (N)
+            if (noDialog && _services.Input.IsEditorLoad) OpenMapPicker();
+            if (noDialog && _services.Input.IsEditorNew)  HandleNewMapRequest();
 
             int mapAreaWidth = context.ScreenWidth - PaletteWidth;
 
@@ -148,6 +164,24 @@ namespace FrostyPlatformer.States
                     DrawPalette(context, mapAreaWidth);
                 }
                 DrawMapPickerOverlay(context);
+                return;
+            }
+
+            // Ny-karta-dialog — hantera input och rita overlay
+            if (_showNewMapDialog)
+            {
+                UpdateNewMapDialog();
+                if (_mapAdapter != null && _levelObj != null)
+                {
+                    var bgCam = _services.Camera.Calculate(
+                        _camTargetX, _camTargetY,
+                        _mapAdapter.Width, _mapAdapter.Height,
+                        mapAreaWidth, context.ScreenHeight);
+                    DrawTiles(bgCam);
+                    DrawGrid(bgCam, mapAreaWidth, context.ScreenHeight);
+                    DrawPalette(context, mapAreaWidth);
+                }
+                DrawNewMapDialogOverlay(context);
                 return;
             }
 
@@ -423,6 +457,119 @@ namespace FrostyPlatformer.States
             _pickerPendingDirty = false;
         }
 
+        // ── Ny-karta-dialog ──────────────────────────────────────────────────────
+
+        private void HandleNewMapRequest()
+        {
+            if (_isDirty && !_newMapPendingDirty)
+            {
+                ShowMessage("Unsaved changes! Press N again to discard and create new.");
+                _newMapPendingDirty = true;
+                return;
+            }
+            _newMapPendingDirty  = false;
+            _newMapDialogField   = 0;
+            _showNewMapDialog    = true;
+        }
+
+        private void UpdateNewMapDialog()
+        {
+            if (_services.Input.IsDownPressed)
+                _newMapDialogField = (_newMapDialogField + 1) % 3;
+            if (_services.Input.IsUpPressed)
+                _newMapDialogField = (_newMapDialogField + 2) % 3;
+
+            if (_services.Input.IsRightPressed) ChangeNewMapField(+1);
+            if (_services.Input.IsLeftPressed)  ChangeNewMapField(-1);
+
+            if (_services.Input.IsConfirmPressed) ConfirmNewMap();
+        }
+
+        private void ChangeNewMapField(int delta)
+        {
+            switch (_newMapDialogField)
+            {
+                case 0:
+                    _newMapWidthIdx   = Math.Clamp(_newMapWidthIdx   + delta, 0, WidthPresets.Length  - 1);
+                    break;
+                case 1:
+                    _newMapHeightIdx  = Math.Clamp(_newMapHeightIdx  + delta, 0, HeightPresets.Length - 1);
+                    break;
+                case 2:
+                    _newMapTilesetIdx = (_newMapTilesetIdx + delta + KnownTilesets.Length) % KnownTilesets.Length;
+                    break;
+            }
+        }
+
+        private void ConfirmNewMap()
+        {
+            int w = WidthPresets[_newMapWidthIdx];
+            int h = HeightPresets[_newMapHeightIdx];
+
+            var level = new LevelObj
+            {
+                Width          = w,
+                Height         = h,
+                TileIndex      = new int[w * h],
+                AttributeIndex = new int[w * h],
+                TilesetSource  = KnownTilesets[_newMapTilesetIdx],
+                SpawnX         = 1,
+                SpawnY         = 1
+            };
+
+            string mapId    = GenerateNewMapId();
+            _levelObj       = level;
+            _mapAdapter     = new LevelObjMapAdapter(_levelObj);
+            _mapId          = mapId;
+            _isDirty        = true;
+            _camTargetX     = 0f;
+            _camTargetY     = 0f;
+            _mode           = EditorMode.Tiles;
+            _showNewMapDialog = false;
+            ShowMessage($"New map '{mapId}' created — Ctrl+S to save.");
+        }
+
+        private string GenerateNewMapId()
+        {
+            var existing = new System.Collections.Generic.HashSet<string>(
+                _services.UserMaps.GetAvailableMapIds());
+            if (!existing.Contains("newmap")) return "newmap";
+            int n = 2;
+            while (existing.Contains($"newmap{n}")) n++;
+            return $"newmap{n}";
+        }
+
+        private void DrawNewMapDialogOverlay(GameContext context)
+        {
+            const int boxX = 100, boxY = 70, boxW = 200, boxH = 90;
+            const int labelX = boxX + 8, valueX = boxX + 72;
+            const int lineH = 14;
+
+            _rc.FillRect(0, 0, context.ScreenWidth, context.ScreenHeight, PickerOverlayColor);
+            _rc.FillRect(boxX, boxY, boxW, boxH, new RenderColor(20, 20, 30, 240));
+
+            _rc.DrawText("NEW MAP", labelX, boxY + 4);
+
+            string[] labels = { "Width:", "Height:", "Tileset:" };
+            string[] values =
+            {
+                $"< {WidthPresets[_newMapWidthIdx]} >",
+                $"< {HeightPresets[_newMapHeightIdx]} >",
+                $"< {KnownTilesets[_newMapTilesetIdx]} >"
+            };
+
+            for (int i = 0; i < 3; i++)
+            {
+                int y = boxY + 20 + i * lineH;
+                if (i == _newMapDialogField)
+                    _rc.FillRect(labelX - 2, y - 1, boxW - 12, lineH, PickerSelectColor);
+                _rc.DrawText(labels[i], labelX,  y);
+                _rc.DrawText(values[i], valueX,  y);
+            }
+
+            _rc.DrawText("Enter=create   Esc=cancel", labelX, boxY + boxH - 12);
+        }
+
         private void UpdateMapPicker(GameContext context)
         {
             if (_pickerEntries == null) return;
@@ -615,7 +762,7 @@ namespace FrostyPlatformer.States
             string dirtyMark = _isDirty ? "*" : "";
             string line = $"[{modeLabel}]  {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  "
                         + $"brush:{_selectedTileId}  {tileInfo}  {spawnInfo}  "
-                        + $"{controls}  C=col  G=spawn  L=load  Ctrl+S=save  Arrows=scroll  Esc=exit";
+                        + $"{controls}  C=col  G=spawn  N=new  L=load  Ctrl+S=save  Arrows=scroll  Esc=exit";
 
             _rc.DrawText(line, 2, 2);
 

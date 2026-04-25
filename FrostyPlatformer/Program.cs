@@ -220,7 +220,7 @@ namespace FrostyPlatformer
                 new SettingsService(),
                 Core.Aggregate.Instance,
                 new Systems.TiledMapRepository(gameMapsPath),
-                new Systems.TiledMapRepository(userMapsPath),
+                new Systems.TiledMapRepository(userMapsPath, scanDirectory: true),
                 _dialog,
                 _questSystem,
                 _itemSystem,

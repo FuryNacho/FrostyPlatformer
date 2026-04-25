@@ -94,6 +94,11 @@ namespace FrostyPlatformer.Systems
         /// </summary>
         bool IsEditorLoad { get; }
 
+        /// <summary>
+        /// True den frame som N-tangenten trycks ned. Öppnar ny-karta-dialogen i EditorState.
+        /// </summary>
+        bool IsEditorNew { get; }
+
         // ─────────────────────────────────────────────
         // Mus-input
         // ─────────────────────────────────────────────
