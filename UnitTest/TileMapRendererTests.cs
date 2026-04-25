@@ -46,10 +46,13 @@ namespace UnitTest
             var map  = new FakeMapData(200, 200);
             var calls = _renderer.GetDrawCalls(cam, map).ToList();
 
-            // Loop: x i [-1, VisX], y i [-1, VisY] → (VisX+2) * (VisY+2)
-            int expected = (VisX + 2) * (VisY + 2);
+            // Loop: x i [-1, VisX], y i [-1, VisY+1] → (VisX+2) * (VisY+3)
+            // Y-dimensionen har en extra buffertrad jämfört med X, eftersom skärmhöjden
+            // sällan är jämnt delbar med tile-höjden — utan den extra raden kan botten
+            // blinka när TileOffsetY är stort.
+            int expected = (VisX + 2) * (VisY + 3);
             Assert.AreEqual(expected, calls.Count,
-                "Antal draw calls ska vara (VisibleTilesX+2) * (VisibleTilesY+2).");
+                "Antal draw calls ska vara (VisibleTilesX+2) * (VisibleTilesY+3).");
         }
 
         // ─────────────────────────────────────────────
