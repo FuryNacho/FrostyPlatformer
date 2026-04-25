@@ -101,7 +101,11 @@ namespace FrostyPlatformer.States
 
         private static readonly int[]    WidthPresets  = { 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 192, 256 };
         private static readonly int[]    HeightPresets = { 14, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 192, 256 };
-        private static readonly string[] KnownTilesets = { "spring.tsx", "summer.tsx", "fall.tsx", "winter.tsx" };
+        private static readonly string[] KnownTilesets =
+        {
+            "tilesheetspring.tsx", "tilesheetsummer.tsx",
+            "tilesheetfall.tsx",   "tilesheetwinter.tsx"
+        };
 
         /// <summary>Skapar ett nytt EditorState.</summary>
         /// <param name="services">Gemensamma speltjänster (input, kamera, renderer m.m.).</param>
@@ -446,8 +450,9 @@ namespace FrostyPlatformer.States
         /// </summary>
         private void RegisterTilesheet(string tilesetSource)
         {
-            string stem = tilesetSource.Replace(".tsx", "");
-            string? path = _services.Assets.GetSpritePath("tilesheet" + stem);
+            // TilesetSource är t.ex. "tilesheetspring.tsx" — Aggregate-nyckeln är samma utan ".tsx"
+            string assetName = tilesetSource.Replace(".tsx", "");
+            string? path = _services.Assets.GetSpritePath(assetName);
             if (path != null)
                 _rc.RegisterSprite(SpriteId.MapTileSheet, path);
         }
