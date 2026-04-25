@@ -1,4 +1,5 @@
 #nullable enable
+using FrostyPlatformer.Global;
 using FrostyPlatformer.Models;
 using System;
 using System.Collections.Generic;
@@ -85,6 +86,7 @@ namespace FrostyPlatformer.Systems
 
             var tilesLayer     = map.Layers.FirstOrDefault(l => l.Name == "Tiles");
             var collisionLayer = map.Layers.FirstOrDefault(l => l.Name == "Collision");
+            var objectsLayer   = map.Layers.FirstOrDefault(l => l.Type == "objectgroup" && l.Name == "Objects");
 
             // "Tiles"-lagret är obligatoriskt — utan det kan inget renderas
             if (tilesLayer == null) return null;
@@ -93,13 +95,26 @@ namespace FrostyPlatformer.Systems
             // att komma tillbaka till sprite-sheet-index som spelet förväntar sig
             int firstGid = map.Tilesets.Count > 0 ? map.Tilesets[0].FirstGid : 1;
 
-            return new LevelObj
+            var level = new LevelObj
             {
                 Width          = map.Width,
                 Height         = map.Height,
                 TileIndex      = ConvertTileData(tilesLayer.Data, firstGid),
                 AttributeIndex = collisionLayer?.Data ?? new int[map.Width * map.Height]
             };
+
+            if (objectsLayer != null)
+            {
+                var spawn = objectsLayer.Objects.FirstOrDefault(
+                    o => o.Name == "PlayerSpawn");
+                if (spawn != null)
+                {
+                    level.SpawnX = (int)(spawn.X / GameConstants.TileSize);
+                    level.SpawnY = (int)(spawn.Y / GameConstants.TileSize);
+                }
+            }
+
+            return level;
         }
 
         /// <summary>
@@ -122,7 +137,16 @@ namespace FrostyPlatformer.Systems
         private sealed class TiledLayerDto
         {
             public string Name { get; set; } = "";
+            public string Type { get; set; } = "tilelayer";
             public int[]  Data { get; set; } = Array.Empty<int>();
+            public List<TiledObjectDto> Objects { get; set; } = new();
+        }
+
+        private sealed class TiledObjectDto
+        {
+            public string Name   { get; set; } = "";
+            public float  X      { get; set; }
+            public float  Y      { get; set; }
         }
 
         private sealed class TiledTilesetDto

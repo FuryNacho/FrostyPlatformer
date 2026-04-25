@@ -21,6 +21,15 @@ namespace FrostyPlatformer.Models
         public int[] AttributeIndex { get; set; } = System.Array.Empty<int>();
         public int   Width          { get; set; }
         public int   Height         { get; set; }
+
+        /// <summary>Hjältens startposition X i tile-koordinater. -1 = ej satt.</summary>
+        public int SpawnX { get; set; } = -1;
+
+        /// <summary>Hjältens startposition Y i tile-koordinater. -1 = ej satt.</summary>
+        public int SpawnY { get; set; } = -1;
+
+        /// <summary>True om en spawn-punkt är satt (SpawnX och SpawnY är giltiga).</summary>
+        public bool HasSpawn => SpawnX >= 0 && SpawnY >= 0;
     }
 
 

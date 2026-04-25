@@ -195,6 +195,82 @@ namespace UnitTest
             Assert.IsNull(repo.Load("doesnotexist"));
         }
 
+        // ── ParseTiledJson — spawn-punkt (E2d) ───────────────────────────────
+
+        private const string JsonWithSpawn = @"{
+            ""width"": 2, ""height"": 2,
+            ""tilesets"": [{ ""firstgid"": 1, ""source"": ""t.tsx"" }],
+            ""layers"": [
+                { ""name"": ""Tiles"",     ""type"": ""tilelayer"",   ""data"": [1, 1, 1, 1] },
+                { ""name"": ""Objects"",   ""type"": ""objectgroup"",
+                  ""objects"": [{ ""name"": ""PlayerSpawn"", ""x"": 32.0, ""y"": 16.0 }] }
+            ]
+        }";
+
+        [TestMethod]
+        public void ParseTiledJson_WithSpawnObject_SetsSpawnX()
+        {
+            // x=32, TileSize=16 → SpawnX=2
+            var result = TiledMapRepository.ParseTiledJson(JsonWithSpawn);
+
+            Assert.AreEqual(2, result!.SpawnX);
+        }
+
+        [TestMethod]
+        public void ParseTiledJson_WithSpawnObject_SetsSpawnY()
+        {
+            // y=16, TileSize=16 → SpawnY=1
+            var result = TiledMapRepository.ParseTiledJson(JsonWithSpawn);
+
+            Assert.AreEqual(1, result!.SpawnY);
+        }
+
+        [TestMethod]
+        public void ParseTiledJson_WithSpawnObject_HasSpawnIsTrue()
+        {
+            var result = TiledMapRepository.ParseTiledJson(JsonWithSpawn);
+
+            Assert.IsTrue(result!.HasSpawn);
+        }
+
+        [TestMethod]
+        public void ParseTiledJson_NoObjectsLayer_SpawnIsMinusOne()
+        {
+            // Utan Objects-lager ska SpawnX och SpawnY vara -1 (standardvärdet)
+            var result = TiledMapRepository.ParseTiledJson(MinimalJson);
+
+            Assert.AreEqual(-1, result!.SpawnX);
+            Assert.AreEqual(-1, result!.SpawnY);
+        }
+
+        [TestMethod]
+        public void ParseTiledJson_NoObjectsLayer_HasSpawnIsFalse()
+        {
+            var result = TiledMapRepository.ParseTiledJson(MinimalJson);
+
+            Assert.IsFalse(result!.HasSpawn);
+        }
+
+        [TestMethod]
+        public void ParseTiledJson_ObjectsLayerWithoutPlayerSpawn_SpawnIsMinusOne()
+        {
+            // Objects-lagret finns men saknar PlayerSpawn-objekt
+            var json = @"{
+                ""width"": 1, ""height"": 1,
+                ""tilesets"": [{ ""firstgid"": 1, ""source"": ""t.tsx"" }],
+                ""layers"": [
+                    { ""name"": ""Tiles"",   ""type"": ""tilelayer"",   ""data"": [1] },
+                    { ""name"": ""Objects"", ""type"": ""objectgroup"",
+                      ""objects"": [{ ""name"": ""SomethingElse"", ""x"": 16.0, ""y"": 16.0 }] }
+                ]
+            }";
+
+            var result = TiledMapRepository.ParseTiledJson(json);
+
+            Assert.AreEqual(-1, result!.SpawnX);
+            Assert.IsFalse(result!.HasSpawn);
+        }
+
         // ── GetAvailableMapIds ────────────────────────────────────────────────
 
         [TestMethod]
