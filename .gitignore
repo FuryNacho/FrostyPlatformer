@@ -365,10 +365,12 @@ healthchecksdb
 **/Resources/Settings/settings.json
 **/Resources/Settings/highscore.json
 
-# Claude-specifika filer (lokala AI-instruktioner, ska ej pushas)
+# Claude-specifika filer (lokala AI-instruktioner och sessionsdata, ska ej pushas)
 CLAUDE.md
+.claude/
 
 # Interna planeringsdokument – lokala, visas ej på GitHub
 ROADMAP.md
 MONOGAME_PLAN.md
 TILED_PLAN.md
+FrostyPlatformer/Engine/MonoGame/README.md
