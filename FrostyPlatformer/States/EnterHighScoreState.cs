@@ -25,8 +25,10 @@ namespace FrostyPlatformer.States
     /// </remarks>
     internal sealed class EnterHighScoreState : IGameState
     {
-        private readonly GameServices _services;
+        private readonly GameServices  _services;
         private readonly IRenderContext _rc;
+        private readonly Action<string>? _onSave;
+        private readonly IGameState?    _returnState;
 
         private int _hsSelectX;
         private int _hsSelectY = 1;
@@ -36,10 +38,26 @@ namespace FrostyPlatformer.States
         // Sprite-positioner för pilarna och OK-knappen i ASCII-väljaren
         private static readonly List<HighScoreEnterName> ActionList = BuildActionList();
 
-        public EnterHighScoreState(GameServices services)
+        /// <summary>
+        /// Skapar ett nytt EnterHighScoreState.
+        /// </summary>
+        /// <param name="services">Gemensamma speltjänster.</param>
+        /// <param name="onSave">
+        /// Om angiven: anropas med den inmatade tre-bokstavs-taggen när OK bekräftas.
+        /// Ersätter den normala IScoreSystem-sparningen — används för user map-rekord.
+        /// Om null används det vanliga highscore-flödet.
+        /// </param>
+        /// <param name="returnState">
+        /// State att övergå till efter bekräftelse. Null = HighScoreState (standardflöde).
+        /// </param>
+        public EnterHighScoreState(GameServices services,
+            Action<string>? onSave = null,
+            IGameState? returnState = null)
         {
-            _services = services;
-            _rc       = services.RenderContext;
+            _services    = services;
+            _rc          = services.RenderContext;
+            _onSave      = onSave;
+            _returnState = returnState;
         }
 
         public void Enter(GameContext context)
@@ -179,20 +197,28 @@ namespace FrostyPlatformer.States
                     foreach (int ascii in _nameAscii)
                         name += ((char)ascii).ToString();
 
-                    _services.Score.PutOnHighScore(new HighScoreObj
+                    if (_onSave != null)
                     {
-                        DateTime = DateTime.Now,
-                        Handle   = name,
-                        TimeSpan = context.EndTotalTime,
-                        Percent  = context.CollectedEnergiIds.Count
-                    });
-                    _services.Score.Save();
-
-                    _services.Input.ButtonsHasGoneIdle = false;
-                    _services.StateManager.Transition(new HighScoreState(_services), context);
+                        _onSave(name);
+                    }
+                    else
+                    {
+                        _services.Score.PutOnHighScore(new HighScoreObj
+                        {
+                            DateTime = DateTime.Now,
+                            Handle   = name,
+                            TimeSpan = context.EndTotalTime,
+                            Percent  = context.CollectedEnergiIds.Count
+                        });
+                        _services.Score.Save();
+                    }
 
                     _nameAscii = new List<int> { 65, 65, 65 };
                     _hsSelectX = 0;
+                    _services.Input.ButtonsHasGoneIdle = false;
+
+                    var next = _returnState ?? (IGameState)new HighScoreState(_services);
+                    _services.StateManager.Transition(next, context);
                 }
             }
         }

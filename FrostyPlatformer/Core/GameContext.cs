@@ -166,5 +166,12 @@ namespace FrostyPlatformer.Core
         /// </summary>
         public TimeSpan UserMapRunStartTime { get; set; }
 
+        /// <summary>
+        /// Slot-ID för pågående user map-körning (t.ex. "slot1").
+        /// Null = varken preview- eller user run-läge.
+        /// Sätts av UserMapsState och rensas när körningen avslutas.
+        /// </summary>
+        public string? UserMapSlotId { get; set; }
+
     }
 }

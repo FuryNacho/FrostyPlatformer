@@ -107,6 +107,16 @@ namespace FrostyPlatformer.States
                         new UserMapResultState(_services, runTime, context.PreviewReturnState!),
                         context);
                 }
+                else if (context.UserMapSlotId != null)
+                {
+                    var runTime = context.GameTotalTime - context.UserMapRunStartTime;
+                    _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundGame);
+                    _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
+                    _services.StateManager.Transition(
+                        new UserMapResultState(_services, runTime,
+                            new UserMapsState(_services), context.UserMapSlotId),
+                        context);
+                }
                 else
                 {
                     _services.StateManager.Transition(new WorldMapState(_services), context);
@@ -116,7 +126,7 @@ namespace FrostyPlatformer.States
 
             if (_enemyJump > -1) _enemyJump--;
 
-            // Hjälten är död → game over (eller tillbaka till editorn i preview)
+            // Hjälten är död → game over (eller tillbaka vid preview/user run)
             if (context.Player!.Health < 1)
             {
                 _services.Input.ButtonsHasGoneIdle = false;
@@ -125,6 +135,12 @@ namespace FrostyPlatformer.States
                     _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundGame);
                     _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
                     ReturnToEditor(context);
+                }
+                else if (context.UserMapSlotId != null)
+                {
+                    _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundGame);
+                    _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
+                    ReturnToUserMaps(context);
                 }
                 else
                 {
@@ -234,6 +250,14 @@ namespace FrostyPlatformer.States
             _services.StateManager.Transition(returnState, context);
         }
 
+        private void ReturnToUserMaps(GameContext context)
+        {
+            _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundGame);
+            _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
+            context.UserMapSlotId = null;
+            _services.StateManager.Transition(new UserMapsState(_services), context);
+        }
+
         // ── Dialog-input ─────────────────────────────────────────────────────────
         /// <summary>
         /// Avfärdar aktiv dialogruta vid confirm-tryck och kompletterar skriptkommandot.
@@ -332,6 +356,8 @@ namespace FrostyPlatformer.States
                 _services.Input.ButtonsHasGoneIdle = false;
                 if (context.IsPreviewMode)
                     ReturnToEditor(context);
+                else if (context.UserMapSlotId != null)
+                    ReturnToUserMaps(context);
                 else
                     _services.StateManager.Transition(new PauseState(_services), context);
                 return;

@@ -117,7 +117,7 @@ namespace FrostyPlatformer.States
                     return new List<string>
                     {
                         "Start New Game", "Load Saved Game", "View High Score",
-                        "Settings", "Credits", "Level Editor", "Exit Game"
+                        "Settings", "Credits", "Level Editor", "My Maps", "Exit Game"
                     };
 
                 case Enum.MenuState.PauseMenu:
@@ -216,6 +216,11 @@ namespace FrostyPlatformer.States
                 case "Level Editor":
                     _services.Input.ButtonsHasGoneIdle = false;
                     _services.StateManager.Transition(new EditorState(_services), context);
+                    break;
+
+                case "My Maps":
+                    _services.Input.ButtonsHasGoneIdle = false;
+                    _services.StateManager.Transition(new UserMapsState(_services), context);
                     break;
 
                 case "Exit Game":
