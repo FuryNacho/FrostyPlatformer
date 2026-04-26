@@ -65,6 +65,7 @@ namespace FrostyPlatformer.States
         private float               _camTargetY;
         private int                 _selectedTileId;
         private EditorMode          _mode;
+        private bool                _undoMode;       // toggle via U — LMB raderar istället för målar
 
         // ── HUD-meddelanden ─────────────────────────────────────────────────────
         private string _hudMessage     = "";
@@ -233,6 +234,8 @@ namespace FrostyPlatformer.States
                 _mode = _mode == EditorMode.Collision ? EditorMode.Tiles : EditorMode.Collision;
             if (_services.Input.IsEditorToggleSpawn)
                 _mode = _mode == EditorMode.Spawn ? EditorMode.Tiles : EditorMode.Spawn;
+            if (_services.Input.IsEditorUndoPressed)
+                _undoMode = !_undoMode;
 
             bool mouseInMap = _services.Input.MouseX < mapAreaWidth;
             if (mouseInMap)
@@ -365,13 +368,15 @@ namespace FrostyPlatformer.States
         private void HandleTilePainting(CameraView cam)
         {
             bool leftDown  = _services.Input.IsMouseLeftDown;
-            bool rightDown = _services.Input.IsMouseRightDown || _services.Input.IsEditorUndoDown;
-            if (!leftDown && !rightDown) return;
+            bool rightDown = _services.Input.IsMouseRightDown;
+            bool erase     = rightDown || (_undoMode && leftDown);
+            bool place     = leftDown && !_undoMode;
+            if (!place && !erase) return;
 
             var (tx, ty) = EditorMath.ScreenToTile(
                 _services.Input.MouseX, _services.Input.MouseY, cam);
 
-            _mapAdapter!.SetTile(tx, ty, leftDown ? _selectedTileId : 0);
+            _mapAdapter!.SetTile(tx, ty, place ? _selectedTileId : 0);
             _isDirty = true;
         }
 
@@ -380,14 +385,16 @@ namespace FrostyPlatformer.States
         /// </summary>
         private void HandleCollisionPainting(CameraView cam)
         {
-            bool leftDown  = _services.Input.IsMouseLeftDown;
-            bool rightDown = _services.Input.IsMouseRightDown || _services.Input.IsEditorUndoDown;
-            if (!leftDown && !rightDown) return;
+            bool leftDown    = _services.Input.IsMouseLeftDown;
+            bool rightDown   = _services.Input.IsMouseRightDown;
+            bool removeSolid = rightDown || (_undoMode && leftDown);
+            bool addSolid    = leftDown && !_undoMode;
+            if (!addSolid && !removeSolid) return;
 
             var (tx, ty) = EditorMath.ScreenToTile(
                 _services.Input.MouseX, _services.Input.MouseY, cam);
 
-            _mapAdapter!.SetSolid(tx, ty, leftDown);
+            _mapAdapter!.SetSolid(tx, ty, addSolid);
             _isDirty = true;
         }
 
@@ -420,10 +427,12 @@ namespace FrostyPlatformer.States
         /// </summary>
         private void HandleSpawnPlacement(CameraView cam)
         {
-            bool undoPressed = _services.Input.IsMouseRightPressed || _services.Input.IsEditorUndoPressed;
-            if (!_services.Input.IsMouseLeftPressed && !undoPressed) return;
+            bool clearPressed = _services.Input.IsMouseRightPressed
+                             || (_undoMode && _services.Input.IsMouseLeftPressed);
+            bool placePressed = !_undoMode && _services.Input.IsMouseLeftPressed;
+            if (!placePressed && !clearPressed) return;
 
-            if (undoPressed)
+            if (clearPressed)
             {
                 _levelObj!.SpawnX = -1;
                 _levelObj!.SpawnY = -1;
@@ -832,7 +841,7 @@ namespace FrostyPlatformer.States
                 _                   => "LMB=paint RMB=erase"
             };
 
-            bool undoActive  = _services.Input.IsEditorUndoDown;
+            bool undoActive  = _undoMode;
             string dirtyMark = _isDirty ? "*" : "";
             string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  b:{_selectedTileId}";
             string row2 = $"{tileInfo}  {spawnInfo}  {mouseCtrl}";
