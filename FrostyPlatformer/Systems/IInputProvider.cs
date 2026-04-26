@@ -85,6 +85,12 @@ namespace FrostyPlatformer.Systems
         bool IsEditorToggleSpawn { get; }
 
         /// <summary>
+        /// True den frame som T-tangenten trycks ned. Används av EditorState
+        /// för att växla till mål/portal-redigeringsläge.
+        /// </summary>
+        bool IsEditorToggleGoal { get; }
+
+        /// <summary>
         /// True den frame som Ctrl+S trycks ned. Används av EditorState för att spara kartan.
         /// </summary>
         bool IsEditorSave { get; }

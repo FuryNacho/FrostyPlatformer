@@ -133,6 +133,20 @@ namespace FrostyPlatformer.Systems
                     level.SpawnX = (int)(spawn.X / GameConstants.TileSize);
                     level.SpawnY = (int)(spawn.Y / GameConstants.TileSize);
                 }
+
+                foreach (var obj in objectsLayer.Objects)
+                {
+                    if (obj.Name == "PlayerSpawn") continue;
+                    if (string.IsNullOrEmpty(obj.Type)) continue;
+
+                    level.Objects.Add(new PlacedObject
+                    {
+                        ObjectType = obj.Type,
+                        SubType    = obj.Name,
+                        TileX      = (int)(obj.X / GameConstants.TileSize),
+                        TileY      = (int)(obj.Y / GameConstants.TileSize)
+                    });
+                }
             }
 
             return level;
@@ -163,7 +177,7 @@ namespace FrostyPlatformer.Systems
             layers.Add(BuildTileLayer("Collision", level.Width, level.Height,
                 level.AttributeIndex));
 
-            if (level.HasSpawn)
+            if (level.HasSpawn || level.Objects.Count > 0)
                 layers.Add(BuildObjectsLayer(level));
 
             var root = new JsonObject
@@ -198,23 +212,38 @@ namespace FrostyPlatformer.Systems
 
         private static JsonObject BuildObjectsLayer(LevelObj level)
         {
-            int px = level.SpawnX * GameConstants.TileSize;
-            int py = level.SpawnY * GameConstants.TileSize;
+            var objects = new JsonArray();
+
+            if (level.HasSpawn)
+            {
+                objects.Add(new JsonObject
+                {
+                    ["name"]   = "PlayerSpawn",
+                    ["x"]      = level.SpawnX * GameConstants.TileSize,
+                    ["y"]      = level.SpawnY * GameConstants.TileSize,
+                    ["width"]  = GameConstants.TileSize,
+                    ["height"] = GameConstants.TileSize
+                });
+            }
+
+            foreach (var obj in level.Objects)
+            {
+                objects.Add(new JsonObject
+                {
+                    ["name"]   = obj.SubType,
+                    ["type"]   = obj.ObjectType,
+                    ["x"]      = obj.TileX * GameConstants.TileSize,
+                    ["y"]      = obj.TileY * GameConstants.TileSize,
+                    ["width"]  = GameConstants.TileSize,
+                    ["height"] = GameConstants.TileSize
+                });
+            }
+
             return new JsonObject
             {
-                ["name"] = "Objects",
-                ["type"] = "objectgroup",
-                ["objects"] = new JsonArray
-                {
-                    new JsonObject
-                    {
-                        ["name"]   = "PlayerSpawn",
-                        ["x"]      = px,
-                        ["y"]      = py,
-                        ["width"]  = GameConstants.TileSize,
-                        ["height"] = GameConstants.TileSize
-                    }
-                }
+                ["name"]    = "Objects",
+                ["type"]    = "objectgroup",
+                ["objects"] = objects
             };
         }
 
@@ -246,6 +275,7 @@ namespace FrostyPlatformer.Systems
         private sealed class TiledObjectDto
         {
             public string Name   { get; set; } = "";
+            public string Type   { get; set; } = "";
             public float  X      { get; set; }
             public float  Y      { get; set; }
         }

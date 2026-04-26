@@ -31,7 +31,7 @@ namespace FrostyPlatformer.States
     /// mönster som alla andra states. Escape leder tillbaka till MenuState.
     /// </remarks>
     /// <summary>Redigeringsläge i editorn — styr vad musklick gör.</summary>
-    internal enum EditorMode { Tiles, Collision, Spawn }
+    internal enum EditorMode { Tiles, Collision, Spawn, Goal }
 
     internal sealed class EditorState : IGameState
     {
@@ -52,6 +52,8 @@ namespace FrostyPlatformer.States
             new RenderColor(220, 50, 50, 100);
         private static readonly RenderColor SpawnMarkerColor =
             new RenderColor(50, 220, 80, 200);
+        private static readonly RenderColor GoalMarkerColor =
+            new RenderColor(255, 200, 0, 230);
         private static readonly RenderColor MapBoundsColor =
             new RenderColor(255, 200, 0, 230);
 
@@ -234,15 +236,18 @@ namespace FrostyPlatformer.States
                 _mode = _mode == EditorMode.Collision ? EditorMode.Tiles : EditorMode.Collision;
             if (_services.Input.IsEditorToggleSpawn)
                 _mode = _mode == EditorMode.Spawn ? EditorMode.Tiles : EditorMode.Spawn;
+            if (_services.Input.IsEditorToggleGoal)
+                _mode = _mode == EditorMode.Goal ? EditorMode.Tiles : EditorMode.Goal;
             if (_services.Input.IsEditorUndoPressed)
                 _undoMode = !_undoMode;
 
             bool mouseInMap = _services.Input.MouseX < mapAreaWidth;
             if (mouseInMap)
             {
-                if (_mode == EditorMode.Tiles)          HandleTilePainting(cam);
+                if      (_mode == EditorMode.Tiles)     HandleTilePainting(cam);
                 else if (_mode == EditorMode.Collision) HandleCollisionPainting(cam);
-                else                                    HandleSpawnPlacement(cam);
+                else if (_mode == EditorMode.Spawn)     HandleSpawnPlacement(cam);
+                else                                    HandleGoalPlacement(cam);
             }
             else if (_mode == EditorMode.Tiles)
             {
@@ -257,6 +262,8 @@ namespace FrostyPlatformer.States
 
             if (_levelObj.HasSpawn)
                 DrawSpawnMarker(cam, mapAreaWidth);
+            if (_levelObj.HasGoal)
+                DrawGoalMarker(cam, mapAreaWidth);
 
             if (mouseInMap)
             {
@@ -446,6 +453,41 @@ namespace FrostyPlatformer.States
 
             _levelObj!.SpawnX = tx;
             _levelObj!.SpawnY = ty;
+            _isDirty = true;
+        }
+
+        /// <summary>
+        /// Placerar mål/portal-objektet (LMB) eller tar bort det (RMB).
+        /// Bara ett mål per karta tillåts — befintligt ersätts vid ny placering.
+        /// Portalen leder alltid tillbaka till worldmap.
+        /// </summary>
+        private void HandleGoalPlacement(CameraView cam)
+        {
+            bool clearPressed = _services.Input.IsMouseRightPressed
+                             || (_undoMode && _services.Input.IsMouseLeftPressed);
+            bool placePressed = !_undoMode && _services.Input.IsMouseLeftPressed;
+            if (!placePressed && !clearPressed) return;
+
+            if (clearPressed)
+            {
+                _levelObj!.Objects.RemoveAll(o => o.ObjectType == "Goal");
+                _isDirty = true;
+                return;
+            }
+
+            var (tx, ty) = EditorMath.ScreenToTile(
+                _services.Input.MouseX, _services.Input.MouseY, cam);
+
+            if (tx < 0 || tx >= _mapAdapter!.Width || ty < 0 || ty >= _mapAdapter!.Height) return;
+
+            _levelObj!.Objects.RemoveAll(o => o.ObjectType == "Goal");
+            _levelObj.Objects.Add(new PlacedObject
+            {
+                ObjectType = "Goal",
+                SubType    = "Goal",
+                TileX      = tx,
+                TileY      = ty
+            });
             _isDirty = true;
         }
 
@@ -800,6 +842,29 @@ namespace FrostyPlatformer.States
             _rc.DrawLine(cx,       cy - arm, cx,       cy + arm, c);
         }
 
+        /// <summary>
+        /// Ritar en gul diamant vid mål-/portal-tilen.
+        /// </summary>
+        private void DrawGoalMarker(CameraView cam, int mapAreaWidth)
+        {
+            var goal = _levelObj!.Objects.Find(o => o.ObjectType == "Goal");
+            if (goal == null) return;
+
+            var (sx, sy) = EditorMath.TileToScreen(goal.TileX, goal.TileY, cam);
+            if (sx >= mapAreaWidth) return;
+
+            int ts  = GameConstants.TileSize;
+            int cx  = sx + ts / 2;
+            int cy  = sy + ts / 2;
+            int arm = ts / 2 - 1;
+            var c   = GoalMarkerColor;
+
+            _rc.DrawLine(cx,       cy - arm, cx + arm, cy,       c);
+            _rc.DrawLine(cx + arm, cy,       cx,       cy + arm, c);
+            _rc.DrawLine(cx,       cy + arm, cx - arm, cy,       c);
+            _rc.DrawLine(cx - arm, cy,       cx,       cy - arm, c);
+        }
+
         private void DrawCursor(int tileX, int tileY, CameraView cam)
         {
             var (cx, cy) = EditorMath.TileToScreen(tileX, tileY, cam);
@@ -822,6 +887,7 @@ namespace FrostyPlatformer.States
             {
                 EditorMode.Collision => "COL",
                 EditorMode.Spawn     => "SPAWN",
+                EditorMode.Goal      => "GOAL",
                 _                   => "TILES"
             };
 
@@ -834,18 +900,24 @@ namespace FrostyPlatformer.States
                 ? $"sp:({_levelObj.SpawnX},{_levelObj.SpawnY})"
                 : "sp:none";
 
+            var goalObj = _levelObj.Objects.Find(o => o.ObjectType == "Goal");
+            string goalInfo = goalObj != null
+                ? $"g:({goalObj.TileX},{goalObj.TileY})"
+                : "g:none";
+
             string mouseCtrl = _mode switch
             {
                 EditorMode.Collision => "LMB=solid RMB=open",
                 EditorMode.Spawn     => "LMB=set RMB=clear",
+                EditorMode.Goal      => "LMB=set RMB=clear",
                 _                   => "LMB=paint RMB=erase"
             };
 
             bool undoActive  = _undoMode;
             string dirtyMark = _isDirty ? "*" : "";
             string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  b:{_selectedTileId}";
-            string row2 = $"{tileInfo}  {spawnInfo}  {mouseCtrl}";
-            string row3 = "C=col  G=spawn  U=undo  L=maps  Ctrl+S=save  Esc=exit";
+            string row2 = $"{tileInfo}  {spawnInfo}  {goalInfo}  {mouseCtrl}";
+            string row3 = "C=col  G=spawn  T=goal  U=undo  L=maps  Ctrl+S=save  Esc=exit";
 
             int hudHeight = undoActive ? 44 : 33;
             _rc.FillRect(0, 0, context.ScreenWidth, hudHeight, new RenderColor(0, 0, 0, 170));

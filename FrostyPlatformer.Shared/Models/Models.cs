@@ -4,6 +4,26 @@ using System.Collections.Generic;
 
 namespace FrostyPlatformer.Models
 {
+    /// <summary>
+    /// Representerar ett placerat objekt på kartan (mål, fiende, pickup).
+    /// Serialiseras till Tiled JSON Objects-lagret via TiledMapRepository.
+    /// </summary>
+    public class PlacedObject
+    {
+        /// <summary>Objektkategori: "Goal", "Pickup" eller "Enemy".</summary>
+        public string ObjectType { get; set; } = "";
+
+        /// <summary>Specifik typ inom kategorin, t.ex. "Penguin" för Enemy.</summary>
+        public string SubType    { get; set; } = "";
+
+        /// <summary>Horisontell tile-koordinat.</summary>
+        public int    TileX      { get; set; }
+
+        /// <summary>Vertikal tile-koordinat.</summary>
+        public int    TileY      { get; set; }
+    }
+
+
     public class Models
     { }
     public class CreateObj
@@ -33,6 +53,12 @@ namespace FrostyPlatformer.Models
 
         /// <summary>Relativ sökväg till tileset-filen (.tsx) som refereras i Tiled JSON.</summary>
         public string TilesetSource { get; set; } = "tilesheetspring.tsx";
+
+        /// <summary>Placerade objekt (mål, fiender, pickups) i kartan.</summary>
+        public List<PlacedObject> Objects { get; set; } = new List<PlacedObject>();
+
+        /// <summary>True om kartan har ett mål-/portal-objekt.</summary>
+        public bool HasGoal => Objects.Exists(o => o.ObjectType == "Goal");
     }
 
 

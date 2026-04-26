@@ -495,6 +495,98 @@ namespace UnitTest
             Assert.AreEqual(10, ids.Count);
         }
 
+        // ── ParseTiledJson — PlacedObject (E4b) ─────────────────────────────
+
+        private const string JsonWithGoal = @"{
+            ""width"": 4, ""height"": 4,
+            ""tilesets"": [{ ""firstgid"": 1, ""source"": ""t.tsx"" }],
+            ""layers"": [
+                { ""name"": ""Tiles"",   ""type"": ""tilelayer"",   ""data"": [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] },
+                { ""name"": ""Objects"", ""type"": ""objectgroup"",
+                  ""objects"": [
+                    { ""name"": ""PlayerSpawn"", ""x"": 16.0, ""y"": 16.0 },
+                    { ""name"": ""Goal"", ""type"": ""Goal"", ""x"": 48.0, ""y"": 32.0 }
+                  ]
+                }
+            ]
+        }";
+
+        [TestMethod]
+        public void ParseTiledJson_WithGoalObject_AddsGoalToObjects()
+        {
+            var result = TiledMapRepository.ParseTiledJson(JsonWithGoal);
+
+            Assert.IsTrue(result!.HasGoal);
+            Assert.AreEqual(1, result.Objects.Count);
+        }
+
+        [TestMethod]
+        public void ParseTiledJson_WithGoalObject_ConvertsCoordinatesToTiles()
+        {
+            // x=48, TileSize=16 → TileX=3   y=32, TileSize=16 → TileY=2
+            var result = TiledMapRepository.ParseTiledJson(JsonWithGoal);
+            var goal   = result!.Objects.Find(o => o.ObjectType == "Goal");
+
+            Assert.AreEqual(3, goal!.TileX);
+            Assert.AreEqual(2, goal!.TileY);
+        }
+
+        [TestMethod]
+        public void BuildTiledJson_GoalRoundTrip_PreservesPosition()
+        {
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 4,
+                Height         = 4,
+                TileIndex      = new int[16],
+                AttributeIndex = new int[16],
+                SpawnX         = 1,
+                SpawnY         = 1
+            };
+            level.Objects.Add(new FrostyPlatformer.Models.PlacedObject
+            {
+                ObjectType = "Goal",
+                SubType    = "Goal",
+                TileX      = 3,
+                TileY      = 2
+            });
+
+            var json   = TiledMapRepository.BuildTiledJson(level);
+            var result = TiledMapRepository.ParseTiledJson(json);
+            var goal   = result!.Objects.Find(o => o.ObjectType == "Goal");
+
+            Assert.IsNotNull(goal);
+            Assert.AreEqual(3, goal!.TileX);
+            Assert.AreEqual(2, goal!.TileY);
+        }
+
+        [TestMethod]
+        public void BuildTiledJson_GoalWithoutSpawn_StillIncludesObjectsLayer()
+        {
+            // Kartan har inget spawn men har ett mål — Objects-lagret ska ändå skrivas
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 2,
+                Height         = 2,
+                TileIndex      = new int[4],
+                AttributeIndex = new int[4]
+                // SpawnX/Y = -1 (standard)
+            };
+            level.Objects.Add(new FrostyPlatformer.Models.PlacedObject
+            {
+                ObjectType = "Goal",
+                SubType    = "Goal",
+                TileX      = 1,
+                TileY      = 1
+            });
+
+            var json   = TiledMapRepository.BuildTiledJson(level);
+            var result = TiledMapRepository.ParseTiledJson(json);
+
+            Assert.IsTrue(result!.HasGoal);
+            Assert.IsFalse(result.HasSpawn);
+        }
+
         // ── GetAvailableMapIds ────────────────────────────────────────────────
 
         [TestMethod]
