@@ -31,7 +31,7 @@ namespace FrostyPlatformer.States
     /// mönster som alla andra states. Escape leder tillbaka till MenuState.
     /// </remarks>
     /// <summary>Redigeringsläge i editorn — styr vad musklick gör.</summary>
-    internal enum EditorMode { Tiles, Collision, Spawn, Goal }
+    internal enum EditorMode { Tiles, Collision, Spawn, Goal, Pickup }
 
     internal sealed class EditorState : IGameState
     {
@@ -54,6 +54,8 @@ namespace FrostyPlatformer.States
             new RenderColor(50, 220, 80, 200);
         private static readonly RenderColor GoalMarkerColor =
             new RenderColor(255, 200, 0, 230);
+        private static readonly RenderColor PickupMarkerColor =
+            new RenderColor(0, 210, 200, 210);
         private static readonly RenderColor MapBoundsColor =
             new RenderColor(255, 200, 0, 230);
 
@@ -68,6 +70,9 @@ namespace FrostyPlatformer.States
         private int                 _selectedTileId;
         private EditorMode          _mode;
         private bool                _undoMode;       // toggle via U — LMB raderar istället för målar
+        private int                 _selectedPickupSubType;
+
+        private static readonly string[] PickupSubTypes = { "Energy" };
 
         // ── HUD-meddelanden ─────────────────────────────────────────────────────
         private string _hudMessage     = "";
@@ -238,6 +243,16 @@ namespace FrostyPlatformer.States
                 _mode = _mode == EditorMode.Spawn ? EditorMode.Tiles : EditorMode.Spawn;
             if (_services.Input.IsEditorToggleGoal)
                 _mode = _mode == EditorMode.Goal ? EditorMode.Tiles : EditorMode.Goal;
+            if (_services.Input.IsEditorTogglePickup)
+                _mode = _mode == EditorMode.Pickup ? EditorMode.Tiles : EditorMode.Pickup;
+
+            if (_mode == EditorMode.Pickup && PickupSubTypes.Length > 1)
+            {
+                if (_services.Input.IsLeftPressed)
+                    _selectedPickupSubType = (_selectedPickupSubType - 1 + PickupSubTypes.Length) % PickupSubTypes.Length;
+                if (_services.Input.IsRightPressed)
+                    _selectedPickupSubType = (_selectedPickupSubType + 1) % PickupSubTypes.Length;
+            }
             if (_services.Input.IsEditorUndoPressed)
                 _undoMode = !_undoMode;
 
@@ -247,7 +262,8 @@ namespace FrostyPlatformer.States
                 if      (_mode == EditorMode.Tiles)     HandleTilePainting(cam);
                 else if (_mode == EditorMode.Collision) HandleCollisionPainting(cam);
                 else if (_mode == EditorMode.Spawn)     HandleSpawnPlacement(cam);
-                else                                    HandleGoalPlacement(cam);
+                else if (_mode == EditorMode.Goal)      HandleGoalPlacement(cam);
+                else                                    HandlePickupPlacement(cam);
             }
             else if (_mode == EditorMode.Tiles)
             {
@@ -264,6 +280,7 @@ namespace FrostyPlatformer.States
                 DrawSpawnMarker(cam, mapAreaWidth);
             if (_levelObj.HasGoal)
                 DrawGoalMarker(cam, mapAreaWidth);
+            DrawPickupMarkers(cam, mapAreaWidth);
 
             if (mouseInMap)
             {
@@ -485,6 +502,45 @@ namespace FrostyPlatformer.States
             {
                 ObjectType = "Goal",
                 SubType    = "Goal",
+                TileX      = tx,
+                TileY      = ty
+            });
+            _isDirty = true;
+        }
+
+        /// <summary>
+        /// Placerar en pickup av vald sub-typ (LMB) eller tar bort pickup på tilen (RMB).
+        /// Flera pickups per karta tillåts; max en per tile.
+        /// </summary>
+        private void HandlePickupPlacement(CameraView cam)
+        {
+            bool clearPressed = _services.Input.IsMouseRightPressed
+                             || (_undoMode && _services.Input.IsMouseLeftPressed);
+            bool placePressed = !_undoMode && _services.Input.IsMouseLeftPressed;
+            if (!placePressed && !clearPressed) return;
+
+            var (tx, ty) = EditorMath.ScreenToTile(
+                _services.Input.MouseX, _services.Input.MouseY, cam);
+
+            if (tx < 0 || tx >= _mapAdapter!.Width || ty < 0 || ty >= _mapAdapter!.Height) return;
+
+            if (clearPressed)
+            {
+                _levelObj!.Objects.RemoveAll(
+                    o => o.ObjectType == "Pickup" && o.TileX == tx && o.TileY == ty);
+                _isDirty = true;
+                return;
+            }
+
+            // En pickup per tile — inga staplar
+            if (_levelObj!.Objects.Exists(
+                    o => o.ObjectType == "Pickup" && o.TileX == tx && o.TileY == ty))
+                return;
+
+            _levelObj.Objects.Add(new PlacedObject
+            {
+                ObjectType = "Pickup",
+                SubType    = PickupSubTypes[_selectedPickupSubType],
                 TileX      = tx,
                 TileY      = ty
             });
@@ -865,6 +921,27 @@ namespace FrostyPlatformer.States
             _rc.DrawLine(cx - arm, cy,       cx,       cy - arm, c);
         }
 
+        /// <summary>
+        /// Ritar en teal fylld ruta med "E"-etikett för varje pickup i kartan.
+        /// </summary>
+        private void DrawPickupMarkers(CameraView cam, int mapAreaWidth)
+        {
+            int ts     = GameConstants.TileSize;
+            int margin = ts / 4;
+            var c      = PickupMarkerColor;
+
+            foreach (var obj in _levelObj!.Objects)
+            {
+                if (obj.ObjectType != "Pickup") continue;
+
+                var (sx, sy) = EditorMath.TileToScreen(obj.TileX, obj.TileY, cam);
+                if (sx >= mapAreaWidth) continue;
+
+                _rc.FillRect(sx + margin, sy + margin, ts - margin * 2, ts - margin * 2, c);
+                _rc.DrawText("E", sx + margin + 1, sy + margin + 1);
+            }
+        }
+
         private void DrawCursor(int tileX, int tileY, CameraView cam)
         {
             var (cx, cy) = EditorMath.TileToScreen(tileX, tileY, cam);
@@ -888,6 +965,7 @@ namespace FrostyPlatformer.States
                 EditorMode.Collision => "COL",
                 EditorMode.Spawn     => "SPAWN",
                 EditorMode.Goal      => "GOAL",
+                EditorMode.Pickup    => "PICKUP",
                 _                   => "TILES"
             };
 
@@ -905,19 +983,26 @@ namespace FrostyPlatformer.States
                 ? $"g:({goalObj.TileX},{goalObj.TileY})"
                 : "g:none";
 
+            int    pickupCount       = _levelObj.Objects.FindAll(o => o.ObjectType == "Pickup").Count;
+            string activePickupLabel = _mode == EditorMode.Pickup
+                ? $"[{PickupSubTypes[_selectedPickupSubType]}]"
+                : "";
+            string pickupInfo = $"p:{pickupCount}{activePickupLabel}";
+
             string mouseCtrl = _mode switch
             {
                 EditorMode.Collision => "LMB=solid RMB=open",
                 EditorMode.Spawn     => "LMB=set RMB=clear",
                 EditorMode.Goal      => "LMB=set RMB=clear",
+                EditorMode.Pickup    => "LMB=place RMB=del",
                 _                   => "LMB=paint RMB=erase"
             };
 
             bool undoActive  = _undoMode;
             string dirtyMark = _isDirty ? "*" : "";
             string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  b:{_selectedTileId}";
-            string row2 = $"{tileInfo}  {spawnInfo}  {goalInfo}  {mouseCtrl}";
-            string row3 = "C=col  G=spawn  T=goal  U=undo  L=maps  Ctrl+S=save  Esc=exit";
+            string row2 = $"{tileInfo}  {spawnInfo}  {goalInfo}  {pickupInfo}  {mouseCtrl}";
+            string row3 = "C=col  G=spawn  T=goal  P=item  U=undo  L=maps  Ctrl+S=save  Esc=exit";
 
             int hudHeight = undoActive ? 44 : 33;
             _rc.FillRect(0, 0, context.ScreenWidth, hudHeight, new RenderColor(0, 0, 0, 170));

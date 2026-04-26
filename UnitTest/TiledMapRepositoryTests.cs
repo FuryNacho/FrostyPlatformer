@@ -587,6 +587,96 @@ namespace UnitTest
             Assert.IsFalse(result.HasSpawn);
         }
 
+        // ── ParseTiledJson — Pickup (E4c) ────────────────────────────────────
+
+        private const string JsonWithPickup = @"{
+            ""width"": 4, ""height"": 4,
+            ""tilesets"": [{ ""firstgid"": 1, ""source"": ""t.tsx"" }],
+            ""layers"": [
+                { ""name"": ""Tiles"",   ""type"": ""tilelayer"",   ""data"": [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] },
+                { ""name"": ""Objects"", ""type"": ""objectgroup"",
+                  ""objects"": [
+                    { ""name"": ""PlayerSpawn"", ""x"": 16.0, ""y"": 16.0 },
+                    { ""name"": ""Energy"", ""type"": ""Pickup"", ""x"": 32.0, ""y"": 16.0 },
+                    { ""name"": ""Energy"", ""type"": ""Pickup"", ""x"": 48.0, ""y"": 32.0 }
+                  ]
+                }
+            ]
+        }";
+
+        [TestMethod]
+        public void ParseTiledJson_WithPickupObjects_AddsPickupsToObjects()
+        {
+            var result = TiledMapRepository.ParseTiledJson(JsonWithPickup);
+
+            Assert.AreEqual(2, result!.Objects.Count);
+            Assert.IsTrue(result.Objects.TrueForAll(o => o.ObjectType == "Pickup"));
+        }
+
+        [TestMethod]
+        public void ParseTiledJson_WithPickupObjects_ConvertsCoordinatesToTiles()
+        {
+            // x=32 → TileX=2, y=16 → TileY=1
+            var result  = TiledMapRepository.ParseTiledJson(JsonWithPickup);
+            var pickup1 = result!.Objects.Find(o => o.TileX == 2);
+
+            Assert.IsNotNull(pickup1);
+            Assert.AreEqual(1,        pickup1!.TileY);
+            Assert.AreEqual("Energy", pickup1.SubType);
+        }
+
+        [TestMethod]
+        public void BuildTiledJson_PickupRoundTrip_PreservesPositionAndSubType()
+        {
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 4,
+                Height         = 4,
+                TileIndex      = new int[16],
+                AttributeIndex = new int[16],
+                SpawnX         = 1,
+                SpawnY         = 1
+            };
+            level.Objects.Add(new FrostyPlatformer.Models.PlacedObject
+            {
+                ObjectType = "Pickup",
+                SubType    = "Energy",
+                TileX      = 2,
+                TileY      = 3
+            });
+
+            var json   = TiledMapRepository.BuildTiledJson(level);
+            var result = TiledMapRepository.ParseTiledJson(json);
+            var pickup = result!.Objects.Find(o => o.ObjectType == "Pickup");
+
+            Assert.IsNotNull(pickup);
+            Assert.AreEqual("Energy", pickup!.SubType);
+            Assert.AreEqual(2,        pickup.TileX);
+            Assert.AreEqual(3,        pickup.TileY);
+        }
+
+        [TestMethod]
+        public void BuildTiledJson_MultiplePickups_AllPreserved()
+        {
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 4,
+                Height         = 4,
+                TileIndex      = new int[16],
+                AttributeIndex = new int[16],
+                SpawnX         = 0,
+                SpawnY         = 0
+            };
+            level.Objects.Add(new FrostyPlatformer.Models.PlacedObject { ObjectType = "Pickup", SubType = "Energy", TileX = 1, TileY = 1 });
+            level.Objects.Add(new FrostyPlatformer.Models.PlacedObject { ObjectType = "Pickup", SubType = "Energy", TileX = 2, TileY = 2 });
+            level.Objects.Add(new FrostyPlatformer.Models.PlacedObject { ObjectType = "Pickup", SubType = "Energy", TileX = 3, TileY = 3 });
+
+            var json   = TiledMapRepository.BuildTiledJson(level);
+            var result = TiledMapRepository.ParseTiledJson(json);
+
+            Assert.AreEqual(3, result!.Objects.FindAll(o => o.ObjectType == "Pickup").Count);
+        }
+
         // ── GetAvailableMapIds ────────────────────────────────────────────────
 
         [TestMethod]

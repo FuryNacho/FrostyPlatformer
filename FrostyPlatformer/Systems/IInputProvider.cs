@@ -91,6 +91,12 @@ namespace FrostyPlatformer.Systems
         bool IsEditorToggleGoal { get; }
 
         /// <summary>
+        /// True den frame som P-tangenten trycks ned. Används av EditorState
+        /// för att växla till pickup-redigeringsläge.
+        /// </summary>
+        bool IsEditorTogglePickup { get; }
+
+        /// <summary>
         /// True den frame som Ctrl+S trycks ned. Används av EditorState för att spara kartan.
         /// </summary>
         bool IsEditorSave { get; }

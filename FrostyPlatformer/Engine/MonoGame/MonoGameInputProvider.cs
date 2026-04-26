@@ -198,6 +198,7 @@ namespace FrostyPlatformer.Engine.MonoGame
         public bool IsEditorToggleCollision => KeyPressed(Keys.C);
         public bool IsEditorToggleSpawn     => KeyPressed(Keys.G);
         public bool IsEditorToggleGoal      => KeyPressed(Keys.T);
+        public bool IsEditorTogglePickup    => KeyPressed(Keys.P);
         public bool IsEditorSave            => KeyPressed(Keys.S) && KeyDown(Keys.LeftControl);
         public bool IsEditorLoad            => KeyPressed(Keys.L);
         public bool IsEditorNew             => KeyPressed(Keys.N);
