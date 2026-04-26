@@ -250,7 +250,22 @@ namespace FrostyPlatformer.States
             if (_services.Input.IsEditorTogglePickup)
                 _mode = _mode == EditorMode.Pickup ? EditorMode.Tiles : EditorMode.Pickup;
             if (_services.Input.IsEditorToggleEnemy)
-                _mode = _mode == EditorMode.Enemy ? EditorMode.Tiles : EditorMode.Enemy;
+            {
+                if (_mode != EditorMode.Enemy)
+                {
+                    _mode = EditorMode.Enemy;
+                    _selectedEnemySubType = 0;
+                }
+                else
+                {
+                    _selectedEnemySubType++;
+                    if (_selectedEnemySubType >= EnemySubTypes.Length)
+                    {
+                        _selectedEnemySubType = 0;
+                        _mode = EditorMode.Tiles;
+                    }
+                }
+            }
 
             if (_mode == EditorMode.Pickup && PickupSubTypes.Length > 1)
             {
@@ -258,13 +273,6 @@ namespace FrostyPlatformer.States
                     _selectedPickupSubType = (_selectedPickupSubType - 1 + PickupSubTypes.Length) % PickupSubTypes.Length;
                 if (_services.Input.IsRightPressed)
                     _selectedPickupSubType = (_selectedPickupSubType + 1) % PickupSubTypes.Length;
-            }
-            if (_mode == EditorMode.Enemy)
-            {
-                if (_services.Input.IsLeftPressed)
-                    _selectedEnemySubType = (_selectedEnemySubType - 1 + EnemySubTypes.Length) % EnemySubTypes.Length;
-                if (_services.Input.IsRightPressed)
-                    _selectedEnemySubType = (_selectedEnemySubType + 1) % EnemySubTypes.Length;
             }
             if (_services.Input.IsEditorUndoPressed)
                 _undoMode = !_undoMode;
