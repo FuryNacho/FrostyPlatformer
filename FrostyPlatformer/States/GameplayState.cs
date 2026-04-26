@@ -95,21 +95,41 @@ namespace FrostyPlatformer.States
             }
 
             // Skript kan byta karta till worldmap (bana klar → CommandChangeMap).
-            // I så fall ska WorldMapState ta över — GameplayState ska inte köra
-            // gravitation och hopplogik mot världskartan.
+            // I preview-läge: återvänd till editorn istället för WorldMapState.
             if (context.CurrentLevel?.Name == "worldmap")
             {
-                _services.StateManager.Transition(new WorldMapState(_services), context);
+                if (context.IsPreviewMode)
+                {
+                    var runTime = context.GameTotalTime - context.UserMapRunStartTime;
+                    _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundGame);
+                    _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
+                    _services.StateManager.Transition(
+                        new UserMapResultState(_services, runTime, context.PreviewReturnState!),
+                        context);
+                }
+                else
+                {
+                    _services.StateManager.Transition(new WorldMapState(_services), context);
+                }
                 return;
             }
 
             if (_enemyJump > -1) _enemyJump--;
 
-            // Hjälten är död → game over
+            // Hjälten är död → game over (eller tillbaka till editorn i preview)
             if (context.Player!.Health < 1)
             {
                 _services.Input.ButtonsHasGoneIdle = false;
-                _services.StateManager.Transition(new GameOverState(_services), context);
+                if (context.IsPreviewMode)
+                {
+                    _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundGame);
+                    _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
+                    ReturnToEditor(context);
+                }
+                else
+                {
+                    _services.StateManager.Transition(new GameOverState(_services), context);
+                }
                 return;
             }
 
@@ -197,6 +217,22 @@ namespace FrostyPlatformer.States
         public void Draw(IRenderContext renderContext) { }
 
         public void Exit(GameContext context) { }
+
+        // ── Preview-hjälpmetod ───────────────────────────────────────────────────
+        /// <summary>
+        /// Avslutar preview-läget och återvänder till den EditorState som
+        /// startade preview-sessionen.
+        /// </summary>
+        private void ReturnToEditor(GameContext context)
+        {
+            _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundGame);
+            _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
+
+            var returnState = context.PreviewReturnState!;
+            context.IsPreviewMode      = false;
+            context.PreviewReturnState = null;
+            _services.StateManager.Transition(returnState, context);
+        }
 
         // ── Dialog-input ─────────────────────────────────────────────────────────
         /// <summary>
@@ -294,7 +330,10 @@ namespace FrostyPlatformer.States
             if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsCancelPressed)
             {
                 _services.Input.ButtonsHasGoneIdle = false;
-                _services.StateManager.Transition(new PauseState(_services), context);
+                if (context.IsPreviewMode)
+                    ReturnToEditor(context);
+                else
+                    _services.StateManager.Transition(new PauseState(_services), context);
                 return;
             }
 

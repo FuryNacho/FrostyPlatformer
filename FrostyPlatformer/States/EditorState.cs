@@ -131,9 +131,19 @@ namespace FrostyPlatformer.States
             _rc       = services.RenderContext;
         }
 
-        /// <summary>Öppnar slot-pickern direkt vid start — ingen spelkarta laddas automatiskt.</summary>
+        /// <summary>
+        /// Öppnar slot-pickern vid normal start.
+        /// Vid återkomst från preview (karta redan laddad) återregistreras tilesheet utan reset.
+        /// </summary>
         public void Enter(GameContext context)
         {
+            // Returning from preview — keep current map and editor state intact
+            if (_mapAdapter != null)
+            {
+                RegisterTilesheet(_levelObj!.TilesetSource);
+                return;
+            }
+
             _selectedTileId = 0;
             _mode           = EditorMode.Tiles;
             OpenMapPicker();
@@ -276,6 +286,12 @@ namespace FrostyPlatformer.States
             }
             if (_services.Input.IsEditorUndoPressed)
                 _undoMode = !_undoMode;
+
+            if (_services.Input.IsEditorPreviewPlay)
+            {
+                HandlePreviewPlay(context);
+                return;
+            }
 
             bool mouseInMap = _services.Input.MouseX < mapAreaWidth;
             if (mouseInMap)
@@ -443,6 +459,54 @@ namespace FrostyPlatformer.States
 
             _mapAdapter!.SetSolid(tx, ty, addSolid);
             _isDirty = true;
+        }
+
+        /// <summary>
+        /// Startar en testspelning (preview) av aktuell karta.
+        /// Kräver spawn-punkt och mål. Esc under preview återvänder hit.
+        /// </summary>
+        private void HandlePreviewPlay(GameContext context)
+        {
+            if (_levelObj == null || _mapAdapter == null) return;
+
+            if (!_levelObj.HasSpawn)
+            {
+                ShowMessage("Preview: no spawn — place spawn (G)");
+                return;
+            }
+            if (!_levelObj.HasGoal)
+            {
+                ShowMessage("Preview: no goal — place goal (T)");
+                return;
+            }
+
+            var userMap = new UserMap(_levelObj, _mapId, _services.Assets);
+
+            // Förbered context för preview
+            var hero = context.Player!;
+            hero.px     = _levelObj.SpawnX;
+            hero.py     = _levelObj.SpawnY;
+            hero.vx     = 0f;
+            hero.vy     = 0f;
+            hero.Health = 9;
+
+            // UserMap items start at ID 1000. Clear any IDs from a previous
+            // preview run so GameplayState.Enter doesn't remove them again.
+            context.CollectedEnergiIds.RemoveAll(id => id >= 1000);
+
+            context.ActiveObjects.Clear();
+            context.ActiveObjects.Add(hero);
+            userMap.PopulateDynamics(context.ActiveObjects);
+
+            context.CurrentLevel         = userMap;
+            context.IsPreviewMode        = true;
+            context.PreviewReturnState   = this;
+            context.UserMapRunStartTime  = context.GameTotalTime;
+
+            // Registrera tilesheet för GameplayState-renderingen
+            RegisterTilesheet(_levelObj.TilesetSource);
+
+            _services.StateManager.Transition(new GameplayState(_services), context);
         }
 
         /// <summary>
@@ -692,7 +756,7 @@ namespace FrostyPlatformer.States
             if (_services.Input.IsRightPressed) ChangeNewMapField(+1);
             if (_services.Input.IsLeftPressed)  ChangeNewMapField(-1);
 
-            if (_services.Input.IsConfirmPressed) ConfirmNewMap();
+            if (_services.Input.IsConfirmPressed && !_services.Input.IsEditorSave) ConfirmNewMap();
         }
 
         private void ChangeNewMapField(int delta)
@@ -794,7 +858,9 @@ namespace FrostyPlatformer.States
             if (_services.Input.IsDownPressed)
                 _pickerIndex = Math.Min(_pickerEntries.Count - 1, _pickerIndex + 1);
 
-            if (_services.Input.IsConfirmPressed)
+            // Exkludera Ctrl+S — IsConfirmPressed inkluderar S vilket annars
+            // triggar en oavsiktlig kartladdning när användaren sparar med Ctrl+S.
+            if (_services.Input.IsConfirmPressed && !_services.Input.IsEditorSave)
                 ConfirmPickerLoad();
         }
 
@@ -1099,7 +1165,7 @@ namespace FrostyPlatformer.States
             string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  b:{_selectedTileId}";
             string row2 = $"{tileInfo}  {modeInfo}  {mouseCtrl}";
             string row3 = "C=col G=spawn T=goal I=item E=enemy U=undo";
-            string row4 = undoActive ? "[UNDO MODE - LMB erases]" : "L=maps S=save";
+            string row4 = undoActive ? "[UNDO MODE - LMB erases]" : "L=maps  Ctrl+S=save  F5=preview";
 
             const int hudHeight = 44;
             _rc.FillRect(0, 0, context.ScreenWidth, hudHeight, new RenderColor(0, 0, 0, 170));

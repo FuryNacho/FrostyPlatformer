@@ -107,6 +107,15 @@ namespace FrostyPlatformer.Models
 
     }
 
+    /// <summary>Bästa genomspelning av ett user map-slot.</summary>
+    public class UserMapScore
+    {
+        public string   SlotId   { get; set; } = "";
+        public string   Handle   { get; set; } = "";
+        public TimeSpan BestTime { get; set; }
+        public DateTime SetAt    { get; set; }
+    }
+
     public class HighScoreObj
     {
         public string Handle { get; set; } = "";

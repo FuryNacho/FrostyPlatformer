@@ -128,6 +128,11 @@ namespace FrostyPlatformer.Systems
         /// </summary>
         bool IsEditorUndoPressed { get; }
 
+        /// <summary>
+        /// True den frame F5 trycks ned. Startar testspelning (preview) direkt från editorn.
+        /// </summary>
+        bool IsEditorPreviewPlay { get; }
+
         // ─────────────────────────────────────────────
         // Mus-input
         // ─────────────────────────────────────────────

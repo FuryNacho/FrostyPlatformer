@@ -52,6 +52,7 @@ namespace UnitTest.Fakes
         public bool IsEditorNew             { get; set; }
         public bool IsEditorUndoDown        { get; set; }
         public bool IsEditorUndoPressed     { get; set; }
+        public bool IsEditorPreviewPlay     { get; set; }
 
         // Mus-input
         public int  MouseX              { get; set; }

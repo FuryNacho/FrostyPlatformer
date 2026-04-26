@@ -73,6 +73,9 @@ namespace FrostyPlatformer.States
         /// <summary>Världskartans stage-ingångspunkter och spawn-positioner.</summary>
         public IWorldMapSystem WorldMap { get; }
 
+        /// <summary>Läser och skriver bästa genomspelningstid per user map-slot.</summary>
+        public Systems.IUserMapScoreRepository UserMapScores { get; }
+
         /// <summary>
         /// Laddar och aktiverar en karta. Kallar Program.ChangeMap(name, x, y, hero)
         /// med spelarens nuvarande hero-objekt från GameContext.
@@ -130,6 +133,7 @@ namespace FrostyPlatformer.States
             IItemSystem items,
             IWorldMapSystem worldMap,
             ISaveLoadSystem saveLoad,
+            Systems.IUserMapScoreRepository userMapScores,
             Action<string, float, float> changeMap,
             Action reset,
             Action exitGame,
@@ -155,6 +159,7 @@ namespace FrostyPlatformer.States
             Items                    = items;
             WorldMap                 = worldMap;
             SaveLoad                 = saveLoad;
+            UserMapScores            = userMapScores;
             ChangeMap                = changeMap;
             Reset                    = reset;
             ExitGame                 = exitGame;

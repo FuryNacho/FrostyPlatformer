@@ -143,5 +143,28 @@ namespace FrostyPlatformer.Core
         /// </summary>
         public int ScreenHeight { get; set; } = Global.GameConstants.ScreenHeight;
 
+        // ─────────────────────────────────────────────
+        // Preview-läge (testspelning från editorn)
+        // ─────────────────────────────────────────────
+
+        /// <summary>
+        /// True om GameplayState är startat som preview från editorn.
+        /// Styr att Escape och mål-portal leder tillbaka till editorn
+        /// istället för till PauseState/WorldMapState.
+        /// </summary>
+        public bool IsPreviewMode { get; set; }
+
+        /// <summary>
+        /// Det IGameState som ska återaktiveras när en preview-session avslutas.
+        /// Sätts av EditorState till sin egen instans (this) innan F5-transitionn.
+        /// </summary>
+        public IGameState? PreviewReturnState { get; set; }
+
+        /// <summary>
+        /// Värdet av GameTotalTime när en user map-körning startades.
+        /// Används för att beräkna bans-tid: GameTotalTime − UserMapRunStartTime.
+        /// </summary>
+        public TimeSpan UserMapRunStartTime { get; set; }
+
     }
 }
