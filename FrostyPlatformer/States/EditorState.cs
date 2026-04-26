@@ -954,18 +954,23 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Treraders statusfält: läge/karta/brush — tile-info/spawn — tangentbord.
+        /// Treraders statusfält: läge/karta/brush — tile-info/lägesspecifik info — tangentbord.
+        /// Innehållet i rad 2 anpassas till aktivt läge. Alla rader klipps hårt vid
+        /// kartområdets kant (mapAreaWidth) för att inte hamna under palette-sidebaren.
         /// </summary>
         private void DrawHud(GameContext context, int hoverTileX, int hoverTileY, int mapAreaWidth)
         {
             if (_mapAdapter == null || _levelObj == null) return;
+
+            // Max tecken som ryms i kartområdet innan palette-sidebaren
+            int maxChars = (mapAreaWidth - 2) / GameConstants.FontCharWidth;
 
             string modeLabel = _mode switch
             {
                 EditorMode.Collision => "COL",
                 EditorMode.Spawn     => "SPAWN",
                 EditorMode.Goal      => "GOAL",
-                EditorMode.Pickup    => "PICKUP",
+                EditorMode.Pickup    => "ITEM",
                 _                   => "TILES"
             };
 
@@ -974,47 +979,53 @@ namespace FrostyPlatformer.States
                   + (_mapAdapter.GetSolid(hoverTileX, hoverTileY) ? "[S]" : "[O]")
                 : "[palette]";
 
-            string spawnInfo = _levelObj.HasSpawn
+            // Rad 2 — visar bara det som är relevant för aktivt läge
+            string spawnInfo  = _levelObj.HasSpawn
                 ? $"sp:({_levelObj.SpawnX},{_levelObj.SpawnY})"
                 : "sp:none";
-
-            var goalObj = _levelObj.Objects.Find(o => o.ObjectType == "Goal");
-            string goalInfo = goalObj != null
+            var    goalObj    = _levelObj.Objects.Find(o => o.ObjectType == "Goal");
+            string goalInfo   = goalObj != null
                 ? $"g:({goalObj.TileX},{goalObj.TileY})"
                 : "g:none";
+            int    pickups    = _levelObj.Objects.FindAll(o => o.ObjectType == "Pickup").Count;
 
-            int    pickupCount       = _levelObj.Objects.FindAll(o => o.ObjectType == "Pickup").Count;
-            string activePickupLabel = _mode == EditorMode.Pickup
-                ? $"[{PickupSubTypes[_selectedPickupSubType]}]"
-                : "";
-            string pickupInfo = $"p:{pickupCount}{activePickupLabel}";
+            string modeInfo = _mode switch
+            {
+                EditorMode.Spawn  => spawnInfo,
+                EditorMode.Goal   => goalInfo,
+                EditorMode.Pickup => $"p:{pickups}",
+                _                 => spawnInfo   // Tiles + Collision
+            };
 
             string mouseCtrl = _mode switch
             {
-                EditorMode.Collision => "LMB=solid RMB=open",
-                EditorMode.Spawn     => "LMB=set RMB=clear",
-                EditorMode.Goal      => "LMB=set RMB=clear",
-                EditorMode.Pickup    => "LMB=place RMB=del",
-                _                   => "LMB=paint RMB=erase"
+                EditorMode.Collision => "LMB=solid RMB=clr",
+                EditorMode.Spawn     => "LMB=set RMB=clr",
+                EditorMode.Goal      => "LMB=set RMB=clr",
+                EditorMode.Pickup    => "LMB=add RMB=del",
+                _                    => "LMB=tile RMB=del"
             };
 
-            bool undoActive  = _undoMode;
-            string dirtyMark = _isDirty ? "*" : "";
+            bool   undoActive = _undoMode;
+            string dirtyMark  = _isDirty ? "*" : "";
             string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  b:{_selectedTileId}";
-            string row2 = $"{tileInfo}  {spawnInfo}  {goalInfo}  {pickupInfo}  {mouseCtrl}";
-            string row3 = "C=col  G=spawn  T=goal  P=item  U=undo  L=maps  Ctrl+S=save  Esc=exit";
+            string row2 = $"{tileInfo}  {modeInfo}  {mouseCtrl}";
+            string row3 = "C=col G=spawn T=goal I=item U=undo L=maps S=save";
 
             int hudHeight = undoActive ? 44 : 33;
             _rc.FillRect(0, 0, context.ScreenWidth, hudHeight, new RenderColor(0, 0, 0, 170));
-            _rc.DrawText(row1, 2, 2);
-            _rc.DrawText(row2, 2, 12);
-            _rc.DrawText(row3, 2, 22);
+            _rc.DrawText(HudFit(row1, maxChars), 2, 2);
+            _rc.DrawText(HudFit(row2, maxChars), 2, 12);
+            _rc.DrawText(HudFit(row3, maxChars), 2, 22);
 
             if (undoActive)
-                _rc.DrawText("[UNDO MODE — hold U + LMB to erase]", 2, 33);
+                _rc.DrawText(HudFit("[UNDO MODE — LMB erases]", maxChars), 2, 33);
 
             if (_hudMessageTimer > 0f)
                 _rc.DrawText(_hudMessage, 2, hudHeight + 1);
         }
+
+        private static string HudFit(string s, int maxChars)
+            => s.Length > maxChars ? s[..maxChars] : s;
     }
 }

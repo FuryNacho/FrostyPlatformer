@@ -91,8 +91,8 @@ namespace FrostyPlatformer.Systems
         bool IsEditorToggleGoal { get; }
 
         /// <summary>
-        /// True den frame som P-tangenten trycks ned. Används av EditorState
-        /// för att växla till pickup-redigeringsläge.
+        /// True den frame som I-tangenten trycks ned. Används av EditorState
+        /// för att växla till pickup/item-redigeringsläge.
         /// </summary>
         bool IsEditorTogglePickup { get; }
 
