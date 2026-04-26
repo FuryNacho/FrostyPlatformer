@@ -46,6 +46,7 @@ namespace UnitTest.Fakes
         public bool IsEditorToggleSpawn     { get; set; }
         public bool IsEditorToggleGoal      { get; set; }
         public bool IsEditorTogglePickup    { get; set; }
+        public bool IsEditorToggleEnemy     { get; set; }
         public bool IsEditorSave            { get; set; }
         public bool IsEditorLoad            { get; set; }
         public bool IsEditorNew             { get; set; }

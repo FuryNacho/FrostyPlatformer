@@ -677,6 +677,100 @@ namespace UnitTest
             Assert.AreEqual(3, result!.Objects.FindAll(o => o.ObjectType == "Pickup").Count);
         }
 
+        // ── ParseTiledJson — Enemy (E4d) ─────────────────────────────────────
+
+        private const string JsonWithEnemies = @"{
+            ""width"": 4, ""height"": 4,
+            ""tilesets"": [{ ""firstgid"": 1, ""source"": ""t.tsx"" }],
+            ""layers"": [
+                { ""name"": ""Tiles"",   ""type"": ""tilelayer"",   ""data"": [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] },
+                { ""name"": ""Objects"", ""type"": ""objectgroup"",
+                  ""objects"": [
+                    { ""name"": ""PlayerSpawn"", ""x"": 16.0, ""y"": 16.0 },
+                    { ""name"": ""Penguin"", ""type"": ""Enemy"", ""x"": 32.0, ""y"": 16.0 },
+                    { ""name"": ""Walrus"",  ""type"": ""Enemy"", ""x"": 48.0, ""y"": 32.0 }
+                  ]
+                }
+            ]
+        }";
+
+        [TestMethod]
+        public void ParseTiledJson_WithEnemyObjects_AddsEnemiesToObjects()
+        {
+            var result = TiledMapRepository.ParseTiledJson(JsonWithEnemies);
+
+            Assert.AreEqual(2, result!.Objects.Count);
+            Assert.IsTrue(result.Objects.TrueForAll(o => o.ObjectType == "Enemy"));
+        }
+
+        [TestMethod]
+        public void ParseTiledJson_WithEnemyObjects_PreservesSubType()
+        {
+            var result  = TiledMapRepository.ParseTiledJson(JsonWithEnemies);
+            var penguin = result!.Objects.Find(o => o.SubType == "Penguin");
+            var walrus  = result!.Objects.Find(o => o.SubType == "Walrus");
+
+            Assert.IsNotNull(penguin);
+            Assert.IsNotNull(walrus);
+        }
+
+        [TestMethod]
+        public void BuildTiledJson_EnemyRoundTrip_PreservesTypeAndPosition()
+        {
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 4,
+                Height         = 4,
+                TileIndex      = new int[16],
+                AttributeIndex = new int[16],
+                SpawnX         = 1,
+                SpawnY         = 1
+            };
+            level.Objects.Add(new FrostyPlatformer.Models.PlacedObject
+            {
+                ObjectType = "Enemy",
+                SubType    = "Frost",
+                TileX      = 2,
+                TileY      = 3
+            });
+
+            var json   = TiledMapRepository.BuildTiledJson(level);
+            var result = TiledMapRepository.ParseTiledJson(json);
+            var enemy  = result!.Objects.Find(o => o.ObjectType == "Enemy");
+
+            Assert.IsNotNull(enemy);
+            Assert.AreEqual("Frost", enemy!.SubType);
+            Assert.AreEqual(2,       enemy.TileX);
+            Assert.AreEqual(3,       enemy.TileY);
+        }
+
+        [TestMethod]
+        public void BuildTiledJson_MixedObjects_AllPreserved()
+        {
+            // En karta med spawn, goal, pickup och fiende — alla ska överleva round-trip
+            var level = new FrostyPlatformer.Models.LevelObj
+            {
+                Width          = 4,
+                Height         = 4,
+                TileIndex      = new int[16],
+                AttributeIndex = new int[16],
+                SpawnX         = 0,
+                SpawnY         = 0
+            };
+            level.Objects.Add(new FrostyPlatformer.Models.PlacedObject { ObjectType = "Goal",   SubType = "Goal",    TileX = 3, TileY = 3 });
+            level.Objects.Add(new FrostyPlatformer.Models.PlacedObject { ObjectType = "Pickup", SubType = "Energy",  TileX = 1, TileY = 1 });
+            level.Objects.Add(new FrostyPlatformer.Models.PlacedObject { ObjectType = "Enemy",  SubType = "Penguin", TileX = 2, TileY = 2 });
+            level.Objects.Add(new FrostyPlatformer.Models.PlacedObject { ObjectType = "Enemy",  SubType = "Walrus",  TileX = 3, TileY = 1 });
+
+            var json   = TiledMapRepository.BuildTiledJson(level);
+            var result = TiledMapRepository.ParseTiledJson(json);
+
+            Assert.AreEqual(4, result!.Objects.Count);
+            Assert.IsTrue(result.HasGoal);
+            Assert.AreEqual(1, result.Objects.FindAll(o => o.ObjectType == "Pickup").Count);
+            Assert.AreEqual(2, result.Objects.FindAll(o => o.ObjectType == "Enemy").Count);
+        }
+
         // ── GetAvailableMapIds ────────────────────────────────────────────────
 
         [TestMethod]

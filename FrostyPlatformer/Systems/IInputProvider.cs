@@ -97,6 +97,12 @@ namespace FrostyPlatformer.Systems
         bool IsEditorTogglePickup { get; }
 
         /// <summary>
+        /// True den frame som E-tangenten trycks ned. Används av EditorState
+        /// för att växla till fiende-redigeringsläge.
+        /// </summary>
+        bool IsEditorToggleEnemy { get; }
+
+        /// <summary>
         /// True den frame som Ctrl+S trycks ned. Används av EditorState för att spara kartan.
         /// </summary>
         bool IsEditorSave { get; }

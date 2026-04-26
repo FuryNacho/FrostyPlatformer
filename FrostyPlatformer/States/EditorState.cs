@@ -31,7 +31,7 @@ namespace FrostyPlatformer.States
     /// mönster som alla andra states. Escape leder tillbaka till MenuState.
     /// </remarks>
     /// <summary>Redigeringsläge i editorn — styr vad musklick gör.</summary>
-    internal enum EditorMode { Tiles, Collision, Spawn, Goal, Pickup }
+    internal enum EditorMode { Tiles, Collision, Spawn, Goal, Pickup, Enemy }
 
     internal sealed class EditorState : IGameState
     {
@@ -56,6 +56,8 @@ namespace FrostyPlatformer.States
             new RenderColor(255, 200, 0, 230);
         private static readonly RenderColor PickupMarkerColor =
             new RenderColor(0, 210, 200, 210);
+        private static readonly RenderColor EnemyMarkerColor =
+            new RenderColor(220, 60, 60, 210);
         private static readonly RenderColor MapBoundsColor =
             new RenderColor(255, 200, 0, 230);
 
@@ -71,8 +73,10 @@ namespace FrostyPlatformer.States
         private EditorMode          _mode;
         private bool                _undoMode;       // toggle via U — LMB raderar istället för målar
         private int                 _selectedPickupSubType;
+        private int                 _selectedEnemySubType;
 
         private static readonly string[] PickupSubTypes = { "Energy" };
+        private static readonly string[] EnemySubTypes  = { "Penguin", "Walrus", "Frost" };
 
         // ── HUD-meddelanden ─────────────────────────────────────────────────────
         private string _hudMessage     = "";
@@ -245,6 +249,8 @@ namespace FrostyPlatformer.States
                 _mode = _mode == EditorMode.Goal ? EditorMode.Tiles : EditorMode.Goal;
             if (_services.Input.IsEditorTogglePickup)
                 _mode = _mode == EditorMode.Pickup ? EditorMode.Tiles : EditorMode.Pickup;
+            if (_services.Input.IsEditorToggleEnemy)
+                _mode = _mode == EditorMode.Enemy ? EditorMode.Tiles : EditorMode.Enemy;
 
             if (_mode == EditorMode.Pickup && PickupSubTypes.Length > 1)
             {
@@ -252,6 +258,13 @@ namespace FrostyPlatformer.States
                     _selectedPickupSubType = (_selectedPickupSubType - 1 + PickupSubTypes.Length) % PickupSubTypes.Length;
                 if (_services.Input.IsRightPressed)
                     _selectedPickupSubType = (_selectedPickupSubType + 1) % PickupSubTypes.Length;
+            }
+            if (_mode == EditorMode.Enemy)
+            {
+                if (_services.Input.IsLeftPressed)
+                    _selectedEnemySubType = (_selectedEnemySubType - 1 + EnemySubTypes.Length) % EnemySubTypes.Length;
+                if (_services.Input.IsRightPressed)
+                    _selectedEnemySubType = (_selectedEnemySubType + 1) % EnemySubTypes.Length;
             }
             if (_services.Input.IsEditorUndoPressed)
                 _undoMode = !_undoMode;
@@ -263,7 +276,8 @@ namespace FrostyPlatformer.States
                 else if (_mode == EditorMode.Collision) HandleCollisionPainting(cam);
                 else if (_mode == EditorMode.Spawn)     HandleSpawnPlacement(cam);
                 else if (_mode == EditorMode.Goal)      HandleGoalPlacement(cam);
-                else                                    HandlePickupPlacement(cam);
+                else if (_mode == EditorMode.Pickup)    HandlePickupPlacement(cam);
+                else                                    HandleEnemyPlacement(cam);
             }
             else if (_mode == EditorMode.Tiles)
             {
@@ -281,6 +295,7 @@ namespace FrostyPlatformer.States
             if (_levelObj.HasGoal)
                 DrawGoalMarker(cam, mapAreaWidth);
             DrawPickupMarkers(cam, mapAreaWidth);
+            DrawEnemyMarkers(cam, mapAreaWidth);
 
             if (mouseInMap)
             {
@@ -541,6 +556,45 @@ namespace FrostyPlatformer.States
             {
                 ObjectType = "Pickup",
                 SubType    = PickupSubTypes[_selectedPickupSubType],
+                TileX      = tx,
+                TileY      = ty
+            });
+            _isDirty = true;
+        }
+
+        /// <summary>
+        /// Placerar en fiende av vald typ (LMB) eller tar bort fienden på tilen (RMB).
+        /// Max en fiende per tile. Typ väljs med vänster/höger piltangent.
+        /// </summary>
+        private void HandleEnemyPlacement(CameraView cam)
+        {
+            bool clearPressed = _services.Input.IsMouseRightPressed
+                             || (_undoMode && _services.Input.IsMouseLeftPressed);
+            bool placePressed = !_undoMode && _services.Input.IsMouseLeftPressed;
+            if (!placePressed && !clearPressed) return;
+
+            var (tx, ty) = EditorMath.ScreenToTile(
+                _services.Input.MouseX, _services.Input.MouseY, cam);
+
+            if (tx < 0 || tx >= _mapAdapter!.Width || ty < 0 || ty >= _mapAdapter!.Height) return;
+
+            if (clearPressed)
+            {
+                _levelObj!.Objects.RemoveAll(
+                    o => o.ObjectType == "Enemy" && o.TileX == tx && o.TileY == ty);
+                _isDirty = true;
+                return;
+            }
+
+            // En fiende per tile — inga staplar
+            if (_levelObj!.Objects.Exists(
+                    o => o.ObjectType == "Enemy" && o.TileX == tx && o.TileY == ty))
+                return;
+
+            _levelObj.Objects.Add(new PlacedObject
+            {
+                ObjectType = "Enemy",
+                SubType    = EnemySubTypes[_selectedEnemySubType],
                 TileX      = tx,
                 TileY      = ty
             });
@@ -942,6 +996,28 @@ namespace FrostyPlatformer.States
             }
         }
 
+        /// <summary>
+        /// Ritar en röd fylld ruta med initial-bokstav (P/W/F) för varje fiende i kartan.
+        /// </summary>
+        private void DrawEnemyMarkers(CameraView cam, int mapAreaWidth)
+        {
+            int ts     = GameConstants.TileSize;
+            int margin = 1;
+            var c      = EnemyMarkerColor;
+
+            foreach (var obj in _levelObj!.Objects)
+            {
+                if (obj.ObjectType != "Enemy") continue;
+
+                var (sx, sy) = EditorMath.TileToScreen(obj.TileX, obj.TileY, cam);
+                if (sx >= mapAreaWidth) continue;
+
+                _rc.FillRect(sx + margin, sy + margin, ts - margin * 2, ts - margin * 2, c);
+                string label = obj.SubType.Length > 0 ? obj.SubType[..1] : "?";
+                _rc.DrawText(label, sx + margin + 2, sy + margin + 2);
+            }
+        }
+
         private void DrawCursor(int tileX, int tileY, CameraView cam)
         {
             var (cx, cy) = EditorMath.TileToScreen(tileX, tileY, cam);
@@ -971,7 +1047,8 @@ namespace FrostyPlatformer.States
                 EditorMode.Spawn     => "SPAWN",
                 EditorMode.Goal      => "GOAL",
                 EditorMode.Pickup    => "ITEM",
-                _                   => "TILES"
+                EditorMode.Enemy     => "ENEMY",
+                _                    => "TILES"
             };
 
             string tileInfo = hoverTileX >= 0
@@ -980,20 +1057,22 @@ namespace FrostyPlatformer.States
                 : "[palette]";
 
             // Rad 2 — visar bara det som är relevant för aktivt läge
-            string spawnInfo  = _levelObj.HasSpawn
+            string spawnInfo = _levelObj.HasSpawn
                 ? $"sp:({_levelObj.SpawnX},{_levelObj.SpawnY})"
                 : "sp:none";
-            var    goalObj    = _levelObj.Objects.Find(o => o.ObjectType == "Goal");
-            string goalInfo   = goalObj != null
+            var    goalObj   = _levelObj.Objects.Find(o => o.ObjectType == "Goal");
+            string goalInfo  = goalObj != null
                 ? $"g:({goalObj.TileX},{goalObj.TileY})"
                 : "g:none";
-            int    pickups    = _levelObj.Objects.FindAll(o => o.ObjectType == "Pickup").Count;
+            int pickups = _levelObj.Objects.FindAll(o => o.ObjectType == "Pickup").Count;
+            int enemies = _levelObj.Objects.FindAll(o => o.ObjectType == "Enemy").Count;
 
             string modeInfo = _mode switch
             {
                 EditorMode.Spawn  => spawnInfo,
                 EditorMode.Goal   => goalInfo,
                 EditorMode.Pickup => $"p:{pickups}",
+                EditorMode.Enemy  => $"e:{enemies} {EnemySubTypes[_selectedEnemySubType]}",
                 _                 => spawnInfo   // Tiles + Collision
             };
 
@@ -1003,6 +1082,7 @@ namespace FrostyPlatformer.States
                 EditorMode.Spawn     => "LMB=set RMB=clr",
                 EditorMode.Goal      => "LMB=set RMB=clr",
                 EditorMode.Pickup    => "LMB=add RMB=del",
+                EditorMode.Enemy     => "LMB=add RMB=del",
                 _                    => "LMB=tile RMB=del"
             };
 
@@ -1010,16 +1090,15 @@ namespace FrostyPlatformer.States
             string dirtyMark  = _isDirty ? "*" : "";
             string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  b:{_selectedTileId}";
             string row2 = $"{tileInfo}  {modeInfo}  {mouseCtrl}";
-            string row3 = "C=col G=spawn T=goal I=item U=undo L=maps S=save";
+            string row3 = "C=col G=spawn T=goal I=item E=enemy U=undo";
+            string row4 = undoActive ? "[UNDO MODE - LMB erases]" : "L=maps S=save";
 
-            int hudHeight = undoActive ? 44 : 33;
+            const int hudHeight = 44;
             _rc.FillRect(0, 0, context.ScreenWidth, hudHeight, new RenderColor(0, 0, 0, 170));
             _rc.DrawText(HudFit(row1, maxChars), 2, 2);
             _rc.DrawText(HudFit(row2, maxChars), 2, 12);
             _rc.DrawText(HudFit(row3, maxChars), 2, 22);
-
-            if (undoActive)
-                _rc.DrawText(HudFit("[UNDO MODE — LMB erases]", maxChars), 2, 33);
+            _rc.DrawText(HudFit(row4, maxChars), 2, 33);
 
             if (_hudMessageTimer > 0f)
                 _rc.DrawText(_hudMessage, 2, hudHeight + 1);
