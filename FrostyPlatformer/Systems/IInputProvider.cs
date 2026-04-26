@@ -99,6 +99,17 @@ namespace FrostyPlatformer.Systems
         /// </summary>
         bool IsEditorNew { get; }
 
+        /// <summary>
+        /// True så länge U-tangenten hålls ned. Används för att radera/ångra i editorn
+        /// på samma sätt som höger musknapp — alternativt kommando till RMB.
+        /// </summary>
+        bool IsEditorUndoDown { get; }
+
+        /// <summary>
+        /// True den frame U-tangenten trycks ned. Används för spawn-rensning (single press).
+        /// </summary>
+        bool IsEditorUndoPressed { get; }
+
         // ─────────────────────────────────────────────
         // Mus-input
         // ─────────────────────────────────────────────

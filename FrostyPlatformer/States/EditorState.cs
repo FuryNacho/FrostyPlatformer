@@ -365,7 +365,7 @@ namespace FrostyPlatformer.States
         private void HandleTilePainting(CameraView cam)
         {
             bool leftDown  = _services.Input.IsMouseLeftDown;
-            bool rightDown = _services.Input.IsMouseRightDown;
+            bool rightDown = _services.Input.IsMouseRightDown || _services.Input.IsEditorUndoDown;
             if (!leftDown && !rightDown) return;
 
             var (tx, ty) = EditorMath.ScreenToTile(
@@ -381,7 +381,7 @@ namespace FrostyPlatformer.States
         private void HandleCollisionPainting(CameraView cam)
         {
             bool leftDown  = _services.Input.IsMouseLeftDown;
-            bool rightDown = _services.Input.IsMouseRightDown;
+            bool rightDown = _services.Input.IsMouseRightDown || _services.Input.IsEditorUndoDown;
             if (!leftDown && !rightDown) return;
 
             var (tx, ty) = EditorMath.ScreenToTile(
@@ -420,9 +420,10 @@ namespace FrostyPlatformer.States
         /// </summary>
         private void HandleSpawnPlacement(CameraView cam)
         {
-            if (!_services.Input.IsMouseLeftPressed && !_services.Input.IsMouseRightPressed) return;
+            bool undoPressed = _services.Input.IsMouseRightPressed || _services.Input.IsEditorUndoPressed;
+            if (!_services.Input.IsMouseLeftPressed && !undoPressed) return;
 
-            if (_services.Input.IsMouseRightPressed)
+            if (undoPressed)
             {
                 _levelObj!.SpawnX = -1;
                 _levelObj!.SpawnY = -1;
@@ -831,18 +832,23 @@ namespace FrostyPlatformer.States
                 _                   => "LMB=paint RMB=erase"
             };
 
+            bool undoActive  = _services.Input.IsEditorUndoDown;
             string dirtyMark = _isDirty ? "*" : "";
             string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  b:{_selectedTileId}";
             string row2 = $"{tileInfo}  {spawnInfo}  {mouseCtrl}";
-            string row3 = "C=col  G=spawn  L=maps  Ctrl+S=save  Esc=exit";
+            string row3 = "C=col  G=spawn  U=undo  L=maps  Ctrl+S=save  Esc=exit";
 
-            _rc.FillRect(0, 0, context.ScreenWidth, 33, new RenderColor(0, 0, 0, 170));
+            int hudHeight = undoActive ? 44 : 33;
+            _rc.FillRect(0, 0, context.ScreenWidth, hudHeight, new RenderColor(0, 0, 0, 170));
             _rc.DrawText(row1, 2, 2);
             _rc.DrawText(row2, 2, 12);
             _rc.DrawText(row3, 2, 22);
 
+            if (undoActive)
+                _rc.DrawText("[UNDO MODE — hold U + LMB to erase]", 2, 33);
+
             if (_hudMessageTimer > 0f)
-                _rc.DrawText(_hudMessage, 2, 34);
+                _rc.DrawText(_hudMessage, 2, hudHeight + 1);
         }
     }
 }

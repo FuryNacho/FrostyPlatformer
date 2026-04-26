@@ -200,6 +200,8 @@ namespace FrostyPlatformer.Engine.MonoGame
         public bool IsEditorSave            => KeyPressed(Keys.S) && KeyDown(Keys.LeftControl);
         public bool IsEditorLoad            => KeyPressed(Keys.L);
         public bool IsEditorNew             => KeyPressed(Keys.N);
+        public bool IsEditorUndoDown        => KeyDown(Keys.U);
+        public bool IsEditorUndoPressed     => KeyPressed(Keys.U);
 
         // ─── Mus-input ────────────────────────────────────────────────────────
         // Mouse.GetState() returnerar fysiska skärmpixlar. Spellogiken arbetar i
