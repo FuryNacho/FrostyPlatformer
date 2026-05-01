@@ -1,6 +1,7 @@
 #nullable enable
 using FrostyPlatformer.Commands;
 using FrostyPlatformer.Core;
+using FrostyPlatformer.Global.GlobalNamespace;
 using FrostyPlatformer.Models.Items;
 using FrostyPlatformer.Models.Objects;
 using FrostyPlatformer.Systems;
@@ -107,9 +108,9 @@ namespace FrostyPlatformer.Models
 
             this.CreateObj = new CreateObj()
             {
-                levelObj = assets.GetMapData("worldmap"),
+                levelObj = assets.GetMapData(MapName.WorldMap),
                 spritePath = assets.GetSpritePath("tilesheetwm"), // tilesheetwm //tilesheetone
-                name = "worldmap",
+                name = MapName.WorldMap,
             };
 
             CreateFromChild();
@@ -221,9 +222,9 @@ namespace FrostyPlatformer.Models
 
             this.CreateObj = new CreateObj()
             {
-                levelObj = assets.GetMapData("mapone"),
+                levelObj = assets.GetMapData(MapName.MapOne),
                 spritePath = assets.GetSpritePath("tilesheetspring"),
-                name = "mapone",
+                name = MapName.MapOne,
             };
 
             CreateFromChild();
@@ -245,7 +246,7 @@ namespace FrostyPlatformer.Models
             float placeraPortalY = 20;
             float skickaTillX = 2;
             float skickaTillY = 3;
-            ListDynamicObjs.Add(new Teleport(placeraPortalX, placeraPortalY, "worldmap", skickaTillX, skickaTillY));
+            ListDynamicObjs.Add(new Teleport(placeraPortalX, placeraPortalY, MapName.WorldMap, skickaTillX, skickaTillY));
 
             DynamicGameObject g3 = EnemyFactory!.Create(EnemyType.Walrus, Assets!);
             ListDynamicObjs.Add(g3);
@@ -295,9 +296,9 @@ namespace FrostyPlatformer.Models
             ItemFactory = itemFactory;
             this.CreateObj = new CreateObj()
             {
-                levelObj = assets.GetMapData("maptwo"),
+                levelObj = assets.GetMapData(MapName.MapTwo),
                 spritePath = assets.GetSpritePath("tilesheetspring"),
-                name = "maptwo",
+                name = MapName.MapTwo,
             };
 
             CreateFromChild();
@@ -313,7 +314,7 @@ namespace FrostyPlatformer.Models
         {
 
 
-            ListDynamicObjs.Add(new Teleport(125.5f, 23.0f, "worldmap", 2.0f, 3.0f));
+            ListDynamicObjs.Add(new Teleport(125.5f, 23.0f, MapName.WorldMap, 2.0f, 3.0f));
 
 
             //Valross
@@ -401,9 +402,9 @@ namespace FrostyPlatformer.Models
             ItemFactory = itemFactory;
             this.CreateObj = new CreateObj()
             {
-                levelObj = assets.GetMapData("mapthree"),
+                levelObj = assets.GetMapData(MapName.MapThree),
                 spritePath = assets.GetSpritePath("tilesheetsummer"),
-                name = "mapthree",
+                name = MapName.MapThree,
             };
 
             CreateFromChild();
@@ -418,7 +419,7 @@ namespace FrostyPlatformer.Models
         public override bool PopulateDynamics(List<DynamicGameObject> ListDynamicObjs)
         {
 
-            ListDynamicObjs.Add(new Teleport(187.5f, 3.0f, "worldmap", 2.0f, 5.0f));
+            ListDynamicObjs.Add(new Teleport(187.5f, 3.0f, MapName.WorldMap, 2.0f, 5.0f));
 
 
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 31, 23, Assets!, 0, 13));
@@ -512,9 +513,9 @@ namespace FrostyPlatformer.Models
             ItemFactory = itemFactory;
             this.CreateObj = new CreateObj()
             {
-                levelObj = assets.GetMapData("mapfour"),
+                levelObj = assets.GetMapData(MapName.MapFour),
                 spritePath = assets.GetSpritePath("tilesheetsummer"),
-                name = "mapfour",
+                name = MapName.MapFour,
             };
 
             CreateFromChild();
@@ -689,7 +690,7 @@ namespace FrostyPlatformer.Models
             #endregion
 
 
-            ListDynamicObjs.Add(new Teleport(183.5f, 4.0f, "worldmap", 2.0f, 5.0f));
+            ListDynamicObjs.Add(new Teleport(183.5f, 4.0f, MapName.WorldMap, 2.0f, 5.0f));
 
 
             return true;
@@ -725,9 +726,9 @@ namespace FrostyPlatformer.Models
             ItemFactory = itemFactory;
             this.CreateObj = new CreateObj()
             {
-                levelObj = assets.GetMapData("mapfive"),
+                levelObj = assets.GetMapData(MapName.MapFive),
                 spritePath = assets.GetSpritePath("tilesheetfall"),
-                name = "mapfive",
+                name = MapName.MapFive,
             };
 
             CreateFromChild();
@@ -847,7 +848,7 @@ namespace FrostyPlatformer.Models
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 140, 15, Assets!, 0, 38));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 183, 17, Assets!, 0, 39));
 
-            ListDynamicObjs.Add(new Teleport(188.5f, 17.0f, "worldmap", 2.0f, 5.0f));
+            ListDynamicObjs.Add(new Teleport(188.5f, 17.0f, MapName.WorldMap, 2.0f, 5.0f));
 
             return true;
         }
@@ -881,9 +882,9 @@ namespace FrostyPlatformer.Models
             ItemFactory = itemFactory;
             this.CreateObj = new CreateObj()
             {
-                levelObj = assets.GetMapData("mapsix"),
+                levelObj = assets.GetMapData(MapName.MapSix),
                 spritePath = assets.GetSpritePath("tilesheetfall"),
-                name = "mapsix",
+                name = MapName.MapSix,
             };
 
             CreateFromChild();
@@ -1012,7 +1013,7 @@ namespace FrostyPlatformer.Models
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 245, 19, Assets!, 0, 55));
 
 
-            ListDynamicObjs.Add(new Teleport(253.5f, 18.0f, "worldmap", 2.0f, 5.0f));
+            ListDynamicObjs.Add(new Teleport(253.5f, 18.0f, MapName.WorldMap, 2.0f, 5.0f));
 
             return true;
         }
@@ -1048,9 +1049,9 @@ namespace FrostyPlatformer.Models
             ItemFactory = itemFactory;
             this.CreateObj = new CreateObj()
             {
-                levelObj = assets.GetMapData("mapseven"),
+                levelObj = assets.GetMapData(MapName.MapSeven),
                 spritePath = assets.GetSpritePath("tilesheetwinter"),
-                name = "mapseven",
+                name = MapName.MapSeven,
             };
 
             CreateFromChild();
@@ -1505,7 +1506,7 @@ namespace FrostyPlatformer.Models
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 256, 6, Assets!, 0, 76));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 1, 7, Assets!, 0, 77));
 
-            ListDynamicObjs.Add(new Teleport(315.5f, 7.0f, "worldmap", 2.0f, 5.0f));
+            ListDynamicObjs.Add(new Teleport(315.5f, 7.0f, MapName.WorldMap, 2.0f, 5.0f));
 
             return true;
         }
@@ -1543,9 +1544,9 @@ namespace FrostyPlatformer.Models
             ItemFactory = itemFactory;
             this.CreateObj = new CreateObj()
             {
-                levelObj = assets.GetMapData("mapeight"),
+                levelObj = assets.GetMapData(MapName.MapEight),
                 spritePath = assets.GetSpritePath("tilesheetwinter"),
-                name = "mapeight",
+                name = MapName.MapEight,
             };
 
             CreateFromChild();
@@ -2011,9 +2012,9 @@ namespace FrostyPlatformer.Models
             ItemFactory = itemFactory;
             this.CreateObj = new CreateObj()
             {
-                levelObj = assets.GetMapData("mapnine"),
+                levelObj = assets.GetMapData(MapName.MapNine),
                 spritePath = assets.GetSpritePath("tilesheetwinter"),
-                name = "mapnine",
+                name = MapName.MapNine,
             };
 
             CreateFromChild();
@@ -2142,7 +2143,7 @@ namespace FrostyPlatformer.Models
             overlay7.Name = "overlay";
 
 
-            ListDynamicObjs.Add(new Teleport(0.0f, 0.0f, "worldmap", 2.0f, 5.0f));
+            ListDynamicObjs.Add(new Teleport(0.0f, 0.0f, MapName.WorldMap, 2.0f, 5.0f));
 
             return true;
         }

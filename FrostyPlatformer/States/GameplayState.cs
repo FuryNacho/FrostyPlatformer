@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using FrostyPlatformer.Core;
 using FrostyPlatformer.Global;
+using FrostyPlatformer.Global.GlobalNamespace;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Models.Items;
 using FrostyPlatformer.Models.Objects;
@@ -91,7 +92,7 @@ namespace FrostyPlatformer.States
                     context.CollectedEnergiIds.Any(id => id == x.CoinId));
             }
 
-            if (context.CurrentLevel?.Name == "worldmap")
+            if (context.CurrentLevel?.Name == MapName.WorldMap)
             {
                 if (context.IsPreviewMode)
                 {
@@ -161,7 +162,7 @@ namespace FrostyPlatformer.States
                 HandleInput(context, elapsed);
 
             // Fysik + kollision per objekt
-            bool bossAlive = context.CurrentLevel?.Name == "mapnine" &&
+            bool bossAlive = context.CurrentLevel?.Name == MapName.MapNine &&
                              context.ActiveObjects.Any(x => x is DynamicCreatureEnemyBoss);
 
             foreach (var obj in context.ActiveObjects)
@@ -169,7 +170,7 @@ namespace FrostyPlatformer.States
                 obj.detHarBallatUr = false;
 
                 // Speciell boss-bana-logik (mapnine)
-                if (context.CurrentLevel?.Name == "mapnine")
+                if (context.CurrentLevel?.Name == MapName.MapNine)
                 {
                     if (!bossAlive)
                     {
@@ -397,7 +398,7 @@ namespace FrostyPlatformer.States
             _rememberJumpCollision = rjc;
 
             // Luftmotstånd
-            bool isIcy = map.Name == "mapseven" || map.Name == "mapeight" || map.Name == "mapnine";
+            bool isIcy = map.Name == MapName.MapSeven || map.Name == MapName.MapEight || map.Name == MapName.MapNine;
             bool anyDir = _services.Input.IsLeftDown || _services.Input.IsRightDown;
             PhysicsSystem.ApplyDrag(obj, _bPower, isIcy, anyDir, elapsed);
 
@@ -424,14 +425,14 @@ namespace FrostyPlatformer.States
             {
                 var (adjX, hitLeft) = CollisionSystem.ResolveHorizontal(obj.py, newX, obj.vx, fBorder, map);
                 bool turnPatrol = false;
-                if (hitLeft) { newX = adjX; if (obj.Name != "frost") obj.vx = 0; turnPatrol = true; }
+                if (hitLeft) { newX = adjX; if (obj is not DynamicCreatureEnemyFrost) obj.vx = 0; turnPatrol = true; }
                 obj.OnWallCollision(ref newX, turnPatrol, true, map, fBorder);
             }
             else
             {
                 var (adjX, hitRight) = CollisionSystem.ResolveHorizontal(obj.py, newX, obj.vx, fBorder, map);
                 bool turnPatrol = false;
-                if (hitRight) { if (obj.Name != "frost") { newX = adjX; obj.vx = 0; } turnPatrol = true; }
+                if (hitRight) { if (obj is not DynamicCreatureEnemyFrost) { newX = adjX; obj.vx = 0; } turnPatrol = true; }
                 obj.OnWallCollision(ref newX, turnPatrol, false, map, fBorder);
             }
 
@@ -447,7 +448,7 @@ namespace FrostyPlatformer.States
             }
             else
             {
-                if (obj.Name != "boss" && obj.Name != "ice")
+                if (obj is not DynamicCreatureEnemyBoss && obj is not DynamicCreatureEnemyIcicle)
                 {
                     var (adjY, _, grounded) = CollisionSystem.ResolveVertical(newX, newY, obj.vy, map);
                     if (grounded)
@@ -487,7 +488,7 @@ namespace FrostyPlatformer.States
 
             if (!obj.detHarBallatUr)
             { obj.px = dx; obj.py = dy; }
-            else if (_detHarBallatUrLog && obj.Name != "pickup")
+            else if (_detHarBallatUrLog && obj is not DynamicItem)
                 System.Diagnostics.Debug.WriteLine($"Position ej uppdaterad. {obj.Name} vx={obj.vx} vy={obj.vy}");
 
             obj.Update(elapsed, context.Player!);

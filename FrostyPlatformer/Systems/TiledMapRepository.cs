@@ -1,5 +1,6 @@
 #nullable enable
 using FrostyPlatformer.Global;
+using FrostyPlatformer.Global.GlobalNamespace;
 using FrostyPlatformer.Models;
 using System;
 using System.Collections.Generic;
@@ -39,9 +40,10 @@ namespace FrostyPlatformer.Systems
 
         private static readonly string[] KnownMapIds =
         {
-            "worldmap",
-            "mapone", "maptwo", "mapthree", "mapfour", "mapfive",
-            "mapsix", "mapseven", "mapeight", "mapnine"
+            MapName.WorldMap,
+            MapName.MapOne,   MapName.MapTwo,   MapName.MapThree,
+            MapName.MapFour,  MapName.MapFive,  MapName.MapSix,
+            MapName.MapSeven, MapName.MapEight, MapName.MapNine
         };
 
         /// <summary>

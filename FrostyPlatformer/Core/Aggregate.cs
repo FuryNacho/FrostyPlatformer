@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using FrostyPlatformer.Global.GlobalNamespace;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Models.Items;
 using FrostyPlatformer.Commands;
@@ -116,27 +117,27 @@ namespace FrostyPlatformer.Core
             var itemFactory  = new FrostyPlatformer.Systems.ItemFactory();
 
             var wm = new WorldMap(this, enemyFactory, itemFactory);
-            MapMaps.Add("worldmap", wm);
+            MapMaps.Add(MapName.WorldMap, wm);
 
             var lvl1 = new MapOne(this, enemyFactory, itemFactory);
-            MapMaps.Add("mapone", lvl1);
+            MapMaps.Add(MapName.MapOne, lvl1);
             var lvl2 = new MapTwo(this, enemyFactory, itemFactory);
-            MapMaps.Add("maptwo", lvl2);
+            MapMaps.Add(MapName.MapTwo, lvl2);
             var lvl3 = new MapThree(this, enemyFactory, itemFactory);
-            MapMaps.Add("mapthree", lvl3);
+            MapMaps.Add(MapName.MapThree, lvl3);
             var lvl4 = new MapFour(this, enemyFactory, itemFactory);
-            MapMaps.Add("mapfour", lvl4);
+            MapMaps.Add(MapName.MapFour, lvl4);
             var lvl5 = new MapFive(this, enemyFactory, itemFactory);
-            MapMaps.Add("mapfive", lvl5);
+            MapMaps.Add(MapName.MapFive, lvl5);
             var lvl6 = new MapSix(this, enemyFactory, itemFactory);
-            MapMaps.Add("mapsix", lvl6);
+            MapMaps.Add(MapName.MapSix, lvl6);
             var lvl7 = new MapSeven(this, enemyFactory, itemFactory);
-            MapMaps.Add("mapseven", lvl7);
+            MapMaps.Add(MapName.MapSeven, lvl7);
             var lvl8 = new MapEight(this, enemyFactory, itemFactory);
-            MapMaps.Add("mapeight", lvl8);
+            MapMaps.Add(MapName.MapEight, lvl8);
 
             var lvl9 = new MapNine(this, enemyFactory, itemFactory);
-            MapMaps.Add("mapnine", lvl9);
+            MapMaps.Add(MapName.MapNine, lvl9);
         }
 
         private void LoadItems()

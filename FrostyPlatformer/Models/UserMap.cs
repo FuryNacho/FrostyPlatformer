@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using FrostyPlatformer.Commands;
 using FrostyPlatformer.Core;
+using FrostyPlatformer.Global.GlobalNamespace;
 using FrostyPlatformer.Models.Items;
 using FrostyPlatformer.Models.Objects;
 using FrostyPlatformer.Systems;
@@ -71,7 +72,7 @@ namespace FrostyPlatformer.Models
                 switch (obj.ObjectType)
                 {
                     case "Goal":
-                        list.Add(new Teleport(obj.TileX, obj.TileY, "worldmap", 2f, 3f));
+                        list.Add(new Teleport(obj.TileX, obj.TileY, MapName.WorldMap, 2f, 3f));
                         break;
 
                     case "Pickup" when obj.SubType == "Energy":

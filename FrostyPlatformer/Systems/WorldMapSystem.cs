@@ -1,4 +1,5 @@
 #nullable enable
+using FrostyPlatformer.Global.GlobalNamespace;
 
 namespace FrostyPlatformer.Systems
 {
@@ -27,14 +28,14 @@ namespace FrostyPlatformer.Systems
         {
             switch (stage)
             {
-                case 1: return ("mapone",   2f, 23f);
-                case 2: return ("maptwo",   2f, 23f);
-                case 3: return ("mapthree", 2f, 20f);
-                case 4: return ("mapfour",  2f,  3f);
-                case 5: return ("mapfive",  2f, 33f);
-                case 6: return ("mapsix",   2f, 22f);
-                case 7: return ("mapseven", 3f, 18f);
-                case 8: return ("mapeight", 4f, 41f);
+                case 1: return (MapName.MapOne,   2f, 23f);
+                case 2: return (MapName.MapTwo,   2f, 23f);
+                case 3: return (MapName.MapThree, 2f, 20f);
+                case 4: return (MapName.MapFour,  2f,  3f);
+                case 5: return (MapName.MapFive,  2f, 33f);
+                case 6: return (MapName.MapSix,   2f, 22f);
+                case 7: return (MapName.MapSeven, 3f, 18f);
+                case 8: return (MapName.MapEight, 4f, 41f);
                 default: return null;
             }
         }

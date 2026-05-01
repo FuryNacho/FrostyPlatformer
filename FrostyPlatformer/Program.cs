@@ -179,7 +179,7 @@ namespace FrostyPlatformer
 
             ActualTotalTime = new TimeSpan();
             Hero = new DynamicCreatureHero();
-            ChangeMap("worldmap", 2, 3, Hero);
+            ChangeMap(MapName.WorldMap, 2, 3, Hero);
 
             _input        = new MonoGameInputProvider(() => IsActive);
             _camera       = new CameraSystem();

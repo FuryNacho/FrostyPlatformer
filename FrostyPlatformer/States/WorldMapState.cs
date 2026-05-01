@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FrostyPlatformer.Core;
 using FrostyPlatformer.Global;
+using FrostyPlatformer.Global.GlobalNamespace;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Models.Objects;
 using FrostyPlatformer.Rendering;
@@ -84,9 +85,9 @@ namespace FrostyPlatformer.States
             int spawn = _services.Settings.ActivePlayer.SpawnAtWorldMap;
             var (corrX, corrY) = _services.WorldMap.GetSpawnPosition(spawn);
 
-            if (context.CurrentLevel?.Name != "worldmap")
+            if (context.CurrentLevel?.Name != MapName.WorldMap)
             {
-                _services.ChangeMap("worldmap", corrX, corrY);
+                _services.ChangeMap(MapName.WorldMap, corrX, corrY);
                 _services.Input.ButtonsHasGoneIdle = false;
             }
 
