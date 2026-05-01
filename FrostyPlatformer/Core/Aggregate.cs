@@ -78,13 +78,10 @@ namespace FrostyPlatformer.Core
             LoadSprite("tilesheetwinter", PathSprites, @"\tilesheetwinter", ".png");
 
 
-            LoadSprite("tilesheetwm", PathSprites, @"\tilesheetwm", ".png"); // tile sheet
-            //LoadSprite("tilesheetone", PathSprites, @"\tilesheetone", ".png"); // tile sheet
-            //LoadSprite("tilesheettwo", PathSprites, @"\tilesheettwo", ".png"); // tile sheet
-            LoadSprite("font", PathSprites, @"\font", ".png"); // font
-            LoadSprite("hero", PathSprites, @"\hero", ".png"); // hero
-            /*LoadSprite("energi", PathSprites, @"\energi", ".png");*/ // energi
-            LoadSprite("items", PathSprites, @"\items", ".png");
+            LoadSprite("tilesheetwm", PathSprites, @"\tilesheetwm", ".png");
+            LoadSprite("font",        PathSprites, @"\font",        ".png");
+            LoadSprite("hero",        PathSprites, @"\hero",        ".png");
+            LoadSprite("items",       PathSprites, @"\items",       ".png");
 
             // enemy
             LoadSprite("enemyzero", PathSprites, @"\enemyzero", ".png");
@@ -93,14 +90,9 @@ namespace FrostyPlatformer.Core
             LoadSprite("enemythree", PathSprites, @"\enemythree", ".png");
             LoadSprite("enemyboss", PathSprites, @"\enemyboss", ".png");
 
-            //LoadSprite("cord", PathSprites, @"\cord", ".bmp"); // tile sheet that is coordinates
-
-
             LoadSprite("splashstart", PathSprites, @"\splashstart", ".png");
-            LoadSprite("splashend", PathSprites, @"\splashend", ".png");
-            //LoadSprite("splashaltend", PathSprites, @"\splashaltend", ".png");
-            //LoadSprite("splashsuperaltend", PathSprites, @"\splashsuperaltend", ".png");
-            LoadSprite("endart", PathSprites, @"\endart", ".png");
+            LoadSprite("splashend",   PathSprites, @"\splashend",   ".png");
+            LoadSprite("endart",      PathSprites, @"\endart",      ".png");
 
         }
 

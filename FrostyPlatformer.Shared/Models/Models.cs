@@ -24,8 +24,6 @@ namespace FrostyPlatformer.Models
     }
 
 
-    public class Models
-    { }
     public class CreateObj
     {
         public string   fileData        { get; set; } = "";

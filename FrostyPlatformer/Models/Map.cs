@@ -71,7 +71,7 @@ namespace FrostyPlatformer.Models
         }
 
 
-        public bool Create(CreateObj createObj)
+        public void Create(CreateObj createObj)
         {
             Name = createObj.name;
             SpritePath = createObj.spritePath!;
@@ -79,22 +79,15 @@ namespace FrostyPlatformer.Models
             Width = createObj.levelObj.Width;
             Indices = createObj.levelObj.TileIndex;
 
-            // Only use solid or not solid for now. Might want other states in the future.
             Solids = new bool[Width * Height];
             var length = createObj.levelObj.AttributeIndex.Length;
             for (int i = 0; i < length; i++)
             {
                 if (createObj.levelObj.AttributeIndex[i].Equals(0))
-                {
                     Solids[i] = false;
-                }
                 else
-                {
                     Solids[i] = true;
-                }
             }
-
-            return false;
         }
 
     };
@@ -119,12 +112,12 @@ namespace FrostyPlatformer.Models
                 name = "worldmap",
             };
 
-            CrateFromChild();
+            CreateFromChild();
         }
 
-        public bool CrateFromChild()
+        public void CreateFromChild()
         {
-            return this.Create(CreateObj);
+            this.Create(CreateObj);
         }
 
         public override bool PopulateDynamics(List<DynamicGameObject> ListDynamicObjs)
@@ -233,12 +226,12 @@ namespace FrostyPlatformer.Models
                 name = "mapone",
             };
 
-            CrateFromChild();
+            CreateFromChild();
         }
 
-        public bool CrateFromChild()
+        public void CreateFromChild()
         {
-            return this.Create(CreateObj);
+            this.Create(CreateObj);
         }
 
 
@@ -252,47 +245,13 @@ namespace FrostyPlatformer.Models
             float placeraPortalY = 20;
             float skickaTillX = 2;
             float skickaTillY = 3;
-            // ListDynamicObjs.Add(new Teleport(placeraPortalX, placeraPortalY, "maptwo", skickaTillX, skickaTillY)); // Placering hamna, plcering visa
             ListDynamicObjs.Add(new Teleport(placeraPortalX, placeraPortalY, "worldmap", skickaTillX, skickaTillY));
 
-
-            // Placera ut fiender
-            //DynamicGameObject g1 = EnemyFactory!.Create(EnemyType.Penguin, Assets!);
-            //ListDynamicObjs.Add(g1);
-            //g1.px = 11;
-            //g1.py = 5;
-            //g1.Name = "BadPeng";
-
-            //DynamicGameObject g2 = EnemyFactory!.Create(EnemyType.Penguin, Assets!);
-            //ListDynamicObjs.Add(g2);
-            //g2.px = 14;
-            //g2.py = 5;
-            //g2.Name = "NoTwo";
-
-
-            //Valross
             DynamicGameObject g3 = EnemyFactory!.Create(EnemyType.Walrus, Assets!);
             ListDynamicObjs.Add(g3);
             g3.px = 37;
             g3.py = 21;
             g3.Name = "walrus";
-
-
-            //Istapp
-            //DynamicGameObject g4 = EnemyFactory!.Create(EnemyType.Icicle, Assets!);
-            //ListDynamicObjs.Add(g4);
-            //g4.px = 60;
-            //g4.py = 7;
-            //g4.Name = "icicle";
-
-
-            // 3 18
-            //DynamicGameObject g5 = EnemyFactory!.Create(EnemyType.Boss, Assets!);
-            //ListDynamicObjs.Add(g5);
-            //g5.px = 3;
-            //g5.py = 18;
-            //g5.Name = "frostboss";
-
 
             // Add items
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 20, 23, Assets!, 0, 1));
@@ -341,12 +300,12 @@ namespace FrostyPlatformer.Models
                 name = "maptwo",
             };
 
-            CrateFromChild();
+            CreateFromChild();
         }
 
-        public bool CrateFromChild()
+        public void CreateFromChild()
         {
-            return this.Create(CreateObj);
+            this.Create(CreateObj);
         }
 
 
@@ -354,7 +313,6 @@ namespace FrostyPlatformer.Models
         {
 
 
-            //ListDynamicObjs.Add(new Teleport(50.0f, 3.0f, "mapone", 2.0f, 2.0f)); // placering portal
             ListDynamicObjs.Add(new Teleport(125.5f, 23.0f, "worldmap", 2.0f, 3.0f));
 
 
@@ -448,19 +406,18 @@ namespace FrostyPlatformer.Models
                 name = "mapthree",
             };
 
-            CrateFromChild();
+            CreateFromChild();
         }
 
-        public bool CrateFromChild()
+        public void CreateFromChild()
         {
-            return this.Create(CreateObj);
+            this.Create(CreateObj);
         }
 
 
         public override bool PopulateDynamics(List<DynamicGameObject> ListDynamicObjs)
         {
 
-            //ListDynamicObjs.Add(new Teleport(50.0f, 3.0f, "mapone", 2.0f, 2.0f)); // placering portal
             ListDynamicObjs.Add(new Teleport(187.5f, 3.0f, "worldmap", 2.0f, 5.0f));
 
 
@@ -560,12 +517,12 @@ namespace FrostyPlatformer.Models
                 name = "mapfour",
             };
 
-            CrateFromChild();
+            CreateFromChild();
         }
 
-        public bool CrateFromChild()
+        public void CreateFromChild()
         {
-            return this.Create(CreateObj);
+            this.Create(CreateObj);
         }
 
 
@@ -726,14 +683,12 @@ namespace FrostyPlatformer.Models
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 121, 13, Assets!, 0, 27));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 122, 13, Assets!, 0, 28));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 127, 3, Assets!, 0, 29));
-            //ListDynamicObjs.Add(new DynamicItem(128, 3, Assets!.GetItem("energi")));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 190, 3, Assets!, 0, 30));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 157, 18, Assets!, 0, 31));
             
             #endregion
 
 
-            //ListDynamicObjs.Add(new Teleport(50.0f, 3.0f, "mapone", 2.0f, 2.0f)); // placering portal
             ListDynamicObjs.Add(new Teleport(183.5f, 4.0f, "worldmap", 2.0f, 5.0f));
 
 
@@ -761,8 +716,6 @@ namespace FrostyPlatformer.Models
 
     public class MapFive : Map
     {
-        //TODO
-
         public CreateObj CreateObj { get; set; }
 
         public MapFive(IAssets assets, IEnemyFactory enemyFactory, IItemFactory itemFactory)
@@ -770,7 +723,6 @@ namespace FrostyPlatformer.Models
             Assets = assets;
             EnemyFactory = enemyFactory;
             ItemFactory = itemFactory;
-            //TODO
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData("mapfive"),
@@ -778,12 +730,12 @@ namespace FrostyPlatformer.Models
                 name = "mapfive",
             };
 
-            CrateFromChild();
+            CreateFromChild();
         }
 
-        public bool CrateFromChild()
+        public void CreateFromChild()
         {
-            return this.Create(CreateObj);
+            this.Create(CreateObj);
         }
 
         public override bool PopulateDynamics(List<DynamicGameObject> ListDynamicObjs)
@@ -902,7 +854,6 @@ namespace FrostyPlatformer.Models
         public override bool OnInteraction(List<DynamicGameObject> ListDynamicObjs, DynamicGameObject target, Enum.NATURE nature)
         {
 
-            //TODO
             if (target.Name == "Teleport")
             {
                 if (Core.Aggregate.Instance.Settings!.ActivePlayer.StageCompleted < 5)
@@ -935,12 +886,12 @@ namespace FrostyPlatformer.Models
                 name = "mapsix",
             };
 
-            CrateFromChild();
+            CreateFromChild();
         }
 
-        public bool CrateFromChild()
+        public void CreateFromChild()
         {
-            return this.Create(CreateObj);
+            this.Create(CreateObj);
         }
 
         public override bool PopulateDynamics(List<DynamicGameObject> ListDynamicObjs)
@@ -1068,7 +1019,6 @@ namespace FrostyPlatformer.Models
         public override bool OnInteraction(List<DynamicGameObject> ListDynamicObjs, DynamicGameObject target, Enum.NATURE nature)
         {
 
-            //TODO
             if (target.Name == "Teleport")
             {
                 if (Core.Aggregate.Instance.Settings!.ActivePlayer.StageCompleted < 6)
@@ -1096,7 +1046,6 @@ namespace FrostyPlatformer.Models
             Assets = assets;
             EnemyFactory = enemyFactory;
             ItemFactory = itemFactory;
-            //TODO
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData("mapseven"),
@@ -1104,12 +1053,12 @@ namespace FrostyPlatformer.Models
                 name = "mapseven",
             };
 
-            CrateFromChild();
+            CreateFromChild();
         }
 
-        public bool CrateFromChild()
+        public void CreateFromChild()
         {
-            return this.Create(CreateObj);
+            this.Create(CreateObj);
         }
 
         public override bool PopulateDynamics(List<DynamicGameObject> ListDynamicObjs)
@@ -1217,8 +1166,7 @@ namespace FrostyPlatformer.Models
             ListDynamicObjs.Add(f01);
             f01.px = 22;
             f01.py = 19;
-            //f01.py = 20;
-            f01.FromCor = 18; 
+            f01.FromCor = 18;
             f01.ToCor = 28;
             f01.Name = "frost";
             f01.Id = 1;
@@ -1524,12 +1472,6 @@ namespace FrostyPlatformer.Models
             w24.py = 6;
             w24.Name = "walrus";
 
-            //DynamicGameObject w25 = EnemyFactory!.Create(EnemyType.Walrus, Assets!);
-            //ListDynamicObjs.Add(w25);
-            //w25.px = 126;
-            //w25.py = 14;
-            //w25.Name = "walrus";
-
             DynamicGameObject w26 = EnemyFactory!.Create(EnemyType.Walrus, Assets!);
             ListDynamicObjs.Add(w26);
             w26.px = 7;
@@ -1599,7 +1541,6 @@ namespace FrostyPlatformer.Models
             Assets = assets;
             EnemyFactory = enemyFactory;
             ItemFactory = itemFactory;
-            //TODO
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData("mapeight"),
@@ -1607,12 +1548,12 @@ namespace FrostyPlatformer.Models
                 name = "mapeight",
             };
 
-            CrateFromChild();
+            CreateFromChild();
         }
 
-        public bool CrateFromChild()
+        public void CreateFromChild()
         {
-            return this.Create(CreateObj);
+            this.Create(CreateObj);
         }
 
         public override bool PopulateDynamics(List<DynamicGameObject> ListDynamicObjs)
@@ -1760,12 +1701,6 @@ namespace FrostyPlatformer.Models
             w23.px = 205;
             w23.py = 2;
             w23.Name = "walrus";
-
-            //DynamicGameObject w24 = EnemyFactory!.Create(EnemyType.Walrus, Assets!);
-            //ListDynamicObjs.Add(w24);
-            //w24.px = 255;
-            //w24.py = 7;
-            //w24.Name = "walrus";
 
             DynamicGameObject w25 = EnemyFactory!.Create(EnemyType.Walrus, Assets!);
             ListDynamicObjs.Add(w25);
@@ -1930,7 +1865,6 @@ namespace FrostyPlatformer.Models
             ListDynamicObjs.Add(f01);
             f01.px = 26;
             f01.py = 42;
-            //f01.py = 20;
             f01.FromCor = 26;
             f01.ToCor = 28;
             f01.Name = "frost";
@@ -2032,17 +1966,12 @@ namespace FrostyPlatformer.Models
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 189, 14, Assets!, 0, 90));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 200, 10, Assets!, 0, 91));
 
-            //ListDynamicObjs.Add(new DynamicItem(222, 10, Assets!.GetItem("energi")));
-
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 274, 4, Assets!, 0, 92));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 371, 14, Assets!, 0, 93));
 
             #endregion
 
            ListDynamicObjs.Add(new Teleport(377.5f, 8.0f, "mapnine", 2.0f, 5.0f));
-
-            // f�r test att snabbt komma till sista banan
-            //ListDynamicObjs.Add(new Teleport(3f, 41f, "mapnine", 1.0f, 5.0f));
 
             return true;
         }
@@ -2080,7 +2009,6 @@ namespace FrostyPlatformer.Models
             Assets = assets;
             EnemyFactory = enemyFactory;
             ItemFactory = itemFactory;
-            //TODO
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData("mapnine"),
@@ -2088,19 +2016,17 @@ namespace FrostyPlatformer.Models
                 name = "mapnine",
             };
 
-            CrateFromChild();
+            CreateFromChild();
         }
 
-        public bool CrateFromChild()
+        public void CreateFromChild()
         {
-            return this.Create(CreateObj);
+            this.Create(CreateObj);
         }
 
         public override bool PopulateDynamics(List<DynamicGameObject> ListDynamicObjs)
         {
 
-            //TODO
-            //ice
             DynamicGameObject ice1 = EnemyFactory!.Create(EnemyType.Icicle, Assets!);
             ListDynamicObjs.Add(ice1);
             ice1.px = 3;
@@ -2216,7 +2142,6 @@ namespace FrostyPlatformer.Models
             overlay7.Name = "overlay";
 
 
-            //ListDynamicObjs.Add(new Teleport(12f, 12.0f, "worldmap", 2.0f, 5.0f));
             ListDynamicObjs.Add(new Teleport(0.0f, 0.0f, "worldmap", 2.0f, 5.0f));
 
             return true;
