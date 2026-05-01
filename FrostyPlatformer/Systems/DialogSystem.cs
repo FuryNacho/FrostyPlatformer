@@ -52,21 +52,17 @@ namespace FrostyPlatformer.Systems
 
             var darkBlue = new RenderColor(0, 0, 128);
 
-            // Bakgrund
             rc.FillRect(BoxX, BoxY, BoxW, BoxH, darkBlue);
 
-            // Ram
             rc.FillRect(BoxX,            BoxY,            BoxW, 1,    RenderColor.White);
             rc.FillRect(BoxX,            BoxY + BoxH - 1, BoxW, 1,    RenderColor.White);
             rc.FillRect(BoxX,            BoxY,            1,    BoxH, RenderColor.White);
             rc.FillRect(BoxX + BoxW - 1, BoxY,            1,    BoxH, RenderColor.White);
 
-            // Textrader (max 3)
             int maxLines = Math.Min(_lines.Count, 3);
             for (int i = 0; i < maxLines; i++)
                 rc.DrawText(_lines[i], BoxX + 4, BoxY + 4 + i * 10);
 
-            // Bekräftelsetips
             rc.DrawText("Press confirm", BoxX + 4, BoxY + BoxH - 10);
         }
     }

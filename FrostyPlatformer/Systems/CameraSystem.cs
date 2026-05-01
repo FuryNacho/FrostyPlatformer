@@ -31,7 +31,6 @@ namespace FrostyPlatformer.Systems
             int visibleTilesX = screenWidth  / tileWidth;
             int visibleTilesY = screenHeight / tileHeight;
 
-            // Centrera kameran på målet
             float offsetX = targetX - visibleTilesX / 2.0f;
             float offsetY = targetY - visibleTilesY / 2.0f;
 
@@ -45,7 +44,6 @@ namespace FrostyPlatformer.Systems
             if (offsetX > maxOffsetX) offsetX = maxOffsetX;
             if (offsetY > maxOffsetY) offsetY = maxOffsetY;
 
-            // Sub-tile offset för mjuk scrollning
             float tileOffsetX = (offsetX - (int)offsetX) * tileWidth;
             float tileOffsetY = (offsetY - (int)offsetY) * tileHeight;
 

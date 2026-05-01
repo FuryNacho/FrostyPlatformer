@@ -54,7 +54,6 @@ namespace FrostyPlatformer.States
             if (!_services.Input.ButtonsHasGoneIdle && _services.Input.IsIdle && !_services.Input.IsAnyKeyPressed)
                 _services.Input.ButtonsHasGoneIdle = true;
 
-            // Select/S → tillbaka till världskartan
             if (_services.Input.IsConfirmPressed || _services.Input.IsPausePressed)
             {
                 _services.Input.ButtonsHasGoneIdle = false;
@@ -62,7 +61,6 @@ namespace FrostyPlatformer.States
                 return;
             }
 
-            // Start/P → återuppta spelet
             if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsCancelPressed)
             {
                 _services.Input.ButtonsHasGoneIdle = false;
@@ -70,7 +68,6 @@ namespace FrostyPlatformer.States
                 return;
             }
 
-            // Konami-kod
             if (_services.Input.ButtonsHasGoneIdle && !_services.Input.IsIdle)
                 HandleKonami(context);
         }

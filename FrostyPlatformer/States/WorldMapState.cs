@@ -63,7 +63,6 @@ namespace FrostyPlatformer.States
             if (!_services.Audio.IsPlaying(Global.GlobalNamespace.SoundRef.BGSoundWorld))
                 _services.Audio.Play(Global.GlobalNamespace.SoundRef.BGSoundWorld);
 
-            // Kolla om vi ska gå till slutskärmen
             if (_services.Settings.ActivePlayer.ShowEnd)
             {
                 _services.Input.ButtonsHasGoneIdle = false;
@@ -73,7 +72,6 @@ namespace FrostyPlatformer.States
 
             _rc.Clear(RenderColor.Black);
 
-            // Hastighetsåterställning
             if (!_hasAccumulated)
             {
                 _hasAccumulated = true;
@@ -83,18 +81,15 @@ namespace FrostyPlatformer.States
                 context.Player.ChangeStageKnockBackReset();
             }
 
-            // Spawn-position
             int spawn = _services.Settings.ActivePlayer.SpawnAtWorldMap;
             var (corrX, corrY) = _services.WorldMap.GetSpawnPosition(spawn);
 
-            // Byt till världskartan om vi inte är där
             if (context.CurrentLevel?.Name != "worldmap")
             {
                 _services.ChangeMap("worldmap", corrX, corrY);
                 _services.Input.ButtonsHasGoneIdle = false;
             }
 
-            // HasSwitchedState-ekvivalent: placera hero rätt
             if (context.Player!.vx == 0 && context.Player.vy == 0 &&
                 (context.Player.px != corrX || context.Player.py != corrY))
             {
@@ -121,13 +116,11 @@ namespace FrostyPlatformer.States
                         context.Player.vx = 3;
                 }
 
-                // Välj bana — confirm-knappen
                 if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsConfirmPressed)
                 {
                     if (TryEnterStage(spawn, context)) return;
                 }
 
-                // Öppna meny
                 if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsCancelPressed)
                 {
                     context.MenuNavigation = Enum.MenuState.PauseMenu;
@@ -137,11 +130,9 @@ namespace FrostyPlatformer.States
                 }
             }
 
-            // Uppdatera alla objekt + kollision
             if (context.CurrentLevel != null)
                 UpdateObjects(context, elapsed);
 
-            // Rita karta
             if (context.CurrentLevel != null && context.Player != null)
             {
                 var cam = _services.Camera.Calculate(
@@ -195,7 +186,6 @@ namespace FrostyPlatformer.States
 
             foreach (var obj in context.ActiveObjects)
             {
-                // Stages-stopp och overlay-status
                 if (obj.IsHero) UpdateHeroStageStop(obj, context);
 
                 if (obj is DynamicCreatureOverlayWorldMap)

@@ -30,13 +30,9 @@ namespace FrostyPlatformer.States
         {
             if (context.Player == null) return;
 
-            // Bakgrunds-rektangel
             rc.FillRect(2, 2, context.ScreenWidth - 4, 7, RenderColor.Brown);
-
-            // HUD-sprite (energimätarens ram)
             rc.DrawPartialSprite(SpriteId.Items, 3, 3, 0, 16 * 4, 16, 4);
 
-            // Text: hälsa + tid
             string text = context.Player.Health.ToString() + "% " +
                           context.GameTotalTime.ToString("hh':'mm':'ss'.'fff");
             for (int i = 0; i < text.Length; i++)
@@ -56,7 +52,6 @@ namespace FrostyPlatformer.States
                 rc.DrawPartialSprite(SpriteId.Items, 30 + i * 5, 3, sx, sy, 8, 5);
             }
 
-            // Energimätare
             var color = RenderColor.Green;
             int health = context.Player.Health;
             int bar = HealthToBar(health, ref color);
@@ -64,7 +59,6 @@ namespace FrostyPlatformer.States
             rc.DrawLine(3 + 1, 3 + 1, 3 + bar, 3 + 1, color);
             rc.DrawLine(3 + 1, 3 + 2, 3 + bar, 3 + 2, color);
 
-            // Paus-text
             if (mode == "pause")
             {
                 rc.DrawText("Pause", 25, 25);

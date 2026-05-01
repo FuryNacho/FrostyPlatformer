@@ -145,27 +145,26 @@ namespace FrostyPlatformer.Systems
         {
             bool ballat = false;
 
-            // Horisontellt – höger
+            // Horisontellt
             if (obj.vx > GameConstants.MaxVelocityX)
             {
                 if (obj.vx > GameConstants.MaxVelocityXCrash) { obj.vx = 0.0f; ballat = true; }
                 else obj.vx = GameConstants.MaxVelocityX;
             }
-            // Horisontellt – vänster
             else if (obj.vx < -GameConstants.MaxVelocityX)
             {
                 if (obj.vx < -GameConstants.MaxVelocityXCrash) { obj.vx = 0.0f; ballat = true; }
                 else obj.vx = -GameConstants.MaxVelocityX;
             }
 
-            // Vertikalt – neråt (fall)
+            // Vertikalt – fall
             if (obj.vy > GameConstants.FallSpeedThreshold)
             {
                 if (obj.vy > GameConstants.FallSpeedMax) { obj.vy = 0.0f; ballat = true; }
                 else obj.vy = GameConstants.FallSpeedThreshold;
             }
 
-            // Vertikalt – uppåt (hopp)
+            // Vertikalt – hopp
             if (obj.vy < -GameConstants.MaxVelocityYUp)
             {
                 if (obj.vy < -GameConstants.MaxVelocityYUpCrash) { obj.vy = 0.0f; ballat = true; }

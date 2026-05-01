@@ -83,7 +83,6 @@ namespace FrostyPlatformer.Core
             LoadSprite("hero",        PathSprites, @"\hero",        ".png");
             LoadSprite("items",       PathSprites, @"\items",       ".png");
 
-            // enemy
             LoadSprite("enemyzero", PathSprites, @"\enemyzero", ".png");
             LoadSprite("enemyone", PathSprites, @"\enemyone", ".png");
             LoadSprite("enemytwo", PathSprites, @"\enemytwo", ".png");
@@ -242,11 +241,6 @@ namespace FrostyPlatformer.Core
 
             this.Settings = settingsObj;
             return true;
-
-            // TODO; spara settings
-            // return ReadWrite.WriteJson<SettingsObj>(PathSettings, @"\settings", ".json", settingsObj);
-
-
         }
 
         public int RNG(int SmallNumber, int BigNumber)
@@ -269,7 +263,6 @@ namespace FrostyPlatformer.Core
 
         public void CheckSwitchX()
         {
-            // är under jorden
             if (IsUnderGround && HasBeenOnTheTop && !IsMoving)
             {
                 IsMoving = false;
@@ -279,7 +272,6 @@ namespace FrostyPlatformer.Core
                 ChangeX();
             }
 
-            //nollställ för att kunna switcha igen
             if (IsAboveGround && HasBeenOnTheBottom && !IsMoving)
             {
                 IsMoving = false;
@@ -295,9 +287,6 @@ namespace FrostyPlatformer.Core
             var a = 0;
             var b = 0;
             var c = 0;
-
-            //var d = 0;
-            //var e = 0;
 
             var idx = 0;
             Random rand = new Random();

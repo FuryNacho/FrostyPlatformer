@@ -68,10 +68,8 @@ namespace FrostyPlatformer.States
 
         public void Enter(GameContext context)
         {
-            // Avgör sluttypen baserat på antal samlade energier och hero-hälsa
             _typeOfEnding = DetermineEnding(context);
 
-            // Stoppa alla bakgrundsljud och starta rätt slut-musik
             _services.Audio.StopAll();
             _services.Audio.Pause(Global.GlobalNamespace.SoundRef.BGSoundWorld);
             _services.Audio.Pause(Global.GlobalNamespace.SoundRef.BGSoundGame);
@@ -87,11 +85,9 @@ namespace FrostyPlatformer.States
                     _services.Audio.Play(Global.GlobalNamespace.SoundRef.BGSoundEnd);
             }
 
-            // Spara sluttiden och nollställ animationen
             context.EndTotalTime = context.GameTotalTime;
             ReSetForEnd();
 
-            // Snö
             _snowSlow = null;
             _snowFast = null;
             _counterSlow = 1;
@@ -104,7 +100,6 @@ namespace FrostyPlatformer.States
 
         public void Update(GameContext context, float elapsed)
         {
-            // Första uppdateringen: kontrollera om spelaren platsar på high score-listan
             if (_isFirstUpdate)
             {
                 _isFirstUpdate = false;
@@ -154,19 +149,15 @@ namespace FrostyPlatformer.States
                 }
             }
 
-            // Rita slutskärms-bakgrunden centrerad (256×224 sprite på dynamisk skärm)
             int cx = (context.ScreenWidth  - GameConstants.ScreenWidth)  / 2;
             int cy = (context.ScreenHeight - GameConstants.ScreenHeight) / 2;
             _rc.DrawSprite(SpriteId.SplashEnd, cx, cy);
 
-            // Snöeffekt
             const int SnowScreenMargin = 4; // Lämnar en tunn kant nedtill utanför snöeffekten
             MakeItSnow(elapsed, context.ScreenHeight - SnowScreenMargin);
 
-            // Hero/igloo-animation
+            // Animering + sluttext
             AnimationEnd(elapsed, context);
-
-            // Skriv-animerad sluttext
             DrawEndTextList(elapsed, cx, cy);
         }
 

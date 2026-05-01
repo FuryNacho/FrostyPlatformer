@@ -27,10 +27,7 @@ namespace FrostyPlatformer.Core
 
         private string GetCorrectPath()
         {
-            //Fuckar up och ger tillbaka min path på andras maskiner.. wtf
             Root = System.IO.Path.Combine(Environment.CurrentDirectory);
-            
-            //
             var BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
            
             return BaseDirectory;
@@ -99,19 +96,15 @@ namespace FrostyPlatformer.Core
         {
             string PathLocation = Root + FilePath;
 
-            // Check if dir Exists
             if (!string.IsNullOrEmpty(FilePath) && !System.IO.Directory.Exists(PathLocation))
             {
-                // create dir 
                 var info = System.IO.Directory.CreateDirectory(PathLocation);
             }
 
-            // Check if file Exists
             if (!string.IsNullOrEmpty(FilePath) && !string.IsNullOrEmpty(FileName) && !string.IsNullOrEmpty(FileExtension) && !File.Exists(PathLocation + FileName + FileExtension))
             {
                 if (CreateFile)
                 {
-                    // create file 
                     using (StreamWriter writer = new StreamWriter(PathLocation + FileName + FileExtension)) { };
                 }
                 else
@@ -120,7 +113,6 @@ namespace FrostyPlatformer.Core
                 }
             }
 
-            // Return full Directory. 
             return PathLocation + FileName + FileExtension;
         }
 

@@ -62,26 +62,18 @@ namespace FrostyPlatformer.Models
 
     public class SettingsObj
     {
-        //public int StageCompleted { get; set; }
-
-        //public int SpawnAtWorldMap { get; set; } = 1;
-
         public SaveSlot ActivePlayer { get; set; } = new SaveSlot();
 
         public bool AudioOn { get; set; } = true;
 
         public SaveSlotMainObj SaveSlotsObjs { get; set; } = new SaveSlotMainObj();
 
-        //public bool ShowEnd { get; set; }
         public bool Log { get; set; } = false;
         public bool Mute { get; set; } = false;
     }
 
     public class SaveSlotMainObj
     {
-        //public SaveSlot SlotOne { get; set; } = new SaveSlot() {Name = "Slot One" };
-        //public SaveSlot SlotTwo { get; set; } = new SaveSlot() { Name = "Slot Two" };
-        //public SaveSlot SlotThree { get; set; } = new SaveSlot() { Name = "Slot Three" };
         public SaveSlot SlotOne { get; set; } = new SaveSlot();
         public SaveSlot SlotTwo { get; set; } = new SaveSlot();
         public SaveSlot SlotThree { get; set; } = new SaveSlot();
@@ -89,20 +81,15 @@ namespace FrostyPlatformer.Models
     public class SaveSlot
     {
         public DateTime DateTime { get; set; } = DateTime.Now;
-        //public string Name { get; set; }
         public TimeSpan Time { get; set; }
         public bool IsUsed { get; set; } = false;
         public int HeroEnergi { get; set; } = 7;
-
 
         public int StageCompleted { get; set; } = 0;
         public int SpawnAtWorldMap { get; set; } = 1;
         public bool ShowEnd { get; set; } = false;
 
-        //public float PosX { get; set; }
-        //public float PosY { get; set; }
         public List<int> EnergiCollected { get; set; } = new List<int>();
-
     }
 
     /// <summary>Bästa genomspelning av ett user map-slot.</summary>

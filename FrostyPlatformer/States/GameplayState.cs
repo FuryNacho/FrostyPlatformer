@@ -61,11 +61,9 @@ namespace FrostyPlatformer.States
         {
             _services.ClearSwitchedState();
 
-            // Ta bort redan insamlad energi från aktiva objekt
             context.ActiveObjects.RemoveAll(x =>
                 context.CollectedEnergiIds.Any(id => id == x.CoinId));
 
-            // Ljud
             _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundWorld);
             if (context.CurrentLevel?.Name != "mapnine")
             {
@@ -87,15 +85,12 @@ namespace FrostyPlatformer.States
         {
             _services.Script.Tick(elapsed);
 
-            // Aggregate kan trigga HasSwitchedState från scripts (t.ex. teleport)
             if (_services.CheckAndClearSwitchedState())
             {
                 context.ActiveObjects.RemoveAll(x =>
                     context.CollectedEnergiIds.Any(id => id == x.CoinId));
             }
 
-            // Skript kan byta karta till worldmap (bana klar → CommandChangeMap).
-            // I preview-läge: återvänd till editorn istället för WorldMapState.
             if (context.CurrentLevel?.Name == "worldmap")
             {
                 if (context.IsPreviewMode)
@@ -126,7 +121,6 @@ namespace FrostyPlatformer.States
 
             if (_enemyJump > -1) _enemyJump--;
 
-            // Hjälten är död → game over (eller tillbaka vid preview/user run)
             if (context.Player!.Health < 1)
             {
                 _services.Input.ButtonsHasGoneIdle = false;
@@ -149,7 +143,6 @@ namespace FrostyPlatformer.States
                 return;
             }
 
-            // Rensa redundanta objekt
             context.ActiveObjects.RemoveAll(x => x.RemoveCount >= 4);
 
             if (context.ActiveObjects.Count <= 0)
@@ -262,10 +255,6 @@ namespace FrostyPlatformer.States
         }
 
         // ── Dialog-input ─────────────────────────────────────────────────────────
-        /// <summary>
-        /// Avfärdar aktiv dialogruta vid confirm-tryck och kompletterar skriptkommandot.
-        /// Anropas i Update() när en dialog är aktiv, istället för HandleInput().
-        /// </summary>
         private void HandleDialogInput()
         {
             if (_services.Input.IsConfirmPressed)
@@ -281,7 +270,6 @@ namespace FrostyPlatformer.States
         {
             var hero = (DynamicCreatureHero)context.Player!;
 
-            // Run/power-knapp
             _bPower = _services.Input.IsRunDown || _services.Input.IsSelectDown;
 
             hero.LookUp   = _services.Input.IsUpDown;
