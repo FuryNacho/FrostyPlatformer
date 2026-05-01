@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using FrostyPlatformer.Core;
 using FrostyPlatformer.Models;
 
@@ -57,7 +58,7 @@ namespace FrostyPlatformer.Systems
             _context.ActualTotalTime = copyObj.Time;
             _repo.WriteActivePlayer(copyObj);
             _context.Player!.Health  = copyObj.HeroEnergi;
-            _context.CollectedEnergiIds = copyObj.EnergiCollected;
+            _context.CollectedEnergiIds = new HashSet<int>(copyObj.EnergiCollected);
             _clockHardReset();
         }
 
@@ -77,7 +78,7 @@ namespace FrostyPlatformer.Systems
                 StageCompleted  = active.StageCompleted,
                 SpawnAtWorldMap = active.SpawnAtWorldMap,
                 ShowEnd         = active.ShowEnd,
-                EnergiCollected = _context.CollectedEnergiIds
+                EnergiCollected = new List<int>(_context.CollectedEnergiIds)
             };
 
             // Åsidosätt med aktuella runtime-värden — ActivePlayer kan ha inaktuell data

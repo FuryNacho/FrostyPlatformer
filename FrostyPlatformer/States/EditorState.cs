@@ -500,7 +500,7 @@ namespace FrostyPlatformer.States
 
             // UserMap items start at ID 1000. Clear any IDs from a previous
             // preview run so GameplayState.Enter doesn't remove them again.
-            context.CollectedEnergiIds.RemoveAll(id => id >= 1000);
+            context.CollectedEnergiIds.RemoveWhere(id => id >= 1000);
 
             context.ActiveObjects.Clear();
             context.ActiveObjects.Add(hero);

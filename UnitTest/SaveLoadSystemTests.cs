@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using FrostyPlatformer.Core;
 using FrostyPlatformer.Models;
@@ -230,7 +231,7 @@ namespace UnitTest
 
             Make(ctx, repo).Load(1);
 
-            CollectionAssert.AreEqual(new[] { 10, 20 }, ctx.CollectedEnergiIds);
+            CollectionAssert.AreEquivalent(new[] { 10, 20 }, ctx.CollectedEnergiIds.ToArray());
         }
 
         [TestMethod]
@@ -368,12 +369,12 @@ namespace UnitTest
         public void Save_UsesContextCollectedEnergiIds()
         {
             var ctx  = MakeContext();
-            ctx.CollectedEnergiIds = new List<int> { 5, 7, 11 };
+            ctx.CollectedEnergiIds = new HashSet<int> { 5, 7, 11 };
             var repo = new FakeSaveGameRepository();
 
             Make(ctx, repo).Save(1);
 
-            CollectionAssert.AreEqual(new[] { 5, 7, 11 }, repo.LastWrittenSlotData!.EnergiCollected);
+            CollectionAssert.AreEquivalent(new[] { 5, 7, 11 }, repo.LastWrittenSlotData!.EnergiCollected);
         }
 
         [TestMethod]

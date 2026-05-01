@@ -81,7 +81,7 @@ namespace FrostyPlatformer.Core
         public List<Item> CollectedItems { get; set; } = new List<Item>();
 
         /// <summary>Id:n för insamlade energi-objekt. Används för att markera dem som borttagna.</summary>
-        public List<int> CollectedEnergiIds { get; set; } = new List<int>();
+        public HashSet<int> CollectedEnergiIds { get; set; } = new HashSet<int>();
 
         // ─────────────────────────────────────────────
         // Spelmätning och timing

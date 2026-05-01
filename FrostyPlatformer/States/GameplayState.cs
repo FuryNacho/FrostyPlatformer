@@ -168,6 +168,9 @@ namespace FrostyPlatformer.States
                 HandleInput(context, elapsed);
 
             // Fysik + kollision per objekt
+            bool bossAlive = context.CurrentLevel?.Name == "mapnine" &&
+                             context.ActiveObjects.Any(x => x is DynamicCreatureEnemyBoss);
+
             foreach (var obj in context.ActiveObjects)
             {
                 obj.detHarBallatUr = false;
@@ -175,7 +178,7 @@ namespace FrostyPlatformer.States
                 // Speciell boss-bana-logik (mapnine)
                 if (context.CurrentLevel?.Name == "mapnine")
                 {
-                    if (!context.ActiveObjects.Any(x => x is DynamicCreatureEnemyBoss))
+                    if (!bossAlive)
                     {
                         if (obj is Teleport)
                         { obj.px = context.Player.px; obj.py = context.Player.py; }
@@ -588,18 +591,26 @@ namespace FrostyPlatformer.States
         }
 
         // ── Skada / kollision-hjälpare ────────────────────────────────────────────
+        private const int SpillPerFrame = 4;
+
         private void DamageHero(Creature assailant, Creature victim, string from = "")
         {
             _services.Audio.Play(Global.GlobalNamespace.SoundRef.DamageHero);
 
             if (victim == null || !victim.IsAttackable) return;
 
-            _energiRain.MakeItRain     = true;
-            _energiRain.NumberOfEnergi = assailant.DamageGiven;
-            _energiRain.StartPosX      = victim.px;
-            _energiRain.StartPosY      = victim.py;
-
             victim.Health -= assailant.DamageGiven;
+
+            int n      = assailant.DamageGiven;
+            int health = Math.Max(0, victim.Health);
+            int min    = n / 2 >= health ? health : n / 2;
+            int max    = n       >= health ? health : n;
+            int count  = min >= max ? min : _rng.Next(min, max);
+
+            _energiRain.RemainingToSpawn += count;
+            _energiRain.StartPosX         = victim.px;
+            _energiRain.StartPosY         = victim.py;
+            _energiRain.MakeItRain        = true;
 
             float tx = victim.px - assailant.px;
             float ty = victim.py - assailant.py;
@@ -631,14 +642,16 @@ namespace FrostyPlatformer.States
 
         private void MakeItRainEnergi(GameContext context)
         {
-            _energiRain.MakeItRain = false;
+            const int whenCollectable = 35; // ~0.6 sekunder skydd (normaliserat till 60 fps-ekvivalenta frames)
             float sx = _energiRain.StartPosX, sy = _energiRain.StartPosY;
-            int whenCollectable = 35; // ~0.6 sekunder skydd (normaliserat till 60 fps-ekvivalenta frames)
-            int min = _energiRain.NumberOfEnergi / 2 >= context.Player!.Health ? context.Player.Health : _energiRain.NumberOfEnergi / 2;
-            int max = _energiRain.NumberOfEnergi >= context.Player.Health ? context.Player.Health : _energiRain.NumberOfEnergi;
-            int count = min >= max ? min : _rng.Next(min, max);
-            for (int i = 0; i < count; i++)
+
+            int toSpawn = Math.Min(SpillPerFrame, _energiRain.RemainingToSpawn);
+            for (int i = 0; i < toSpawn; i++)
                 context.ActiveObjects.Add(new DynamicItem(sx, sy, _services.Assets.GetItem("energi")!, whenCollectable));
+
+            _energiRain.RemainingToSpawn -= toSpawn;
+            if (_energiRain.RemainingToSpawn == 0)
+                _energiRain.MakeItRain = false;
         }
     }
 }

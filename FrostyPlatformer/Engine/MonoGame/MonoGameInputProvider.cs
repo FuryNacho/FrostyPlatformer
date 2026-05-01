@@ -140,21 +140,36 @@ namespace FrostyPlatformer.Engine.MonoGame
         private bool PadPressed(Buttons btn)
             => _pad.IsConnected && _pad.IsButtonDown(btn) && !_prevPad.IsButtonDown(btn);
 
+        private bool PadRelease(Buttons btn)
+            => _pad.IsConnected && !_pad.IsButtonDown(btn) && _prevPad.IsButtonDown(btn);
+
+        // ─── Analogspak-hjälpare (vänster spak, med dödzon) ──────────────────
+        private const float AnalogDeadZone = 0.25f;
+
+        private bool AnalogRight     => _pad.IsConnected && _pad.ThumbSticks.Left.X      >  AnalogDeadZone;
+        private bool AnalogLeft      => _pad.IsConnected && _pad.ThumbSticks.Left.X      < -AnalogDeadZone;
+        private bool AnalogUp        => _pad.IsConnected && _pad.ThumbSticks.Left.Y      >  AnalogDeadZone;
+        private bool AnalogDown      => _pad.IsConnected && _pad.ThumbSticks.Left.Y      < -AnalogDeadZone;
+        private bool PrevAnalogRight => _pad.IsConnected && _prevPad.ThumbSticks.Left.X  >  AnalogDeadZone;
+        private bool PrevAnalogLeft  => _pad.IsConnected && _prevPad.ThumbSticks.Left.X  < -AnalogDeadZone;
+        private bool PrevAnalogUp    => _pad.IsConnected && _prevPad.ThumbSticks.Left.Y  >  AnalogDeadZone;
+        private bool PrevAnalogDown  => _pad.IsConnected && _prevPad.ThumbSticks.Left.Y  < -AnalogDeadZone;
+
         // ─── Rörelseåtgärder ──────────────────────────────────────────────────
-        public bool IsRightDown     => KeyDown(Keys.Right)    || PadDown(Buttons.DPadRight);
-        public bool IsLeftDown      => KeyDown(Keys.Left)     || PadDown(Buttons.DPadLeft);
-        public bool IsUpDown        => KeyDown(Keys.Up)       || PadDown(Buttons.DPadUp);
-        public bool IsDownDown      => KeyDown(Keys.Down)     || PadDown(Buttons.DPadDown);
+        public bool IsRightDown     => KeyDown(Keys.Right)    || PadDown(Buttons.DPadRight)    || AnalogRight;
+        public bool IsLeftDown      => KeyDown(Keys.Left)     || PadDown(Buttons.DPadLeft)     || AnalogLeft;
+        public bool IsUpDown        => KeyDown(Keys.Up)       || PadDown(Buttons.DPadUp)       || AnalogUp;
+        public bool IsDownDown      => KeyDown(Keys.Down)     || PadDown(Buttons.DPadDown)     || AnalogDown;
 
-        public bool IsRightPressed  => KeyPressed(Keys.Right)  || PadPressed(Buttons.DPadRight);
-        public bool IsLeftPressed   => KeyPressed(Keys.Left)   || PadPressed(Buttons.DPadLeft);
-        public bool IsUpPressed     => KeyPressed(Keys.Up)     || PadPressed(Buttons.DPadUp);
-        public bool IsDownPressed   => KeyPressed(Keys.Down)   || PadPressed(Buttons.DPadDown);
+        public bool IsRightPressed  => KeyPressed(Keys.Right)  || PadPressed(Buttons.DPadRight)  || (AnalogRight && !PrevAnalogRight);
+        public bool IsLeftPressed   => KeyPressed(Keys.Left)   || PadPressed(Buttons.DPadLeft)   || (AnalogLeft  && !PrevAnalogLeft);
+        public bool IsUpPressed     => KeyPressed(Keys.Up)     || PadPressed(Buttons.DPadUp)     || (AnalogUp    && !PrevAnalogUp);
+        public bool IsDownPressed   => KeyPressed(Keys.Down)   || PadPressed(Buttons.DPadDown)   || (AnalogDown  && !PrevAnalogDown);
 
-        public bool IsRightReleased => KeyReleased(Keys.Right);
-        public bool IsLeftReleased  => KeyReleased(Keys.Left);
-        public bool IsUpReleased    => KeyReleased(Keys.Up);
-        public bool IsDownReleased  => KeyReleased(Keys.Down);
+        public bool IsRightReleased => KeyReleased(Keys.Right) || PadRelease(Buttons.DPadRight)  || (!AnalogRight && PrevAnalogRight);
+        public bool IsLeftReleased  => KeyReleased(Keys.Left)  || PadRelease(Buttons.DPadLeft)   || (!AnalogLeft  && PrevAnalogLeft);
+        public bool IsUpReleased    => KeyReleased(Keys.Up)    || PadRelease(Buttons.DPadUp)     || (!AnalogUp    && PrevAnalogUp);
+        public bool IsDownReleased  => KeyReleased(Keys.Down)  || PadRelease(Buttons.DPadDown)   || (!AnalogDown  && PrevAnalogDown);
 
         // ─── Actionknappar ────────────────────────────────────────────────────
         public bool IsJumpDown     => KeyDown(Keys.Up)    || KeyDown(Keys.Space)
@@ -163,7 +178,7 @@ namespace FrostyPlatformer.Engine.MonoGame
         public bool IsJumpPressed  => KeyPressed(Keys.Up) || KeyPressed(Keys.Space)
                                    || PadPressed(Buttons.A);
 
-        public bool IsJumpReleased => KeyReleased(Keys.Up) || KeyReleased(Keys.Space);
+        public bool IsJumpReleased => KeyReleased(Keys.Up) || KeyReleased(Keys.Space) || PadRelease(Buttons.A);
 
         public bool IsConfirmPressed => KeyPressed(Keys.Enter) || KeyPressed(Keys.Space)
                                      || KeyPressed(Keys.X)     || KeyPressed(Keys.S)

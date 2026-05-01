@@ -175,7 +175,7 @@ namespace FrostyPlatformer.States
             hero.vy     = 0f;
             hero.Health = 9;
 
-            context.CollectedEnergiIds.RemoveAll(id => id >= 1000);
+            context.CollectedEnergiIds.RemoveWhere(id => id >= 1000);
             context.ActiveObjects.Clear();
             context.ActiveObjects.Add(hero);
             userMap.PopulateDynamics(context.ActiveObjects);

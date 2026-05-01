@@ -172,16 +172,10 @@ namespace FrostyPlatformer.Models
 
     public class EnergiRainObject
     {
-        public bool MakeItRain { get; set; }
-        public int NumberOfEnergi { get; set; }
-        /// <summary>
-        /// Utgå ifrån Horisontal position
-        /// </summary>
-        public float StartPosX { get; set; }
-        /// <summary>
-        /// Utgå ifrån Vertikal position
-        /// </summary>
-        public float StartPosY { get; set; }
+        public bool  MakeItRain       { get; set; }
+        public int   RemainingToSpawn { get; set; }
+        public float StartPosX        { get; set; }
+        public float StartPosY        { get; set; }
     }
 
 

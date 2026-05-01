@@ -113,7 +113,7 @@ namespace FrostyPlatformer
             get => _context.CollectedItems;
             set => _context.CollectedItems = value;
         }
-        public List<int> EnergiIdLista
+        public HashSet<int> EnergiIdLista
         {
             get => _context.CollectedEnergiIds;
             set => _context.CollectedEnergiIds = value;
@@ -379,7 +379,7 @@ namespace FrostyPlatformer
             _runningTime    = TimeSpan.Zero;
             RightToAccessPodium = true;
             Core.Aggregate.Instance.Settings.ActivePlayer.StageCompleted = 0;
-            EnergiIdLista = new List<int>();
+            EnergiIdLista = new HashSet<int>();
         }
 
         public void ChangeMap(string MapName, float x, float y)

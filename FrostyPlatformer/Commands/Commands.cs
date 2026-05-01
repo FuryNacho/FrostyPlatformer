@@ -52,39 +52,34 @@ namespace FrostyPlatformer.Commands
 
         public void ProcessCommands(float elapsedTime)
         {
-            UserControlEnabled = !listCommands.Any(); // finns inget i listan ge kontroll till spelaren
+            UserControlEnabled = listCommands.Count == 0;
 
-            if (!UserControlEnabled) // Om det finns nåt i listan, gör nåt
+            if (!UserControlEnabled)
             {
-                if (!listCommands.FirstOrDefault()!.Completed) // Om inte den första processen i listan är klar
+                var cmd = listCommands[0];
+                if (!cmd.Completed)
                 {
-                    if (!listCommands.FirstOrDefault()!.Started)// Om första objektet inte är startad, starta den
+                    if (!cmd.Started)
                     {
-                        listCommands.FirstOrDefault()!.Start();
-                        listCommands.FirstOrDefault()!.Started = true;
+                        cmd.Start();
+                        cmd.Started = true;
                     }
                     else
                     {
-                        // currently in process
-                        listCommands.FirstOrDefault()!.Update(elapsedTime);
+                        cmd.Update(elapsedTime);
                     }
-
                 }
                 else
                 {
-                    //Command has been completed
                     listCommands.RemoveAt(0);
                 }
             }
-
         }
 
         public void CompletedCommand()
         {
-            if (listCommands.Any())
-            {
-                listCommands.FirstOrDefault()!.Completed = true;
-            }
+            if (listCommands.Count > 0)
+                listCommands[0].Completed = true;
         }
     }
 
