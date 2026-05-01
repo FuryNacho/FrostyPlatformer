@@ -30,6 +30,8 @@ namespace FrostyPlatformer.States
 
         private List<string> _slots = new List<string>();
         private int          _selectedIndex;
+        private string       _message      = "";
+        private float        _messageTimer;
 
         public UserMapsState(GameServices services)
         {
@@ -49,6 +51,8 @@ namespace FrostyPlatformer.States
             _services.Audio.PauseAll();
             _rc.Clear(RenderColor.Black);
             _services.Input.Poll();
+
+            if (_messageTimer > 0f) _messageTimer -= elapsed;
 
             if (!_services.Input.ButtonsHasGoneIdle && _services.Input.IsIdle && !_services.Input.IsAnyKeyPressed)
                 _services.Input.ButtonsHasGoneIdle = true;
@@ -88,6 +92,12 @@ namespace FrostyPlatformer.States
         public void Exit(GameContext context) { }
 
         // ── Privata hjälpmetoder ─────────────────────────────────────────────────
+
+        private void ShowMessage(string message)
+        {
+            _message      = message;
+            _messageTimer = 3.0f;
+        }
 
         private List<string> BuildSlotList()
         {
@@ -135,6 +145,9 @@ namespace FrostyPlatformer.States
 
             int helpY = startY + _slots.Count * RowHeight + 6;
             _rc.DrawText("Enter = play   Esc = back", cx - (25 * GameConstants.FontCharWidth) / 2, helpY);
+
+            if (_messageTimer > 0f)
+                _rc.DrawText(_message, cx - (_message.Length * GameConstants.FontCharWidth) / 2, helpY + 14);
         }
 
         private void StartMap(GameContext context, string slotId)
@@ -142,7 +155,16 @@ namespace FrostyPlatformer.States
             var levelObj = _services.UserMaps.Load(slotId);
             if (levelObj == null) return;
 
-            if (!levelObj.HasSpawn || !levelObj.HasGoal) return;
+            if (!levelObj.HasSpawn)
+            {
+                ShowMessage("Map has no spawn point — edit in Level Editor");
+                return;
+            }
+            if (!levelObj.HasGoal)
+            {
+                ShowMessage("Map has no goal — edit in Level Editor");
+                return;
+            }
 
             var userMap = new UserMap(levelObj, slotId, _services.Assets);
 

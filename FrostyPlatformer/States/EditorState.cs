@@ -85,6 +85,7 @@ namespace FrostyPlatformer.States
 
         // ── Dirty-flagga ────────────────────────────────────────────────────────
         private bool _isDirty;
+        private bool _escapePendingDirty;
 
         // ── Slot-picker ─────────────────────────────────────────────────────────
         private bool              _showMapPicker;
@@ -187,6 +188,13 @@ namespace FrostyPlatformer.States
                     }
                     return;
                 }
+                if (_isDirty && !_escapePendingDirty)
+                {
+                    ShowMessage("Unsaved changes! Press Esc again to exit.");
+                    _escapePendingDirty = true;
+                    return;
+                }
+                _escapePendingDirty = false;
                 context.MenuNavigation = Enum.MenuState.StartMenu;
                 _services.StateManager.Transition(new MenuState(_services), context);
                 return;
@@ -523,7 +531,8 @@ namespace FrostyPlatformer.States
             }
 
             _services.UserMaps.Save(_mapId, _levelObj);
-            _isDirty = false;
+            _isDirty            = false;
+            _escapePendingDirty = false;
             ShowMessage($"Saved: UserMaps/{_mapId}.json");
         }
 
