@@ -27,7 +27,7 @@ namespace UnitTest
 
             public void Enter(GameContext context)  => Calls.Add("Enter");
             public void Update(GameContext context, float elapsed) => Calls.Add("Update");
-            public void Draw(IRenderContext rc)     => Calls.Add("Draw");
+            public void Draw(IRenderContext rc, GameContext context) => Calls.Add("Draw");
             public void Exit(GameContext context)   => Calls.Add("Exit");
         }
 
@@ -146,10 +146,11 @@ namespace UnitTest
             var state = new SpyState();
             var rc    = new FakeRenderContext();
 
-            gsm.SetInitial(state, Context());
+            var ctx = Context();
+            gsm.SetInitial(state, ctx);
             state.Calls.Clear();
 
-            gsm.Draw(rc);
+            gsm.Draw(rc, ctx);
 
             CollectionAssert.Contains(state.Calls, "Draw");
         }

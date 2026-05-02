@@ -49,15 +49,12 @@ namespace FrostyPlatformer.States
         public void Update(GameContext context, float elapsed)
         {
             _services.Audio.PauseAll();
-            _rc.Clear(RenderColor.Black);
             _services.Input.Poll();
 
             if (_messageTimer > 0f) _messageTimer -= elapsed;
 
             if (!_services.Input.ButtonsHasGoneIdle && _services.Input.IsIdle && !_services.Input.IsAnyKeyPressed)
                 _services.Input.ButtonsHasGoneIdle = true;
-
-            DrawList(context);
 
             if (!_services.Input.IsWindowFocused) return;
 
@@ -87,7 +84,10 @@ namespace FrostyPlatformer.States
             }
         }
 
-        public void Draw(IRenderContext renderContext) { }
+        public void Draw(IRenderContext renderContext, GameContext context)
+        {
+            DrawList(context);
+        }
 
         public void Exit(GameContext context) { }
 

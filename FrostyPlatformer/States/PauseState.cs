@@ -47,7 +47,6 @@ namespace FrostyPlatformer.States
         public void Update(GameContext context, float elapsed)
         {
             _services.Input.Poll();
-            HudRenderer.Draw(_rc, context, "pause");
 
             if (!_services.Input.IsWindowFocused) return;
 
@@ -72,7 +71,10 @@ namespace FrostyPlatformer.States
                 HandleKonami(context);
         }
 
-        public void Draw(IRenderContext renderContext) { }
+        public void Draw(IRenderContext renderContext, GameContext context)
+        {
+            HudRenderer.Draw(_rc, context, "pause");
+        }
 
         public void Exit(GameContext context) { }
 

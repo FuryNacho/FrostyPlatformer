@@ -72,6 +72,11 @@ namespace FrostyPlatformer.States
                 }
             }
 
+            AdvanceSnow(elapsed, 59);
+        }
+
+        public void Draw(IRenderContext renderContext, GameContext context)
+        {
             // Rita splash-bakgrunden centrerad (256×224 sprite på dynamisk skärm)
             int cx = (context.ScreenWidth  - GameConstants.ScreenWidth)  / 2;
             int cy = (context.ScreenHeight - GameConstants.ScreenHeight) / 2;
@@ -79,21 +84,18 @@ namespace FrostyPlatformer.States
 
             if (_countDown <= 0)
             {
-                const int TextLeftMargin    = 4;   // Vänstermarginal relativt splash-sprites vänsterkant
+                const int TextLeftMargin     = 4;   // Vänstermarginal relativt splash-sprites vänsterkant
                 const int PressAnyButtonRelY = 100; // Y-position relativt splash-sprites överkant
                 _rc.DrawText("Press any button", cx + TextLeftMargin, cy + PressAnyButtonRelY);
             }
 
-            // Snöeffekt — offset matchar splashens position
-            MakeItSnow(elapsed, 59, cx, cy);
+            DrawSnow(59, cx, cy);
         }
-
-        public void Draw(IRenderContext renderContext) { }
 
         public void Exit(GameContext context) { }
 
-        // ── Snöeffekt (ekvivalent med Program.MakeItSnow) ──────────────────────
-        private void MakeItSnow(float elapsed, int height, int offsetX = 0, int offsetY = 0)
+        // ── Snöeffekt ───────────────────────────────────────────────────────────
+        private void AdvanceSnow(float elapsed, int height)
         {
             if (_snowSlow == null || _snowFast == null ||
                 _snowSlow.arrayList.Count <= height - 1)
@@ -115,6 +117,11 @@ namespace FrostyPlatformer.States
                 _incFast = 0f;
                 _counterFast = _counterFast < height ? _counterFast + 1 : 1;
             }
+        }
+
+        private void DrawSnow(int height, int offsetX, int offsetY)
+        {
+            if (_snowSlow == null || _snowFast == null) return;
 
             for (int i = height; i > 0; i--)
             {

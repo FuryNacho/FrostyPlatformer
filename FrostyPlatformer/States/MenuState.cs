@@ -29,7 +29,9 @@ namespace FrostyPlatformer.States
         private readonly GameServices _services;
         private readonly IRenderContext _rc;
 
-        private int _selectedItem = 1;
+        private int          _selectedItem    = 1;
+        private List<string> _currentMenuList = new List<string>();
+        private string       _currentHeader   = "Menu";
 
         public MenuState(GameServices services)
         {
@@ -45,33 +47,11 @@ namespace FrostyPlatformer.States
         public void Update(GameContext context, float elapsed)
         {
             _services.Audio.PauseAll();
-
-            _rc.Clear(RenderColor.Black);
             _services.Input.Poll();
 
-            string header = "Menu";
-            var menuList  = BuildMenuList(context, ref header);
+            _currentHeader   = "Menu";
+            _currentMenuList = BuildMenuList(context, ref _currentHeader);
 
-            // Rita
-            int hx = (context.ScreenWidth / 2) - ((header.Length * 8) / 2);
-            _rc.DrawText(header, hx, 4);
-
-            // Centrera hela menyblocket baserat på det längsta alternativet
-            const int IconToTextGap = 25; // Avstånd från ikonens vänsterkant till textens vänsterkant
-            int maxLen = 0;
-            foreach (var item in menuList)
-                if (item.Length > maxLen) maxLen = item.Length;
-            int screenX = (context.ScreenWidth / 2) - (IconToTextGap + maxLen * GameConstants.FontCharWidth) / 2;
-
-            for (int i = 0; i < menuList.Count; i++)
-            {
-                int screenY = 20 + i * 20;
-                int srcX    = (i + 1 == _selectedItem) ? 0 : 16;
-                _rc.DrawPartialSprite(SpriteId.Items, screenX, screenY, srcX, 48, 16, 16);
-                _rc.DrawText(menuList[i], screenX + 25, screenY + 5);
-            }
-
-            // Input
             if (!_services.Input.IsWindowFocused) return;
 
             if (!_services.Input.ButtonsHasGoneIdle && _services.Input.IsIdle && !_services.Input.IsAnyKeyPressed)
@@ -88,7 +68,7 @@ namespace FrostyPlatformer.States
             }
 
             // Ner
-            if (_selectedItem < menuList.Count && _services.Input.IsDownPressed && _services.Input.ButtonsHasGoneIdle)
+            if (_selectedItem < _currentMenuList.Count && _services.Input.IsDownPressed && _services.Input.ButtonsHasGoneIdle)
             {
                 _selectedItem++;
                 _services.Input.ButtonsHasGoneIdle = false;
@@ -99,11 +79,30 @@ namespace FrostyPlatformer.States
                 (_services.Input.IsCancelPressed || _services.Input.IsConfirmPressed))
             {
                 _services.Input.ButtonsHasGoneIdle = false;
-                HandleSelection(menuList[_selectedItem - 1], context);
+                HandleSelection(_currentMenuList[_selectedItem - 1], context);
             }
         }
 
-        public void Draw(IRenderContext renderContext) { }
+        public void Draw(IRenderContext renderContext, GameContext context)
+        {
+            int hx = (context.ScreenWidth / 2) - ((_currentHeader.Length * 8) / 2);
+            _rc.DrawText(_currentHeader, hx, 4);
+
+            // Centrera hela menyblocket baserat på det längsta alternativet
+            const int IconToTextGap = 25; // Avstånd från ikonens vänsterkant till textens vänsterkant
+            int maxLen = 0;
+            foreach (var item in _currentMenuList)
+                if (item.Length > maxLen) maxLen = item.Length;
+            int screenX = (context.ScreenWidth / 2) - (IconToTextGap + maxLen * GameConstants.FontCharWidth) / 2;
+
+            for (int i = 0; i < _currentMenuList.Count; i++)
+            {
+                int screenY = 20 + i * 20;
+                int srcX    = (i + 1 == _selectedItem) ? 0 : 16;
+                _rc.DrawPartialSprite(SpriteId.Items, screenX, screenY, srcX, 48, 16, 16);
+                _rc.DrawText(_currentMenuList[i], screenX + 25, screenY + 5);
+            }
+        }
 
         public void Exit(GameContext context) { }
 

@@ -62,7 +62,6 @@ namespace FrostyPlatformer.States
 
         public void Update(GameContext context, float elapsed)
         {
-            _rc.Clear(RenderColor.Black);
             _services.Input.Poll();
 
             if (!_services.Input.ButtonsHasGoneIdle && _services.Input.IsIdle && !_services.Input.IsAnyKeyPressed)
@@ -74,7 +73,13 @@ namespace FrostyPlatformer.States
                 UpdatePreview(context);
         }
 
-        public void Draw(IRenderContext renderContext) { }
+        public void Draw(IRenderContext renderContext, GameContext context)
+        {
+            if (_slotId != null)
+                DrawUserRun(context);
+            else
+                DrawPreview(context);
+        }
 
         public void Exit(GameContext context) { }
 
@@ -87,9 +92,11 @@ namespace FrostyPlatformer.States
             {
                 _services.Input.ButtonsHasGoneIdle = false;
                 _services.StateManager.Transition(_returnState, context);
-                return;
             }
+        }
 
+        private void DrawPreview(GameContext context)
+        {
             int cx = context.ScreenWidth  / 2;
             int cy = context.ScreenHeight / 2;
             _rc.DrawText("Level complete!",  cx - 56, cy - 20);
@@ -127,7 +134,12 @@ namespace FrostyPlatformer.States
                     return;
                 }
             }
+        }
 
+        private void DrawUserRun(GameContext context)
+        {
+            var existing = _services.UserMapScores.GetRecord(_slotId!);
+            bool isNewRecord = existing == null || _runTime < existing.BestTime;
             DrawUserRunResult(context, existing?.BestTime, isNewRecord);
         }
 

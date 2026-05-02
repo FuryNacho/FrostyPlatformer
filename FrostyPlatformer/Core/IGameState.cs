@@ -43,8 +43,9 @@ namespace FrostyPlatformer.Core
         /// <summary>
         /// Renderar tillståndets visuella innehåll för denna frame.
         /// Anropas av GameStateManager direkt efter Update.
+        /// Innehåller inga tillståndsändringar — enbart draw-anrop mot renderContext.
         /// </summary>
-        void Draw(IRenderContext renderContext);
+        void Draw(IRenderContext renderContext, GameContext context);
 
         /// <summary>
         /// Körs en gång när tillståndet lämnas. Avregistrera IEventBus-prenumerationer

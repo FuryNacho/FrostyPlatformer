@@ -45,15 +45,14 @@ namespace FrostyPlatformer
     /// spelloopen.
     ///
     /// MONOGAME-LOOPMÖNSTER:
-    /// All logik och rendering anropas från Draw(GameTime) via _stateManager.Update().
-    /// Update(GameTime) spårar bara förfluten tid. Detta undviker att alla IGameState-
-    /// implementationer behöver refaktoreras för att separera logik och rendering (SRP).
-    /// Se MONOGAME_PLAN.md — "Arkitekturell nyckelinsikt" för fullständig motivering.
+    /// Logik körs i Update(GameTime) via _stateManager.Update().
+    /// Rendering körs i Draw(GameTime) via _stateManager.Draw().
+    /// IGameState.Update hanterar input och spellogik; IGameState.Draw hanterar rendering (SRP).
     ///
     /// CLEAR:
-    /// GraphicsDevice.Clear() måste anropas FÖRE SpriteBatch.Begin(). Alla states
-    /// anropar _rc.Clear() internt, men MonoGameRenderContext.Clear() är ett no-op.
-    /// Rensningen sker i Draw() här, en gång per frame, innan batchen öppnas.
+    /// GraphicsDevice.Clear() måste anropas FÖRE SpriteBatch.Begin(). Rensningen sker
+    /// i Draw() här, en gång per frame, innan batchen öppnas.
+    /// IRenderContext.Clear() i states är ett no-op och används inte.
     /// </remarks>
     public class Program : Game
     {
@@ -240,8 +239,8 @@ namespace FrostyPlatformer
         }
 
         /// <summary>
-        /// Spårar förfluten tid och hanterar fönsterkontrollen F11 (helskärm).
-        /// Logik och rendering sker i Draw() — se klassens remarks.
+        /// Spårar förfluten tid, hanterar fönsterkontrollen F11 (helskärm) och
+        /// kör spellogik via _stateManager.Update().
         /// </summary>
         protected override void Update(GameTime gameTime)
         {
@@ -255,13 +254,14 @@ namespace FrostyPlatformer
                 _graphics.ToggleFullScreen();
             _prevKeyboard = kb;
 
+            _stateManager.Update(_context, _elapsed);
+
             base.Update(gameTime);
         }
 
         /// <summary>
-        /// Enkelt-pass-rendering: spelet ritas direkt mot backbuffer med PointClamp.
+        /// Enkelt-pass-rendering: rensar backbuffern och anropar _stateManager.Draw().
         /// Ingen render target används — koordinater skalas med PixW×PixH (4×4).
-        /// Fas 4b utökar detta med dynamisk fönsterstorlek via GameContext.
         /// </summary>
         protected override void Draw(GameTime gameTime)
         {
@@ -271,7 +271,7 @@ namespace FrostyPlatformer
                 BlendState.AlphaBlend,
                 SamplerState.PointClamp,
                 null, null, null, null);
-            _stateManager.Update(_context, _elapsed);
+            _stateManager.Draw(_renderContext, _context);
             _spriteBatch.End();
 
             base.Draw(gameTime);

@@ -69,6 +69,7 @@ namespace FrostyPlatformer.States
         private string              _mapId = "";
         private float               _camTargetX;
         private float               _camTargetY;
+        private CameraView          _editorCam;
         private int                 _selectedTileId;
         private EditorMode          _mode;
         private bool                _undoMode;       // toggle via U — LMB raderar istället för målar
@@ -151,11 +152,10 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Hanterar input, ritar kartan med rutnät, palette och slot-picker.
+        /// Hanterar input och beräknar kamera för aktuell frame.
         /// </summary>
         public void Update(GameContext context, float deltaTime)
         {
-            _rc.Clear(RenderColor.Black);
             _services.Input.Poll();
 
             if (!_services.Input.IsWindowFocused) return;
@@ -210,47 +210,33 @@ namespace FrostyPlatformer.States
             int visX = mapAreaWidth / GameConstants.TileSize;
             int visY = context.ScreenHeight / GameConstants.TileSize;
 
-            // Slot-picker — hantera input och rita overlay
+            // Slot-picker — beräkna kamera för bakgrunden och hantera input
             if (_showMapPicker)
             {
-                UpdateMapPicker(context);
                 if (_mapAdapter != null && _levelObj != null)
-                {
-                    var bgCam = _services.Camera.Calculate(
+                    _editorCam = _services.Camera.Calculate(
                         _camTargetX + visX / 2f, _camTargetY + visY / 2f,
                         _mapAdapter.Width, _mapAdapter.Height,
                         mapAreaWidth, context.ScreenHeight);
-                    DrawTiles(bgCam);
-                    DrawMapBounds(bgCam, mapAreaWidth, context.ScreenHeight);
-                    DrawGrid(bgCam, mapAreaWidth, context.ScreenHeight);
-                    DrawPalette(context, mapAreaWidth);
-                }
-                DrawMapPickerOverlay(context);
+                UpdateMapPicker(context);
                 return;
             }
 
             // Ny-karta-dialog
             if (_showNewMapDialog)
             {
-                UpdateNewMapDialog();
                 if (_mapAdapter != null && _levelObj != null)
-                {
-                    var bgCam = _services.Camera.Calculate(
+                    _editorCam = _services.Camera.Calculate(
                         _camTargetX + visX / 2f, _camTargetY + visY / 2f,
                         _mapAdapter.Width, _mapAdapter.Height,
                         mapAreaWidth, context.ScreenHeight);
-                    DrawTiles(bgCam);
-                    DrawMapBounds(bgCam, mapAreaWidth, context.ScreenHeight);
-                    DrawGrid(bgCam, mapAreaWidth, context.ScreenHeight);
-                    DrawPalette(context, mapAreaWidth);
-                }
-                DrawNewMapDialogOverlay(context);
+                UpdateNewMapDialog();
                 return;
             }
 
             if (_mapAdapter == null || _levelObj == null) return;
 
-            var cam = _services.Camera.Calculate(
+            _editorCam = _services.Camera.Calculate(
                 _camTargetX + visX / 2f, _camTargetY + visY / 2f,
                 _mapAdapter.Width, _mapAdapter.Height,
                 mapAreaWidth, context.ScreenHeight);
@@ -304,35 +290,72 @@ namespace FrostyPlatformer.States
             bool mouseInMap = _services.Input.MouseX < mapAreaWidth;
             if (mouseInMap)
             {
-                if      (_mode == EditorMode.Tiles)     HandleTilePainting(cam);
-                else if (_mode == EditorMode.Collision) HandleCollisionPainting(cam);
-                else if (_mode == EditorMode.Spawn)     HandleSpawnPlacement(cam);
-                else if (_mode == EditorMode.Goal)      HandleGoalPlacement(cam);
-                else if (_mode == EditorMode.Pickup)    HandlePickupPlacement(cam);
-                else                                    HandleEnemyPlacement(cam);
+                if      (_mode == EditorMode.Tiles)     HandleTilePainting(_editorCam);
+                else if (_mode == EditorMode.Collision) HandleCollisionPainting(_editorCam);
+                else if (_mode == EditorMode.Spawn)     HandleSpawnPlacement(_editorCam);
+                else if (_mode == EditorMode.Goal)      HandleGoalPlacement(_editorCam);
+                else if (_mode == EditorMode.Pickup)    HandlePickupPlacement(_editorCam);
+                else                                    HandleEnemyPlacement(_editorCam);
             }
             else if (_mode == EditorMode.Tiles)
             {
                 HandlePaletteClick(context, mapAreaWidth);
             }
+        }
 
-            DrawTiles(cam);
-            DrawMapBounds(cam, mapAreaWidth, context.ScreenHeight);
+        /// <summary>
+        /// Ritar kartan med rutnät, palette, kursor och HUD — eller den aktiva dialogen.
+        /// </summary>
+        public void Draw(IRenderContext renderContext, GameContext context)
+        {
+            int mapAreaWidth = context.ScreenWidth - PaletteWidth;
+
+            if (_showMapPicker)
+            {
+                if (_mapAdapter != null && _levelObj != null)
+                {
+                    DrawTiles(_editorCam);
+                    DrawMapBounds(_editorCam, mapAreaWidth, context.ScreenHeight);
+                    DrawGrid(_editorCam, mapAreaWidth, context.ScreenHeight);
+                    DrawPalette(context, mapAreaWidth);
+                }
+                DrawMapPickerOverlay(context);
+                return;
+            }
+
+            if (_showNewMapDialog)
+            {
+                if (_mapAdapter != null && _levelObj != null)
+                {
+                    DrawTiles(_editorCam);
+                    DrawMapBounds(_editorCam, mapAreaWidth, context.ScreenHeight);
+                    DrawGrid(_editorCam, mapAreaWidth, context.ScreenHeight);
+                    DrawPalette(context, mapAreaWidth);
+                }
+                DrawNewMapDialogOverlay(context);
+                return;
+            }
+
+            if (_mapAdapter == null || _levelObj == null) return;
+
+            DrawTiles(_editorCam);
+            DrawMapBounds(_editorCam, mapAreaWidth, context.ScreenHeight);
             if (_mode == EditorMode.Collision)
-                DrawCollisionOverlay(cam, mapAreaWidth, context.ScreenHeight);
-            DrawGrid(cam, mapAreaWidth, context.ScreenHeight);
+                DrawCollisionOverlay(_editorCam, mapAreaWidth, context.ScreenHeight);
+            DrawGrid(_editorCam, mapAreaWidth, context.ScreenHeight);
 
             if (_levelObj.HasSpawn)
-                DrawSpawnMarker(cam, mapAreaWidth);
+                DrawSpawnMarker(_editorCam, mapAreaWidth);
             if (_levelObj.HasGoal)
-                DrawGoalMarker(cam, mapAreaWidth);
-            DrawPickupMarkers(cam, mapAreaWidth);
-            DrawEnemyMarkers(cam, mapAreaWidth);
+                DrawGoalMarker(_editorCam, mapAreaWidth);
+            DrawPickupMarkers(_editorCam, mapAreaWidth);
+            DrawEnemyMarkers(_editorCam, mapAreaWidth);
 
+            bool mouseInMap = _services.Input.MouseX < mapAreaWidth;
             if (mouseInMap)
             {
-                var (hx, hy) = EditorMath.ScreenToTile(_services.Input.MouseX, _services.Input.MouseY, cam);
-                DrawCursor(hx, hy, cam);
+                var (hx, hy) = EditorMath.ScreenToTile(_services.Input.MouseX, _services.Input.MouseY, _editorCam);
+                DrawCursor(hx, hy, _editorCam);
                 DrawHud(context, hx, hy, mapAreaWidth);
             }
             else
@@ -342,9 +365,6 @@ namespace FrostyPlatformer.States
 
             DrawPalette(context, mapAreaWidth);
         }
-
-        /// <summary>Rendering sker i Update — Draw är avsiktligt tom.</summary>
-        public void Draw(IRenderContext renderContext) { }
 
         /// <summary>Ingen städning krävs.</summary>
         public void Exit(GameContext context) { }

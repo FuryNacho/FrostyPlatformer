@@ -36,7 +36,6 @@ namespace FrostyPlatformer.States
         public void Update(GameContext context, float elapsed)
         {
             _services.Script.Tick(elapsed);
-            _rc.Clear(RenderColor.Black);
             _services.Input.Poll();
 
             if (_services.Input.IsWindowFocused)
@@ -62,7 +61,10 @@ namespace FrostyPlatformer.States
                     return;
                 }
             }
+        }
 
+        public void Draw(IRenderContext renderContext, GameContext context)
+        {
             string header = "Penguin After All High Score";
             int hx = (context.ScreenWidth / 2) - ((header.Length * 8) / 2);
             _rc.DrawText(header, hx, 10);
@@ -82,8 +84,6 @@ namespace FrostyPlatformer.States
             const int BottomTextMargin = 14; // Pixlar från skärmens nederkant till textens överkant
             _rc.DrawText("Press any button", 8, context.ScreenHeight - BottomTextMargin);
         }
-
-        public void Draw(IRenderContext renderContext) { }
 
         public void Exit(GameContext context) { }
     }

@@ -71,73 +71,8 @@ namespace FrostyPlatformer.States
         public void Update(GameContext context, float elapsed)
         {
             _services.Script.Tick(elapsed);
-            _rc.Clear(RenderColor.Black);
             _services.Input.Poll();
 
-            bool newTop = _services.Score.IsNewFirstPlace(context.EndTotalTime);
-
-            int sw = context.ScreenWidth;
-
-            // Rita rubriker
-            if (newTop)
-            {
-                string gratz = "Congratulations!";
-                _rc.DrawText(gratz, (sw / 2) - ((gratz.Length * 8) / 2), 8);
-            }
-            string header = newTop ? "You've Beaten The Top High Score" : "New High Score";
-            _rc.DrawText(header, (sw / 2) - ((header.Length * 8) / 2), 20);
-
-            string endTime = context.EndTotalTime.ToString("hh':'mm':'ss");
-            _rc.DrawText(endTime, (sw / 2) - ((endTime.Length * 8) / 2), 35);
-
-            string inst = "Enter Your Tag";
-            _rc.DrawText(inst, (sw / 2) - ((inst.Length * 8) / 2), 58);
-
-            // Rita ASCII-väljaren
-            for (int i = 0; i < ActionList.Count; i++)
-            {
-                var item = ActionList[i];
-                int x = i % 4;
-                int y = i / 4;
-
-                if (_hsSelectX == x) _select = x;
-
-                const int AsciiChooserCenterOffset = 30; // Halvspann för 4 kolumner med 20px mellanrum: 3*20/2
-                int fx = (sw / 2) + (x * 20 - AsciiChooserCenterOffset);
-                int fy = (20 + y * 20) + 55;
-
-                int sx = 0, sy = 0;
-                switch (item.MyProperty)
-                {
-                    case "pilupp":
-                        sx = _select + 1 == i + 1 ? 32 : 32;
-                        sy = _select + 1 == i + 1 ? 48 : 52;
-                        _rc.DrawPartialSprite(SpriteId.Items, fx, fy, sx, sy, 9, 4);
-                        break;
-                    case "inget":
-                        _rc.DrawPartialSprite(SpriteId.Items, fx, fy, 16, 48, 9, 4);
-                        break;
-                    case "ok":
-                        sx = 48; sy = _select == 3 ? 48 : 56;
-                        _rc.DrawPartialSprite(SpriteId.Items, fx, fy, sx, sy, 16, 8);
-                        break;
-                    case "pilner":
-                        sx = 32; sy = _select + 9 == i + 1 ? 60 : 56;
-                        _rc.DrawPartialSprite(SpriteId.Items, fx, fy, sx, sy, 9, 4);
-                        break;
-                    case "bokstav":
-                        _rc.DrawText(((char)_nameAscii[x]).ToString(), fx, fy);
-                        break;
-                    default:
-                        _rc.DrawPartialSprite(SpriteId.Items, fx, fy, 0, 0, 16, 16);
-                        break;
-                }
-            }
-
-            const int BottomTextMargin = 14; // Pixlar från skärmens nederkant till textens överkant
-            _rc.DrawText("Press OK when done", 8, context.ScreenHeight - BottomTextMargin);
-
-            // Input
             if (!_services.Input.IsWindowFocused) return;
 
             if (!_services.Input.ButtonsHasGoneIdle && _services.Input.IsIdle && !_services.Input.IsAnyKeyPressed)
@@ -180,6 +115,9 @@ namespace FrostyPlatformer.States
             if (_hsSelectY < 0) _hsSelectY = 3;
             if (_hsSelectY >= 4) _hsSelectY = 0;
 
+            // Håll _select synkroniserat med _hsSelectX (kolumnval)
+            _select = _hsSelectX;
+
             if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsCancelPressed)
             {
                 _services.Input.ButtonsHasGoneIdle = false;
@@ -215,6 +153,7 @@ namespace FrostyPlatformer.States
 
                     _nameAscii = new List<int> { 65, 65, 65 };
                     _hsSelectX = 0;
+                    _select    = 0;
                     _services.Input.ButtonsHasGoneIdle = false;
 
                     var next = _returnState ?? (IGameState)new HighScoreState(_services);
@@ -223,7 +162,67 @@ namespace FrostyPlatformer.States
             }
         }
 
-        public void Draw(IRenderContext renderContext) { }
+        public void Draw(IRenderContext renderContext, GameContext context)
+        {
+            bool newTop = _services.Score.IsNewFirstPlace(context.EndTotalTime);
+            int sw = context.ScreenWidth;
+
+            // Rita rubriker
+            if (newTop)
+            {
+                string gratz = "Congratulations!";
+                _rc.DrawText(gratz, (sw / 2) - ((gratz.Length * 8) / 2), 8);
+            }
+            string header = newTop ? "You've Beaten The Top High Score" : "New High Score";
+            _rc.DrawText(header, (sw / 2) - ((header.Length * 8) / 2), 20);
+
+            string endTime = context.EndTotalTime.ToString("hh':'mm':'ss");
+            _rc.DrawText(endTime, (sw / 2) - ((endTime.Length * 8) / 2), 35);
+
+            string inst = "Enter Your Tag";
+            _rc.DrawText(inst, (sw / 2) - ((inst.Length * 8) / 2), 58);
+
+            // Rita ASCII-väljaren
+            for (int i = 0; i < ActionList.Count; i++)
+            {
+                var item = ActionList[i];
+                int x = i % 4;
+                int y = i / 4;
+
+                const int AsciiChooserCenterOffset = 30; // Halvspann för 4 kolumner med 20px mellanrum: 3*20/2
+                int fx = (sw / 2) + (x * 20 - AsciiChooserCenterOffset);
+                int fy = (20 + y * 20) + 55;
+
+                int sx = 0, sy = 0;
+                switch (item.MyProperty)
+                {
+                    case "pilupp":
+                        sx = 32; sy = _select + 1 == i + 1 ? 48 : 52;
+                        _rc.DrawPartialSprite(SpriteId.Items, fx, fy, sx, sy, 9, 4);
+                        break;
+                    case "inget":
+                        _rc.DrawPartialSprite(SpriteId.Items, fx, fy, 16, 48, 9, 4);
+                        break;
+                    case "ok":
+                        sx = 48; sy = _select == 3 ? 48 : 56;
+                        _rc.DrawPartialSprite(SpriteId.Items, fx, fy, sx, sy, 16, 8);
+                        break;
+                    case "pilner":
+                        sx = 32; sy = _select + 9 == i + 1 ? 60 : 56;
+                        _rc.DrawPartialSprite(SpriteId.Items, fx, fy, sx, sy, 9, 4);
+                        break;
+                    case "bokstav":
+                        _rc.DrawText(((char)_nameAscii[x]).ToString(), fx, fy);
+                        break;
+                    default:
+                        _rc.DrawPartialSprite(SpriteId.Items, fx, fy, 0, 0, 16, 16);
+                        break;
+                }
+            }
+
+            const int BottomTextMargin = 14; // Pixlar från skärmens nederkant till textens överkant
+            _rc.DrawText("Press OK when done", 8, context.ScreenHeight - BottomTextMargin);
+        }
 
         public void Exit(GameContext context) { }
 

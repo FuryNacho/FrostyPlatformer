@@ -44,7 +44,6 @@ namespace FrostyPlatformer.States
         public void Update(GameContext context, float elapsed)
         {
             _services.Script.Tick(elapsed);
-            _rc.Clear(RenderColor.Black);
             _services.Input.Poll();
 
             if (!_services.Input.ButtonsHasGoneIdle && _services.Input.IsIdle && !_services.Input.IsAnyKeyPressed)
@@ -63,13 +62,18 @@ namespace FrostyPlatformer.States
                 return;
             }
 
+            _animCount--;
+        }
+
+        public void Draw(IRenderContext renderContext, GameContext context)
+        {
             var color = RenderColor.Random();
             int hw = context.ScreenWidth  / 2;
             int hh = context.ScreenHeight / 2;
 
             if (_animCount >= 7)
             {
-                // animCount 10–9: DrawPath-anrop var en bugg i original (tomt array) — utelämnad
+                // animCount 10–7: DrawPath-anrop var en bugg i original (tomt array) — utelämnad
             }
             else if (_animCount >= 5)
             {
@@ -97,16 +101,11 @@ namespace FrostyPlatformer.States
             }
             else
             {
-                _rc.Clear(RenderColor.Black);
                 _rc.DrawText("Player Dead", 8, 4);
                 const int BottomTextMargin = 7; // Pixlar från skärmens nederkant till textens överkant
                 _rc.DrawText("Press any button", 8, context.ScreenHeight - BottomTextMargin);
             }
-
-            _animCount--;
         }
-
-        public void Draw(IRenderContext renderContext) { }
 
         public void Exit(GameContext context) { }
     }

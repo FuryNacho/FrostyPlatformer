@@ -71,8 +71,6 @@ namespace FrostyPlatformer.States
                 return;
             }
 
-            _rc.Clear(RenderColor.Black);
-
             if (!_hasAccumulated)
             {
                 _hasAccumulated = true;
@@ -133,7 +131,10 @@ namespace FrostyPlatformer.States
 
             if (context.CurrentLevel != null)
                 UpdateObjects(context, elapsed);
+        }
 
+        public void Draw(IRenderContext renderContext, GameContext context)
+        {
             if (context.CurrentLevel != null && context.Player != null)
             {
                 var cam = _services.Camera.Calculate(
@@ -162,8 +163,6 @@ namespace FrostyPlatformer.States
             _rc.DrawText(stageText, 0, 217);
             HudRenderer.Draw(_rc, context);
         }
-
-        public void Draw(IRenderContext renderContext) { }
 
         public void Exit(GameContext context) { }
 

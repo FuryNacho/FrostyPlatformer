@@ -27,7 +27,10 @@ namespace FrostyPlatformer.States
         private readonly GameServices _services;
         private readonly IRenderContext _rc;
 
-        private int _selectIndex = 1;
+        private int              _selectIndex     = 1;
+        private List<OptionsObj> _currentOptions  = new List<OptionsObj>();
+        private string           _currentHeader   = "";
+        private string           _currentBread    = "";
 
         public SettingsState(GameServices services)
         {
@@ -42,30 +45,12 @@ namespace FrostyPlatformer.States
 
         public void Update(GameContext context, float elapsed)
         {
-            _rc.Clear(RenderColor.Black);
             _services.Input.Poll();
 
-            string header  = "";
-            string bread   = "";
-            var options    = BuildOptions(context, ref header, ref bread);
+            _currentHeader  = "";
+            _currentBread   = "";
+            _currentOptions = BuildOptions(context, ref _currentHeader, ref _currentBread);
 
-            // Rita
-            int hx = (context.ScreenWidth / 2) - ((header.Length * 8) / 2);
-            _rc.DrawText(header, hx, 4);
-
-            int bx = (context.ScreenWidth / 2) - ((bread.Length * 8) / 2);
-            _rc.DrawText(bread, bx, 18);
-
-            for (int idx = 0; idx < options.Count; idx++)
-            {
-                string row = options[idx].Display;
-                if (_selectIndex == idx + 1)
-                    row = "> " + row + " <";
-                int ox = (context.ScreenWidth / 2) - ((row.Length * 8) / 2);
-                _rc.DrawText(row, ox, 26 + (idx + 1) * 12);
-            }
-
-            // Input
             if (!_services.Input.IsWindowFocused) return;
 
             if (!_services.Input.ButtonsHasGoneIdle && _services.Input.IsIdle && !_services.Input.IsAnyKeyPressed)
@@ -73,25 +58,41 @@ namespace FrostyPlatformer.States
 
             if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsUpPressed)
             {
-                _selectIndex = _selectIndex <= 1 ? options.Count : _selectIndex - 1;
+                _selectIndex = _selectIndex <= 1 ? _currentOptions.Count : _selectIndex - 1;
                 _services.Input.ButtonsHasGoneIdle = false;
             }
             if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsDownPressed)
             {
-                _selectIndex = _selectIndex >= options.Count ? 1 : _selectIndex + 1;
+                _selectIndex = _selectIndex >= _currentOptions.Count ? 1 : _selectIndex + 1;
                 _services.Input.ButtonsHasGoneIdle = false;
             }
 
             if (_services.Input.ButtonsHasGoneIdle &&
                 (_services.Input.IsCancelPressed || _services.Input.IsConfirmPressed))
             {
-                var sel = options[_selectIndex - 1];
+                var sel = _currentOptions[_selectIndex - 1];
                 _services.Input.ButtonsHasGoneIdle = false;
                 HandleSelection(sel, context);
             }
         }
 
-        public void Draw(IRenderContext renderContext) { }
+        public void Draw(IRenderContext renderContext, GameContext context)
+        {
+            int hx = (context.ScreenWidth / 2) - ((_currentHeader.Length * 8) / 2);
+            _rc.DrawText(_currentHeader, hx, 4);
+
+            int bx = (context.ScreenWidth / 2) - ((_currentBread.Length * 8) / 2);
+            _rc.DrawText(_currentBread, bx, 18);
+
+            for (int idx = 0; idx < _currentOptions.Count; idx++)
+            {
+                string row = _currentOptions[idx].Display;
+                if (_selectIndex == idx + 1)
+                    row = "> " + row + " <";
+                int ox = (context.ScreenWidth / 2) - ((row.Length * 8) / 2);
+                _rc.DrawText(row, ox, 26 + (idx + 1) * 12);
+            }
+        }
 
         public void Exit(GameContext context) { }
 

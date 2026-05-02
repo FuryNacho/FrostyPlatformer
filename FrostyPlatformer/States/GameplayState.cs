@@ -200,9 +200,11 @@ namespace FrostyPlatformer.States
             // Energi-regn
             if (_energiRain.MakeItRain)
                 MakeItRainEnergi(context);
+        }
 
-            // Rendera
-            if (context.CurrentLevel != null)
+        public void Draw(IRenderContext renderContext, GameContext context)
+        {
+            if (context.CurrentLevel != null && context.Player != null)
             {
                 var cam = _services.Camera.Calculate(
                     context.Player.px, context.Player.py,
@@ -226,8 +228,6 @@ namespace FrostyPlatformer.States
             if (_services.Dialog.IsActive)
                 _services.Dialog.Render(_rc);
         }
-
-        public void Draw(IRenderContext renderContext) { }
 
         public void Exit(GameContext context) { }
 

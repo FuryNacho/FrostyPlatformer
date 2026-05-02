@@ -74,9 +74,9 @@ namespace FrostyPlatformer.States
         /// <summary>
         /// Anropar det aktiva lädets Draw. Kallas direkt efter Update varje frame.
         /// </summary>
-        public void Draw(IRenderContext renderContext)
+        public void Draw(IRenderContext renderContext, GameContext context)
         {
-            _current?.Draw(renderContext);
+            _current?.Draw(renderContext, context);
         }
     }
 }
