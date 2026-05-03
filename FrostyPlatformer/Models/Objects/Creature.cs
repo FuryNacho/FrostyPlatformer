@@ -1,6 +1,7 @@
 ﻿#nullable enable
-using FrostyPlatformer.Rendering;
 using System;
+using FrostyPlatformer.Global;
+using FrostyPlatformer.Rendering;
 
 namespace FrostyPlatformer.Models.Objects
 {
@@ -290,16 +291,17 @@ namespace FrostyPlatformer.Models.Objects
             }
 
             int screenX;
-            int screenY = (int)((py - oy) * 16.0f);
+            int screenY = ToPixel(py, oy);
 
             if (IsHero)
             {
-                float rawX = (px - ox) * 16.0f;
-                screenX = (int)(rawX <= 1.0f ? 1.0f : rawX);
+                // Kläm till minimum 1 px — förhindrar vänsterkants-clipping av hjälte-spriten.
+                float rawX = (px - ox) * GameConstants.TileSize;
+                screenX = (int)Math.Round(MathF.Max(1.0f, rawX), MidpointRounding.AwayFromZero);
             }
             else
             {
-                screenX = (int)((px - ox) * 16.0f);
+                screenX = ToPixel(px, ox);
             }
 
             gfx.DrawPartialSprite(SpriteId, screenX, screenY, SheetOffsetX, SheetOffsetY, 16, 16);

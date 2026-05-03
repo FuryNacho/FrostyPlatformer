@@ -73,8 +73,8 @@ namespace FrostyPlatformer.Models.Items
                     spriteX = 16 * 4;
             }
 
-            int screenX = (int)((px - ox) * 16.0f);
-            int screenY = (int)((py - oy) * 16.0f);
+            int screenX = ToPixel(px, ox);
+            int screenY = ToPixel(py, oy);
             // Alla spelplockobjekt ritar från SpriteId.Items-arket (ItemEnergi -> "items")
             graphics.DrawPartialSprite(SpriteId.Items, screenX, screenY, spriteX, spriteY, 16, 16);
         }

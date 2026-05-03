@@ -411,8 +411,8 @@ namespace FrostyPlatformer.Models.Objects
 
         public override void DrawSelf(IRenderContext gfx, float ox, float oy)
         {
-            int screenX = (int)((px - ox) * 16.0f);
-            int screenY = (int)((py - oy) * 16.0f);
+            int screenX = ToPixel(px, ox);
+            int screenY = ToPixel(py, oy);
             gfx.DrawPartialSprite(SpriteId, screenX, screenY, 4 * 16, 1 * 16, 16, 16);
         }
     }
@@ -828,8 +828,8 @@ namespace FrostyPlatformer.Models.Objects
             }
             // State == MovingDown: sheetOffset (0,0) — bevarar ursprungsbeteendet
 
-            int screenX = (int)((px - ox) * 16.0f);
-            int screenY = (int)((py - oy) * 16.0f);
+            int screenX = ToPixel(px, ox);
+            int screenY = ToPixel(py, oy);
             gfx.DrawPartialSprite(SpriteId, screenX, screenY, sheetOffsetX, sheetOffsetY, 16, 16);
         }
     }
@@ -864,8 +864,8 @@ namespace FrostyPlatformer.Models.Objects
                 sheetOffsetX = 1 * 16;
             }
 
-            int screenX = (int)((px - ox) * 16.0f);
-            int screenY = (int)((py - oy) * 16.0f);
+            int screenX = ToPixel(px, ox);
+            int screenY = ToPixel(py, oy);
             gfx.DrawPartialSprite(SpriteId, screenX, screenY, sheetOffsetX, sheetOffsetY, 16, 32);
         }
 
@@ -891,8 +891,8 @@ namespace FrostyPlatformer.Models.Objects
 
         public override void DrawSelf(IRenderContext gfx, float ox, float oy)
         {
-            int screenX = (int)((px - ox) * 16.0f);
-            int screenY = (int)((py - oy) * 16.0f);
+            int screenX = ToPixel(px, ox);
+            int screenY = ToPixel(py, oy);
             gfx.DrawPartialSprite(SpriteId, screenX, screenY, 4 * 16, 3 * 16, 16, 16);
         }
     }
@@ -918,8 +918,8 @@ namespace FrostyPlatformer.Models.Objects
 
         public override void DrawSelf(IRenderContext gfx, float ox, float oy)
         {
-            int screenX = (int)((px - ox) * 16.0f);
-            int screenY = (int)((py - oy) * 16.0f);
+            int screenX = ToPixel(px, ox);
+            int screenY = ToPixel(py, oy);
             gfx.DrawPartialSprite(SpriteId, screenX, screenY, 3 * 16, 3 * 16, 16, 16);
         }
     }

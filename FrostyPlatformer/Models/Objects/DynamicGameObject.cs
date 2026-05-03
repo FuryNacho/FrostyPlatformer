@@ -1,4 +1,6 @@
 ﻿#nullable enable
+using System;
+using FrostyPlatformer.Global;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Rendering;
 
@@ -148,6 +150,24 @@ namespace FrostyPlatformer.Models.Objects
         /// Subklasser som kan fastna (t.ex. Frost) overridar denna.
         /// </summary>
         public virtual void OnStuckCheck() { }
+
+        /// <summary>
+        /// Konverterar en världsposition till skärmpixlar relativt kameraoffset.
+        /// </summary>
+        /// <remarks>
+        /// MOTIVERING — Sub-pixel-stutter:
+        /// C#:s (int)-cast trunkerar alltid nedåt. Vid rörelse på 0.8 px/frame (t.ex.
+        /// vx=3, elapsed=1/60) ger det mönstret 0-1-1-1-0-1-1-1 spelpixlar per frame —
+        /// oregelbundet och märkbart som "hacks" i rörelsen.
+        ///
+        /// Math.Round (AwayFromZero) ger istället 1-1-0-1-1-0 (symmetriskt kring det
+        /// verkliga värdet), vilket upplevs som jämnt flyt. Rendering och fysik är
+        /// separata: float px/py används oförändrat av kollisionslogiken.
+        /// </remarks>
+        protected static int ToPixel(float worldPos, float cameraOffset)
+            => (int)Math.Round(
+                (worldPos - cameraOffset) * GameConstants.TileSize,
+                MidpointRounding.AwayFromZero);
 
     }
 }
