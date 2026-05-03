@@ -1,33 +1,83 @@
 #nullable enable
+using System;
 using FrostyPlatformer.Global;
 
 namespace FrostyPlatformer.Systems
 {
     /// <summary>
     /// Beräknar kamerans position och scrollning för en tile-baserad värld.
-    /// Centrerar på målet och klämer mot kartgränser för att undvika tomrum utanför kartan.
+    /// Stöder både direkt snap och mjuk lerp-följning via intern tillståndsmaskinen.
     /// </summary>
     /// <remarks>
-    /// MÖNSTER: System (tillståndslös beräkningsklass)
+    /// MÖNSTER: Stateful Service
     ///
     /// MOTIVERING:
-    /// Kameralogiken låg inbäddad i DisplayStage och var kopplad till PixelEngine-typer.
-    /// Extraheringen gör beräkningarna tillståndslösa och testbara utan spelmotor (SRP, DIP).
+    /// Den ursprungliga stateless Calculate-metoden gav en kamera som teleporterade
+    /// till spelaren varje frame — visuellt korrekt men utan känsla av vikt eller
+    /// trögrörlighet. Kameran skakade vid minsta rörelseimpuls (landning, kollision).
+    ///
+    /// Mjuk lerp-följning kräver att föregående kameraposition sparas mellan frames,
+    /// vilket gör klassen stateful. Lerp-faktorn är exponentiell och frame-rate-oberoende:
+    ///   t = 1 - (1 - LerpFactor)^(elapsed * 60)
+    /// Formeln ger identiskt visuellt resultat vid 30, 60 eller 144 FPS.
+    ///
+    /// FLÖDE:
+    ///   ChangeMap         → SnapTo(x, y)           — omedelbar snap, nollställer lerp-state
+    ///   GameState.Update  → Advance(px, py, elapsed) — rör kameran mot spelaren
+    ///   GameState.Draw    → GetView(...)             — hämtar mjuk kameravy för rendering
     ///
     /// ANVÄNDNING:
-    /// Injiceras via ICameraSystem i GameServices och anropas från states som behöver
-    /// kameravy. Tar kartdimensioner och målposition; returnerar en CameraView-record.
+    /// Injiceras via ICameraSystem i GameServices. Calculate (stateless) används
+    /// fortfarande av EditorState som styr kameran manuellt.
     /// </remarks>
     public class CameraSystem : ICameraSystem
     {
+        // Hur snabbt kameran glider mot målet. 0 = aldrig, 1 = direkt snap.
+        // Värden 0.10–0.20 ger mjuk plattforms-känsla; 0.12 är en bra startpunkt.
+        private const float LerpFactor = 0.12f;
+
+        private float _smoothX;
+        private float _smoothY;
+        private bool  _initialized;
+
+        /// <inheritdoc />
+        public void SnapTo(float targetX, float targetY)
+        {
+            _smoothX      = targetX;
+            _smoothY      = targetY;
+            _initialized  = true;
+        }
+
+        /// <inheritdoc />
+        public void Advance(float targetX, float targetY, float elapsed)
+        {
+            if (!_initialized)
+            {
+                // Första anropet efter konstruktion eller SnapTo: snap direkt.
+                SnapTo(targetX, targetY);
+                return;
+            }
+
+            // Exponentiell lerp — frame-rate-oberoende.
+            // Derivation: vid varje frame ska kameran täcka LerpFactor av återstående avstånd.
+            // Vid variabel elapsed normaliseras mot 60 Hz via potensformeln nedan.
+            float t = 1f - MathF.Pow(1f - LerpFactor, elapsed * 60f);
+            _smoothX += (targetX - _smoothX) * t;
+            _smoothY += (targetY - _smoothY) * t;
+        }
+
+        /// <inheritdoc />
+        public CameraView GetView(int mapWidth, int mapHeight, int screenWidth, int screenHeight)
+            => Calculate(_smoothX, _smoothY, mapWidth, mapHeight, screenWidth, screenHeight);
+
         /// <inheritdoc />
         public CameraView Calculate(
             float targetX, float targetY,
             int mapWidth, int mapHeight,
             int screenWidth, int screenHeight)
         {
-            int tileWidth  = GameConstants.TileSize;
-            int tileHeight = GameConstants.TileSize;
+            int tileWidth     = GameConstants.TileSize;
+            int tileHeight    = GameConstants.TileSize;
             int visibleTilesX = screenWidth  / tileWidth;
             int visibleTilesY = screenHeight / tileHeight;
 

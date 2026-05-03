@@ -18,18 +18,31 @@ namespace FrostyPlatformer.Systems
     public interface ICameraSystem
     {
         /// <summary>
-        /// Beräknar kameravyn för en given frame.
+        /// Beräknar kameravyn direkt från angiven position — ingen lerp.
+        /// Används av EditorState och liknande tillstånd med manuell kamerastyrning.
         /// </summary>
-        /// <param name="targetX">Målets tile-koordinat X (t.ex. hjältens px).</param>
-        /// <param name="targetY">Målets tile-koordinat Y (t.ex. hjältens py).</param>
-        /// <param name="mapWidth">Kartans bredd i tiles.</param>
-        /// <param name="mapHeight">Kartans höjd i tiles.</param>
-        /// <param name="screenWidth">Skärmens bredd i pixlar.</param>
-        /// <param name="screenHeight">Skärmens höjd i pixlar.</param>
-        /// <returns>En <see cref="CameraView"/> med offsettar och synliga tiles.</returns>
         CameraView Calculate(
             float targetX, float targetY,
             int mapWidth, int mapHeight,
             int screenWidth, int screenHeight);
+
+        /// <summary>
+        /// Uppdaterar den interna mjuka kameraposition mot målet via exponentiell lerp.
+        /// Anropas en gång per Update-tick (inte från Draw).
+        /// Vid första anropet efter SnapTo snäpper kameran direkt utan interpolation.
+        /// </summary>
+        void Advance(float targetX, float targetY, float elapsed);
+
+        /// <summary>
+        /// Placerar kameran omedelbart på angiven position utan interpolation.
+        /// Anropas vid kartiinläsning (ChangeMap) för att undvika lerp-glid till startpositionen.
+        /// </summary>
+        void SnapTo(float targetX, float targetY);
+
+        /// <summary>
+        /// Returnerar en CameraView baserad på den nuvarande mjuka positionen.
+        /// Anropas från Draw efter att Advance körts i Update.
+        /// </summary>
+        CameraView GetView(int mapWidth, int mapHeight, int screenWidth, int screenHeight);
     }
 }

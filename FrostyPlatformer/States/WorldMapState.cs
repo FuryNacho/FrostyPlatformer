@@ -131,14 +131,16 @@ namespace FrostyPlatformer.States
 
             if (context.CurrentLevel != null)
                 UpdateObjects(context, elapsed);
+
+            if (context.Player != null && context.CurrentLevel != null)
+                _services.Camera.Advance(context.Player.px, context.Player.py, elapsed);
         }
 
         public void Draw(IRenderContext renderContext, GameContext context)
         {
             if (context.CurrentLevel != null && context.Player != null)
             {
-                var cam = _services.Camera.Calculate(
-                    context.Player.px, context.Player.py,
+                var cam = _services.Camera.GetView(
                     context.CurrentLevel.Width, context.CurrentLevel.Height,
                     context.ScreenWidth, context.ScreenHeight);
 

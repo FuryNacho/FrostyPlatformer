@@ -405,6 +405,10 @@ namespace FrostyPlatformer
             hero.px = x;
             hero.py = y;
 
+            // Snäpp kameran omedelbart till spelarens startposition.
+            // Förhindrar att kameran lerpar från föregående karta till den nya.
+            _camera?.SnapTo(x, y);
+
             CurrentMap.PopulateDynamics(listDynamics);
             _questSystem.PopulateForMap(listDynamics, CurrentMap.Name);
         }
