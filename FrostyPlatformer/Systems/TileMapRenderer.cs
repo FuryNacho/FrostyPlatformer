@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using FrostyPlatformer.Global;
 using FrostyPlatformer.Models;
@@ -41,8 +42,13 @@ namespace FrostyPlatformer.Systems
                     int idx     = map.GetIndex(mapX, mapY);
                     int sx      = idx % GameConstants.TileSheetColumns;
                     int sy      = idx / GameConstants.TileSheetColumns;
-                    int screenX = (int)(x * cam.TileWidth  - cam.TileOffsetX);
-                    int screenY = (int)(y * cam.TileHeight - cam.TileOffsetY);
+                    // Math.Round (AwayFromZero) istället för (int)-trunkering:
+                    // (int) trunkerar mot noll — för negativa screenX-värden (vänster tiles)
+                    // ger det t.ex. -7 istället för -8, vilket skapar 1-pixel mellanrum
+                    // som varierar med kameraoffset och syns som tile-stutter vid scrollning.
+                    // Round avrundar symmetriskt — alla tiles hoppar vid samma sub-pixel-gräns.
+                    int screenX = (int)Math.Round(x * cam.TileWidth  - cam.TileOffsetX, MidpointRounding.AwayFromZero);
+                    int screenY = (int)Math.Round(y * cam.TileHeight - cam.TileOffsetY, MidpointRounding.AwayFromZero);
                     int spriteX = sx * cam.TileWidth;
                     int spriteY = sy * cam.TileHeight;
 

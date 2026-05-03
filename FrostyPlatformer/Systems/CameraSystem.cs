@@ -36,16 +36,38 @@ namespace FrostyPlatformer.Systems
         // Värden 0.10–0.20 ger mjuk plattforms-känsla; 0.12 är en bra startpunkt.
         private const float LerpFactor = 0.12f;
 
+        // Dödzon i tile-enheter: kameran rör sig inte förrän spelaren lämnar zonen.
+        // Horisontell slack absorberar vänster/höger-vändning utan kameradarr.
+        // Vertikal slack (halv) absorberar landningsjitter utan att dölja plattformar ovan.
+        private const float DeadZoneX = 0.5f;
+        private const float DeadZoneY = 0.25f;
+
+        // Framåtblick: kameran tittar LookAheadAmount tiles framåt i rörelseriktningen.
+        // LookAheadLerp styr hur snabbt offset-en easer in/ut — lägre = mjukare.
+        //private const float LookAheadAmount = 1.5f;
+        private const float LookAheadAmount = 0f;
+        private const float LookAheadLerp   = 0.06f;
+
         private float _smoothX;
         private float _smoothY;
+        // Kameramål efter dödzonskorrigering — lerp-basen glider mot detta värde.
+        private float _cameraTargetX;
+        private float _cameraTargetY;
+        // Horisontell look-ahead-offset — eases mot ±LookAheadAmount eller 0.
+        private float _lookAheadX;
+        private float _prevTargetX;
         private bool  _initialized;
 
         /// <inheritdoc />
         public void SnapTo(float targetX, float targetY)
         {
-            _smoothX      = targetX;
-            _smoothY      = targetY;
-            _initialized  = true;
+            _cameraTargetX = targetX;
+            _cameraTargetY = targetY;
+            _smoothX       = targetX;
+            _smoothY       = targetY;
+            _lookAheadX    = 0f;
+            _prevTargetX   = targetX;
+            _initialized   = true;
         }
 
         /// <inheritdoc />
@@ -58,12 +80,30 @@ namespace FrostyPlatformer.Systems
                 return;
             }
 
-            // Exponentiell lerp — frame-rate-oberoende.
+            // Dödzon ("push"-modell): kameramålet skjuts undan bara när spelaren
+            // lämnar zonen. Så länge spelaren rör sig inom zonen står kameran still.
+            // Effekt: korta vändningsrörelser och landningsjitter syns inte i kameran.
+            if (targetX < _cameraTargetX - DeadZoneX) _cameraTargetX = targetX + DeadZoneX;
+            else if (targetX > _cameraTargetX + DeadZoneX) _cameraTargetX = targetX - DeadZoneX;
+            if (targetY < _cameraTargetY - DeadZoneY) _cameraTargetY = targetY + DeadZoneY;
+            else if (targetY > _cameraTargetY + DeadZoneY) _cameraTargetY = targetY - DeadZoneY;
+
+            // Framåtblick: bestäm riktning från positionsförändring sedan förra frame.
+            // Offset eases mot ±LookAheadAmount när spelaren rör sig, mot 0 när de stannar.
+            float deltaX        = targetX - _prevTargetX;
+            float lookAheadGoal = deltaX > 0.01f ? LookAheadAmount
+                                : deltaX < -0.01f ? -LookAheadAmount
+                                : 0f;
+            float tLook  = 1f - MathF.Pow(1f - LookAheadLerp, elapsed * 60f);
+            _lookAheadX += (lookAheadGoal - _lookAheadX) * tLook;
+            _prevTargetX = targetX;
+
+            // Exponentiell lerp mot dödzons- + look-ahead-korrigerat mål — frame-rate-oberoende.
             // Derivation: vid varje frame ska kameran täcka LerpFactor av återstående avstånd.
             // Vid variabel elapsed normaliseras mot 60 Hz via potensformeln nedan.
             float t = 1f - MathF.Pow(1f - LerpFactor, elapsed * 60f);
-            _smoothX += (targetX - _smoothX) * t;
-            _smoothY += (targetY - _smoothY) * t;
+            _smoothX += (_cameraTargetX + _lookAheadX - _smoothX) * t;
+            _smoothY += (_cameraTargetY - _smoothY) * t;
         }
 
         /// <inheritdoc />
