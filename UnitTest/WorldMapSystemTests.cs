@@ -26,12 +26,20 @@ public class WorldMapSystemTests
     }
 
     [TestMethod]
+    public void GetStageEntry_Stage9_ReturnsMapNine()
+    {
+        var entry = Make().GetStageEntry(9);
+        Assert.IsNotNull(entry);
+        Assert.AreEqual("mapnine", entry!.Value.MapName);
+    }
+
+    [TestMethod]
     public void GetStageEntry_Stage0_ReturnsNull()
         => Assert.IsNull(Make().GetStageEntry(0));
 
     [TestMethod]
-    public void GetStageEntry_Stage9_ReturnsNull()
-        => Assert.IsNull(Make().GetStageEntry(9));
+    public void GetStageEntry_Stage10_ReturnsNull()
+        => Assert.IsNull(Make().GetStageEntry(10));
 
     [TestMethod]
     public void GetStageEntry_NegativeStage_ReturnsNull()
@@ -42,7 +50,7 @@ public class WorldMapSystemTests
     {
         var sys = Make();
         var mapNames = new System.Collections.Generic.HashSet<string>();
-        for (int s = 1; s <= 8; s++)
+        for (int s = 1; s <= 9; s++)
         {
             var entry = sys.GetStageEntry(s);
             Assert.IsNotNull(entry, $"Stage {s} ska returnera ett entry");
@@ -96,7 +104,7 @@ public class WorldMapSystemTests
     }
 
     [TestMethod]
-    public void GetSpawnPosition_Eight_ReturnsLastPosition()
+    public void GetSpawnPosition_Eight_ReturnsCorrectPosition()
     {
         var (x, y) = Make().GetSpawnPosition(8);
         Assert.AreEqual(3f + 7 * 3f, x, 0.001f);
@@ -104,20 +112,28 @@ public class WorldMapSystemTests
     }
 
     [TestMethod]
-    public void GetSpawnPosition_OutOfRange_ReturnsDefaultSpawn()
+    public void GetSpawnPosition_Nine_ReturnsCorrectPosition()
     {
-        var sys = Make();
-        var (x9, _) = sys.GetSpawnPosition(9);
-        var (xN, _) = sys.GetSpawnPosition(-1);
-        Assert.AreEqual(3f, x9, 0.001f);
-        Assert.AreEqual(3f, xN, 0.001f);
+        var (x, y) = Make().GetSpawnPosition(9);
+        Assert.AreEqual(3f + 8 * 3f, x, 0.001f);
+        Assert.AreEqual(8f, y, 0.001f);
     }
 
     [TestMethod]
-    public void GetSpawnPosition_AllEightStages_YIsAlwaysEight()
+    public void GetSpawnPosition_OutOfRange_ReturnsDefaultSpawn()
     {
         var sys = Make();
-        for (int s = 1; s <= 8; s++)
+        var (x10, _) = sys.GetSpawnPosition(10);
+        var (xN,  _) = sys.GetSpawnPosition(-1);
+        Assert.AreEqual(3f, x10, 0.001f);
+        Assert.AreEqual(3f, xN,  0.001f);
+    }
+
+    [TestMethod]
+    public void GetSpawnPosition_AllNineStages_YIsAlwaysEight()
+    {
+        var sys = Make();
+        for (int s = 1; s <= 9; s++)
         {
             var (_, y) = sys.GetSpawnPosition(s);
             Assert.AreEqual(8f, y, 0.001f, $"Stage {s} Y ska vara 8");
@@ -128,7 +144,7 @@ public class WorldMapSystemTests
     public void GetSpawnPosition_EachStep_IncreasesXByThree()
     {
         var sys = Make();
-        for (int s = 2; s <= 8; s++)
+        for (int s = 2; s <= 9; s++)
         {
             var (xPrev, _) = sys.GetSpawnPosition(s - 1);
             var (xCurr, _) = sys.GetSpawnPosition(s);

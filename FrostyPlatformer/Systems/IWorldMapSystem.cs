@@ -22,14 +22,14 @@ namespace FrostyPlatformer.Systems
     public interface IWorldMapSystem
     {
         /// <summary>
-        /// Returnerar kartnamn och spawn-koordinater för angivet stage (1–8).
+        /// Returnerar kartnamn och spawn-koordinater för angivet stage (1–9).
         /// Returnerar null om stage är utanför giltigt intervall.
         /// </summary>
         (string MapName, float X, float Y)? GetStageEntry(int stage);
 
         /// <summary>
         /// Beräknar hjältens position på världskartan utifrån senast besökt stage.
-        /// SpawnAtWorldMap = 0 → startposition (3, 8). Värden 1–8 → jämt fördelade.
+        /// SpawnAtWorldMap = 0 → startposition (3, 8). Värden 1–9 → jämt fördelade.
         /// </summary>
         (float X, float Y) GetSpawnPosition(int spawnAtWorldMap);
     }

@@ -237,13 +237,6 @@ namespace FrostyPlatformer.Core
 
         public SettingsObj? GetSettings() => Settings;
 
-        public bool SaveSettings(SettingsObj settingsObj)
-        {
-
-            this.Settings = settingsObj;
-            return true;
-        }
-
         public int RNG(int SmallNumber, int BigNumber)
         {
             if (SmallNumber > BigNumber)

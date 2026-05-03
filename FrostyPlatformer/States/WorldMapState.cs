@@ -33,7 +33,7 @@ namespace FrostyPlatformer.States
 
         // Världskart-specifikt tillstånd
         private bool _unlockAll;
-        private bool _no1 = true, _no2, _no3, _no4, _no5, _no6, _no7, _no8;
+        private bool _no1 = true, _no2, _no3, _no4, _no5, _no6, _no7, _no8, _no9;
         private int  _currentStage;
         private bool _hasAccumulated;
 
@@ -261,6 +261,8 @@ namespace FrostyPlatformer.States
             { SetStage(7, context); hero.vx = 0; }
             else if (CheckStageZone(p, GameConstants.WorldMapStage8X, _no8, completed, 7))
             { SetStage(8, context); hero.vx = 0; }
+            else if (CheckStageZone(p, GameConstants.WorldMapStage9X, _no9, completed, 8))
+            { SetStage(9, context); hero.vx = 0; }
         }
 
         private static bool CheckStageZone(float px, float stageX, bool noFlag, int completed, int stageIdx)
@@ -271,6 +273,7 @@ namespace FrostyPlatformer.States
         {
             _no1 = stage == 1; _no2 = stage == 2; _no3 = stage == 3; _no4 = stage == 4;
             _no5 = stage == 5; _no6 = stage == 6; _no7 = stage == 7; _no8 = stage == 8;
+            _no9 = stage == 9;
             _services.Settings.ActivePlayer.SpawnAtWorldMap = stage;
             _currentStage = stage;
         }

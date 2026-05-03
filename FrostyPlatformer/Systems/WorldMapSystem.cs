@@ -36,6 +36,7 @@ namespace FrostyPlatformer.Systems
                 case 6: return (MapName.MapSix,   2f, 22f);
                 case 7: return (MapName.MapSeven, 3f, 18f);
                 case 8: return (MapName.MapEight, 4f, 41f);
+                case 9: return (MapName.MapNine,  2f,  5f);
                 default: return null;
             }
         }
@@ -43,7 +44,7 @@ namespace FrostyPlatformer.Systems
         /// <inheritdoc/>
         public (float X, float Y) GetSpawnPosition(int spawnAtWorldMap)
         {
-            if (spawnAtWorldMap >= 1 && spawnAtWorldMap <= 8)
+            if (spawnAtWorldMap >= 1 && spawnAtWorldMap <= 9)
                 return (3f + (spawnAtWorldMap - 1) * 3f, 8f);
 
             return (3f, 8f);

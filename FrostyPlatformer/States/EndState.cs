@@ -148,8 +148,9 @@ namespace FrostyPlatformer.States
                 }
             }
 
-            const int SnowScreenMargin = 4; // Lämnar en tunn kant nedtill utanför snöeffekten
-            AdvanceSnow(elapsed, context.ScreenHeight - SnowScreenMargin);
+            int snowCy     = (context.ScreenHeight - GameConstants.ScreenHeight) / 2;
+            int snowHeight = snowCy + GameConstants.ScreenHeight - 8;
+            AdvanceSnow(elapsed, snowHeight);
             AdvanceAnimationEnd(elapsed, context);
             AdvanceEndText(elapsed);
         }
@@ -160,8 +161,8 @@ namespace FrostyPlatformer.States
             int cy = (context.ScreenHeight - GameConstants.ScreenHeight) / 2;
             _rc.DrawSprite(SpriteId.SplashEnd, cx, cy);
 
-            const int SnowScreenMargin = 4;
-            DrawSnow(context.ScreenHeight - SnowScreenMargin);
+            int snowHeight = cy + GameConstants.ScreenHeight - 8;
+            DrawSnow(snowHeight, cx);
             DrawAnimationEnd(context);
             DrawEndText(cx, cy);
         }
@@ -230,7 +231,7 @@ namespace FrostyPlatformer.States
                 _timeTotalCounter++;
 
                 if (_timeTotalCounter < 85)
-                    { _worldPosIncrement++; _doGest = 1; }
+                    { _worldPosIncrement += 2; _doGest = 1; }
                 else if (_timeTotalCounter > 85 && _timeTotalCounter < 87)
                     _doGest = 0;
                 else if (_timeTotalCounter > 87 && _timeTotalCounter < 95)
@@ -238,14 +239,32 @@ namespace FrostyPlatformer.States
                 else if (_timeTotalCounter > 95 && _timeTotalCounter < 96)
                     _doGest = 0;
                 else if (_timeTotalCounter > 96 && _timeTotalCounter < 400)
-                    { _worldPosIncrement++; _doGest = 1; }
+                    { _worldPosIncrement += 2; _doGest = 1; }
+
+                // Dölj hjälten när de nått igloo-positionen (128 + IglooBodyCenterOffset=18)
+                if (_worldPosIncrement > 146) _drawHeroEnd = false;
             }
         }
 
         private void DrawAnimateDone(GameContext context)
         {
-            const int HeroBottomMargin = 22;
-            DrawHero(_worldPosIncrement, context.ScreenHeight - HeroBottomMargin);
+            const int HeroBottomMargin      = 22;
+            const int IglooArchBottomMargin = 40;
+            const int IglooBodyBottomMargin = 81;
+            const int IglooBodyCenterOffset = 40;
+            const int IglooArchCenterOffset = IglooBodyCenterOffset - 13;
+
+            int sw = context.ScreenWidth;
+            int cx = (sw                   - GameConstants.ScreenWidth)  / 2;
+            int cy = (context.ScreenHeight - GameConstants.ScreenHeight) / 2;
+            int gameBottom = cy + GameConstants.ScreenHeight;
+
+            // Kupol bakom hjälten, ingångsbåge framför kupolen
+            _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooBodyCenterOffset, gameBottom - IglooBodyBottomMargin, 52, 0, 108, 75);
+            _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooArchCenterOffset, gameBottom - IglooArchBottomMargin,  0, 0,  24, 34);
+
+            if (_drawHeroEnd)
+                DrawHero(_worldPosIncrement, gameBottom - HeroBottomMargin, cx);
         }
 
         private void AdvanceAnimateNearPerfect(float elapsed)
@@ -265,7 +284,7 @@ namespace FrostyPlatformer.States
                 if (_timeTotalCounter < 1000) _timeTotalCounter++;
 
                 if (_timeTotalCounter < 65)
-                    { _worldPosIncrement++; _doGest = 1; }
+                    { _worldPosIncrement += 2; _doGest = 1; }
                 else if (_timeTotalCounter > 65 && _timeTotalCounter < 67)
                     _doGest = 0;
                 else if (_timeTotalCounter > 67 && _timeTotalCounter < 75)
@@ -273,9 +292,9 @@ namespace FrostyPlatformer.States
                 else if (_timeTotalCounter > 75 && _timeTotalCounter < 76)
                     _doGest = 0;
                 else if (_timeTotalCounter > 76 && _timeTotalCounter < 80)
-                    { _worldPosIncrement++; _doGest = 1; }
+                    { _worldPosIncrement += 2; _doGest = 1; }
                 else if (_timeTotalCounter > 80 && _timeTotalCounter < 149)
-                    { _worldPosIncrement--; _doGest = 1; }
+                    { _worldPosIncrement -= 2; _doGest = 1; }
 
                 if (_timeTotalCounter > 149 && _drawHeroEnd)
                 {
@@ -288,22 +307,24 @@ namespace FrostyPlatformer.States
         private void DrawAnimateNearPerfect(GameContext context)
         {
             const int HeroBottomMargin      = 22;
-            const int IglooPortBottomMargin = 40;
-            const int IglooPortCenterOffset =  9;
+            const int IglooArchBottomMargin = 40;
             const int IglooBodyBottomMargin = 81;
-            const int IglooBodyCenterOffset = 18;
+            const int IglooBodyCenterOffset = 40;
+            const int IglooArchCenterOffset = IglooBodyCenterOffset - 13;
 
             int sw = context.ScreenWidth;
-            int sh = context.ScreenHeight;
+            int cx = (sw                   - GameConstants.ScreenWidth)  / 2;
+            int cy = (context.ScreenHeight - GameConstants.ScreenHeight) / 2;
+            int gameBottom = cy + GameConstants.ScreenHeight;
             if (_drawHeroEnd)
             {
-                DrawHero(_worldPosIncrement, sh - HeroBottomMargin);
+                DrawHero(_worldPosIncrement, gameBottom - HeroBottomMargin, cx);
             }
             else
             {
                 int iglooPos = _timeTotalCounter < 120 ? 120 - _timeTotalCounter : 0;
-                _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooPortCenterOffset + iglooPos, sh - IglooPortBottomMargin, 0,  0,  24,  34);
-                _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooBodyCenterOffset + iglooPos, sh - IglooBodyBottomMargin, 48, 0, 160, 160);
+                _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooBodyCenterOffset + iglooPos, gameBottom - IglooBodyBottomMargin, 52, 0, 108, 75);
+                _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooArchCenterOffset + iglooPos, gameBottom - IglooArchBottomMargin,  0, 0,  24, 34);
             }
         }
 
@@ -320,13 +341,13 @@ namespace FrostyPlatformer.States
                 if (_timeTotalCounter < 1000) _timeTotalCounter++;
 
                 if (_timeTotalCounter < 129)
-                    { _worldPosIncrement++; _worldPosIncrementIgloo--; _doGest = 1; }
+                    { _worldPosIncrement += 2; _worldPosIncrementIgloo -= 2; _doGest = 1; }
                 else if (_timeTotalCounter >= 129 && _timeTotalCounter < 138)
                     _doGest = 2;
                 else if (_timeTotalCounter >= 138 && _timeTotalCounter < 179)
-                    { _worldPosIncrement++; _worldPosIncrementIgloo--; _doGest = 1; }
+                    { _worldPosIncrement += 2; _worldPosIncrementIgloo -= 2; _doGest = 1; }
                 else if (_timeTotalCounter >= 179 && _timeTotalCounter < 180)
-                    _worldPosIncrementIgloo--;
+                    _worldPosIncrementIgloo -= 2;
 
                 if (_timeTotalCounter > 179) _drawHeroEnd = false;
             }
@@ -335,32 +356,33 @@ namespace FrostyPlatformer.States
         private void DrawAnimatePerfect(GameContext context)
         {
             const int HeroBottomMargin      = 22;
-            const int IglooPortBottomMargin = 40;
-            const int IglooPortCenterOffset =  9;
+            const int IglooArchBottomMargin = 40;
             const int IglooBodyBottomMargin = 81;
-            const int IglooBodyCenterOffset = 18;
+            const int IglooBodyCenterOffset = 40;
+            const int IglooArchCenterOffset = IglooBodyCenterOffset - 13;
 
             int sw = context.ScreenWidth;
-            int sh = context.ScreenHeight;
-            int iglooPos = _worldPosIncrementIgloo;
+            int cx = (sw                   - GameConstants.ScreenWidth)  / 2;
+            int cy = (context.ScreenHeight - GameConstants.ScreenHeight) / 2;
+            int gameBottom = cy + GameConstants.ScreenHeight;
+            int slideOffset = _worldPosIncrementIgloo;
 
-            _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooPortCenterOffset + iglooPos, sh - IglooPortBottomMargin, 0,  0,  24,  34);
+            _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooBodyCenterOffset + slideOffset, gameBottom - IglooBodyBottomMargin, 52, 0, 108, 75);
+            _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooArchCenterOffset + slideOffset, gameBottom - IglooArchBottomMargin,  0, 0,  24, 34);
 
             if (_drawHeroEnd)
-                DrawHero(_worldPosIncrement, sh - HeroBottomMargin);
-
-            _rc.DrawPartialSprite(SpriteId.EndArt, sw / 2 + IglooBodyCenterOffset + iglooPos, sh - IglooBodyBottomMargin, 48, 0, 160, 160);
+                DrawHero(_worldPosIncrement, gameBottom - HeroBottomMargin, cx);
         }
 
         /// <summary>Ritar hero-spriten med rätt gesture-frame vid angiven skärmposition.</summary>
-        private void DrawHero(int worldX, int worldY)
+        private void DrawHero(int worldX, int worldY, int cx)
         {
             int sx, sy;
             if (_doGest == 1)       { sx = 16 * _graphicCounter; sy = 0; }      // gå
             else if (_doGest == 2)  { sx = 16 * 2;               sy = 16 * 2; } // titta upp
             else                    { sx = 0;                     sy = 0; }      // idle
 
-            _rc.DrawPartialSprite(SpriteId.Hero, worldX, worldY, sx, sy, 16, 16);
+            _rc.DrawPartialSprite(SpriteId.Hero, cx + worldX, worldY, sx, sy, 16, 16);
         }
 
         // ── Skriv-animerad sluttext ──────────────────────────────────────────────
@@ -491,14 +513,7 @@ namespace FrostyPlatformer.States
                     "Congratulations!",
                     "You beat the game.",
                     "Thank you so much for",
-                    "trying to help Scarlett",
-                    "find her way back home and",
                     "playing Penguin After All.",
-                    "This game was built on the",
-                    "olcPixelGameEngine",
-                    "created by Javidx9",
-                    "and then ported to C# by",
-                    "DevChrome.",
                     "The music was created by",
                     "Fiskifickorna.",
                     "And the guy who put it",
@@ -507,8 +522,6 @@ namespace FrostyPlatformer.States
                     "FuryNacho.",
                     "We are penguins.. after all.",
                     "Much in common after all.",
-                    "Thank you for playing",
-                    "Penguin After All",
                     "Press any button -to exit"
                 };
             }
@@ -591,7 +604,7 @@ namespace FrostyPlatformer.States
             }
         }
 
-        private void DrawSnow(int height)
+        private void DrawSnow(int height, int cx)
         {
             if (_snowSlow == null || _snowFast == null) return;
 
@@ -601,7 +614,7 @@ namespace FrostyPlatformer.States
                 if (absI < 1) absI = 1;
                 if (absI > height - 1) absI = height - 1;
                 foreach (var x in _snowSlow.arrayList[absI])
-                    _rc.DrawPixel(x, i, RenderColor.White);
+                    _rc.DrawPixel(cx + x, i, RenderColor.White);
             }
             for (int i = height; i > 0; i--)
             {
@@ -609,7 +622,7 @@ namespace FrostyPlatformer.States
                 if (absI < 1) absI = 1;
                 if (absI > height - 1) absI = height - 1;
                 foreach (var x in _snowFast.arrayList[absI])
-                    _rc.DrawPixel(x, i, RenderColor.White);
+                    _rc.DrawPixel(cx + x, i, RenderColor.White);
             }
         }
     }

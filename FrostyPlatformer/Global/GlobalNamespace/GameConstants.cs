@@ -95,6 +95,7 @@ namespace FrostyPlatformer.Global
         public const float WorldMapStage6X  = 18.0f;
         public const float WorldMapStage7X  = 21.0f;
         public const float WorldMapStage8X  = 24.0f;
+        public const float WorldMapStage9X  = 27.0f;
         public const float WorldMapStageTolerance = 0.1f; // Tolerans för positionsjämförelse
 
 
