@@ -44,9 +44,9 @@ namespace FrostyPlatformer.Core
         private Dictionary<string, Map> MapMaps { get; set; } = new Dictionary<string, Map>();
         private Dictionary<string, Item> MapItems { get; set; } = new Dictionary<string, Item>();
         private FrostyPlatformer.Systems.IMapRepository MapRepository { get; set; } = null!;
-        private string PathSprites => @"\Resources\Assets\Sprites";
-        private string PathSettings => @"\Resources\Settings";
-        private string PathSound  => @"\Resources\Assets\Sound";
+        private string PathSprites  => $@"\{MapPath.Resources}\{MapPath.Assets}\{MapPath.Sprites}";
+        private string PathSettings => $@"\{MapPath.Resources}\{MapPath.Settings}";
+        private string PathSound    => $@"\{MapPath.Resources}\{MapPath.Assets}\{MapPath.Sound}";
         /// <summary>Sätts i Load() — null! före dess (garanterat initierat via Load).</summary>
         public ScriptProcessor Script { get; set; } = null!;
         private Random Random { get; set; } = new Random();
@@ -61,7 +61,7 @@ namespace FrostyPlatformer.Core
             ReadWrite = new ReadWrite(EnableWriteToLog);
             LoadSettings();
 
-            string tiledMapPath = Path.Combine(ReadWrite.GetRoot, "Resources", "Assets", "MapData", "Tiled");
+            string tiledMapPath = Path.Combine(ReadWrite.GetRoot, MapPath.Resources, MapPath.Assets, MapPath.MapData, MapPath.Tiled);
             MapRepository = new FrostyPlatformer.Systems.TiledMapRepository(tiledMapPath);
             LoadSprites();
             LoadMaps();
@@ -73,26 +73,25 @@ namespace FrostyPlatformer.Core
 
         private void LoadSprites()
         {
-            LoadSprite(SpriteRef.TileSheetSpring,   PathSprites, @"\tilesheetspring",   ".png");
-            LoadSprite(SpriteRef.TileSheetSummer,   PathSprites, @"\tilesheetsummer",   ".png");
-            LoadSprite(SpriteRef.TileSheetFall,     PathSprites, @"\tilesheetfall",     ".png");
-            LoadSprite(SpriteRef.TileSheetWinter,   PathSprites, @"\tilesheetwinter",   ".png");
+            // Sprite-filnamnet matchar alltid nyckeln — lokal helper eliminerar upprepningen.
+            void Spr(string key) => LoadSprite(key, PathSprites, @"\" + key, FileExt.Png);
 
-            LoadSprite(SpriteRef.TileSheetWorldMap, PathSprites, @"\tilesheetwm",       ".png");
-            LoadSprite(SpriteRef.Font,              PathSprites, @"\font",              ".png");
-            LoadSprite(SpriteRef.Hero,              PathSprites, @"\hero",              ".png");
-            LoadSprite(SpriteRef.Items,             PathSprites, @"\items",             ".png");
-
-            LoadSprite(SpriteRef.EnemyIcicle,       PathSprites, @"\enemyzero",         ".png");
-            LoadSprite(SpriteRef.EnemyPenguin,      PathSprites, @"\enemyone",          ".png");
-            LoadSprite(SpriteRef.EnemyWalrus,       PathSprites, @"\enemytwo",          ".png");
-            LoadSprite(SpriteRef.EnemyFrost,        PathSprites, @"\enemythree",        ".png");
-            LoadSprite(SpriteRef.EnemyBoss,         PathSprites, @"\enemyboss",         ".png");
-            LoadSprite(SpriteRef.EnemyWind,         PathSprites, @"\enemywind",         ".png");
-
-            LoadSprite(SplashScreenRef.Start,       PathSprites, @"\splashstart",       ".png");
-            LoadSprite(SplashScreenRef.End,         PathSprites, @"\splashend",         ".png");
-            LoadSprite(SpriteRef.EndArt,            PathSprites, @"\endart",            ".png");
+            Spr(SpriteRef.TileSheetSpring);
+            Spr(SpriteRef.TileSheetSummer);
+            Spr(SpriteRef.TileSheetFall);
+            Spr(SpriteRef.TileSheetWinter);
+            Spr(SpriteRef.TileSheetWorldMap);
+            Spr(SpriteRef.Font);
+            Spr(SpriteRef.Hero);
+            Spr(SpriteRef.Items);
+            Spr(SpriteRef.EnemyIcicle);
+            Spr(SpriteRef.EnemyPenguin);
+            Spr(SpriteRef.EnemyWalrus);
+            Spr(SpriteRef.EnemyFrost);
+            Spr(SpriteRef.EnemyBoss);
+            Spr(SplashScreenRef.Start);
+            Spr(SplashScreenRef.End);
+            Spr(SpriteRef.EndArt);
         }
 
         private void LoadSprite(string FriendlyName, string FilePath, string FileName, string FileExtension)
@@ -147,7 +146,7 @@ namespace FrostyPlatformer.Core
 
         private void LoadSettings()
         {
-            Settings = ReadWrite.ReadJson<SettingsObj>(PathSettings, @"\settings", ".json")
+            Settings = ReadWrite.ReadJson<SettingsObj>(PathSettings, DataFile.Settings, FileExt.Json)
                        ?? new SettingsObj();
 
             EnableWriteToLog = Settings.Log;
@@ -160,14 +159,14 @@ namespace FrostyPlatformer.Core
         public bool SaveSettings()
         {
             if (Settings == null) return false;
-            return ReadWrite.WriteJson<SettingsObj>(PathSettings, @"\settings", ".json", Settings);
+            return ReadWrite.WriteJson<SettingsObj>(PathSettings, DataFile.Settings, FileExt.Json, Settings);
         }
 
 
         #region High Score
         private void LoadHighScore()
         {
-            HighScoreList = ReadWrite.ReadJson<List<HighScoreObj>>(PathSettings, @"\highscore", ".json")
+            HighScoreList = ReadWrite.ReadJson<List<HighScoreObj>>(PathSettings, DataFile.HighScore, FileExt.Json)
                             ?? new List<HighScoreObj>();
 
             if (HighScoreList.Count < 6)
@@ -215,7 +214,7 @@ namespace FrostyPlatformer.Core
         }
         public bool SaveHighScoreList()
         {
-            return ReadWrite.WriteJson<List<HighScoreObj>>(PathSettings, @"\highscore", ".json", HighScoreList);
+            return ReadWrite.WriteJson<List<HighScoreObj>>(PathSettings, DataFile.HighScore, FileExt.Json, HighScoreList);
         }
         #endregion
 

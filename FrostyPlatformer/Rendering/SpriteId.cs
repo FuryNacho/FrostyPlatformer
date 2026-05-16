@@ -64,5 +64,35 @@ namespace FrostyPlatformer.Rendering
 
         /// <summary>Slutanimationens sprite-ark (igloo, grind m.m.).</summary>
         EndArt,
+
+        // ── Parallax-bakgrundslager ─────────────────────────────────────────
+        // Varje årstid har ett himmel-lager (Sky) och ett mellanskikt (Mid).
+        // Sky-lager: solid bakgrund, scroll-faktor ~0.10 (nästan statisk).
+        // Mid-lager: siluetter med alpha-transparens, scroll-faktor ~0.30.
+        // Bildernas mått: 512×224 spelpixlar (2× skärmbredden för sömlös tiling).
+
+        /// <summary>Vår — himmelslager (ljusblå, avlägsna kullar).</summary>
+        ParallaxSkySpring,
+
+        /// <summary>Vår — mellanskikt (trädsiluetter med transparens).</summary>
+        ParallaxMidSpring,
+
+        /// <summary>Sommar — himmelslager (djupblå, distansmoln).</summary>
+        ParallaxSkySummer,
+
+        /// <summary>Sommar — mellanskikt (lummiga trädtoppar med transparens).</summary>
+        ParallaxMidSummer,
+
+        /// <summary>Höst — himmelslager (varmt orange-rosa, solnedgångsstämning).</summary>
+        ParallaxSkyFall,
+
+        /// <summary>Höst — mellanskikt (grena träd och löv med transparens).</summary>
+        ParallaxMidFall,
+
+        /// <summary>Vinter — himmelslager (mörknattblå, stjärnor).</summary>
+        ParallaxSkyWinter,
+
+        /// <summary>Vinter — mellanskikt (gransiluetter med snö, transparens).</summary>
+        ParallaxMidWinter,
     }
 }

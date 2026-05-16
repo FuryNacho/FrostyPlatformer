@@ -237,6 +237,7 @@ namespace FrostyPlatformer
                 _itemSystem,
                 _worldMapSystem,
                 _saveLoadSystem,
+                new Systems.ParallaxSystem(),
                 new Systems.UserMapScoreRepository(Core.Aggregate.Instance.ReadWrite),
                 (mapName, x, y) => ChangeMap(mapName, x, y),
                 Reset,

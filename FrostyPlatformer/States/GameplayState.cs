@@ -59,7 +59,7 @@ namespace FrostyPlatformer.States
         {
             _services = services;
             _rc       = services.RenderContext;
-            _parallax = new ParallaxSystem();
+            _parallax = services.Parallax;
         }
 
         public void Enter(GameContext context)

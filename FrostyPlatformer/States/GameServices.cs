@@ -73,6 +73,9 @@ namespace FrostyPlatformer.States
         /// <summary>Världskartans stage-ingångspunkter och spawn-positioner.</summary>
         public IWorldMapSystem WorldMap { get; }
 
+        /// <summary>Parallax-bakgrundslager — skapar och byter säsong per bana.</summary>
+        public IParallaxSystem Parallax { get; }
+
         /// <summary>Läser och skriver bästa genomspelningstid per user map-slot.</summary>
         public Systems.IUserMapScoreRepository UserMapScores { get; }
 
@@ -133,6 +136,7 @@ namespace FrostyPlatformer.States
             IItemSystem items,
             IWorldMapSystem worldMap,
             ISaveLoadSystem saveLoad,
+            IParallaxSystem parallax,
             Systems.IUserMapScoreRepository userMapScores,
             Action<string, float, float> changeMap,
             Action reset,
@@ -159,6 +163,7 @@ namespace FrostyPlatformer.States
             Items                    = items;
             WorldMap                 = worldMap;
             SaveLoad                 = saveLoad;
+            Parallax                 = parallax;
             UserMapScores            = userMapScores;
             ChangeMap                = changeMap;
             Reset                    = reset;

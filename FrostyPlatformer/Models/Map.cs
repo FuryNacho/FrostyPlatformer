@@ -109,7 +109,7 @@ namespace FrostyPlatformer.Models
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData(MapName.WorldMap),
-                spritePath = assets.GetSpritePath("tilesheetwm"), // tilesheetwm //tilesheetone
+                spritePath = assets.GetSpritePath(SpriteRef.TileSheetWorldMap), // tilesheetwm //tilesheetone
                 name = MapName.WorldMap,
             };
 
@@ -231,7 +231,7 @@ namespace FrostyPlatformer.Models
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData(MapName.MapOne),
-                spritePath = assets.GetSpritePath("tilesheetspring"),
+                spritePath = assets.GetSpritePath(SpriteRef.TileSheetSpring),
                 name = MapName.MapOne,
             };
 
@@ -305,7 +305,7 @@ namespace FrostyPlatformer.Models
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData(MapName.MapTwo),
-                spritePath = assets.GetSpritePath("tilesheetspring"),
+                spritePath = assets.GetSpritePath(SpriteRef.TileSheetSpring),
                 name = MapName.MapTwo,
             };
 
@@ -411,7 +411,7 @@ namespace FrostyPlatformer.Models
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData(MapName.MapThree),
-                spritePath = assets.GetSpritePath("tilesheetsummer"),
+                spritePath = assets.GetSpritePath(SpriteRef.TileSheetSummer),
                 name = MapName.MapThree,
             };
 
@@ -522,7 +522,7 @@ namespace FrostyPlatformer.Models
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData(MapName.MapFour),
-                spritePath = assets.GetSpritePath("tilesheetsummer"),
+                spritePath = assets.GetSpritePath(SpriteRef.TileSheetSummer),
                 name = MapName.MapFour,
             };
 
@@ -735,7 +735,7 @@ namespace FrostyPlatformer.Models
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData(MapName.MapFive),
-                spritePath = assets.GetSpritePath("tilesheetfall"),
+                spritePath = assets.GetSpritePath(SpriteRef.TileSheetFall),
                 name = MapName.MapFive,
             };
 
@@ -891,7 +891,7 @@ namespace FrostyPlatformer.Models
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData(MapName.MapSix),
-                spritePath = assets.GetSpritePath("tilesheetfall"),
+                spritePath = assets.GetSpritePath(SpriteRef.TileSheetFall),
                 name = MapName.MapSix,
             };
 
@@ -1058,7 +1058,7 @@ namespace FrostyPlatformer.Models
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData(MapName.MapSeven),
-                spritePath = assets.GetSpritePath("tilesheetwinter"),
+                spritePath = assets.GetSpritePath(SpriteRef.TileSheetWinter),
                 name = MapName.MapSeven,
             };
 
@@ -1553,7 +1553,7 @@ namespace FrostyPlatformer.Models
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData(MapName.MapEight),
-                spritePath = assets.GetSpritePath("tilesheetwinter"),
+                spritePath = assets.GetSpritePath(SpriteRef.TileSheetWinter),
                 name = MapName.MapEight,
             };
 
@@ -1980,7 +1980,7 @@ namespace FrostyPlatformer.Models
 
             #endregion
 
-           ListDynamicObjs.Add(new Teleport(377.5f, 8.0f, "mapnine", 2.0f, 5.0f));
+           ListDynamicObjs.Add(new Teleport(377.5f, 8.0f, MapName.MapNine, 2.0f, 5.0f));
 
             return true;
         }
@@ -2021,7 +2021,7 @@ namespace FrostyPlatformer.Models
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData(MapName.MapNine),
-                spritePath = assets.GetSpritePath("tilesheetwinter"),
+                spritePath = assets.GetSpritePath(SpriteRef.TileSheetWinter),
                 name = MapName.MapNine,
             };
 

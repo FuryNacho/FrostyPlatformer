@@ -8,11 +8,16 @@ namespace FrostyPlatformer.Global.GlobalNamespace
     /// </summary>
     public static class SpriteRef
     {
-        // Tilesheet per säsong
-        public const string TileSheetSpring   = "tilesheetspring";
-        public const string TileSheetSummer   = "tilesheetsummer";
-        public const string TileSheetFall     = "tilesheetfall";
-        public const string TileSheetWinter   = "tilesheetwinter";
+        // Sätt till true för att ladda transparenta tilesheets (parallax-experiment).
+        // Byt tillbaka till false för att använda ordinarie tilesheets.
+        // Alla SpriteRef.TileSheet*-referenser uppdateras automatiskt — ingen annan kod behöver ändras.
+        private const bool UseTransparentTileSheets = true;
+
+        // Tilesheet per säsong — static readonly för att tillåta villkorlig initiering från flaggan ovan.
+        public static readonly string TileSheetSpring  = UseTransparentTileSheets ? "tilesheet_transparent_spring"  : "tilesheetspring";
+        public static readonly string TileSheetSummer  = UseTransparentTileSheets ? "tilesheet_transparent_summer"  : "tilesheetsummer";
+        public static readonly string TileSheetFall    = UseTransparentTileSheets ? "tilesheet_transparent_fall"    : "tilesheetfall";
+        public static readonly string TileSheetWinter  = UseTransparentTileSheets ? "tilesheet_transparent_winter"  : "tilesheetwinter";
         public const string TileSheetWorldMap = "tilesheetwm";
 
         // Karaktärer och UI
@@ -74,14 +79,31 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public const string End   = "splashend";
     }
 
-    //  string tiledMapPath = Path.Combine(ReadWrite.GetRoot, "Resources", "Assets", "MapData", "Tiled");
+    /// <summary>Mapp-segment för resurssökvägar — används med Path.Combine.</summary>
     public static class MapPath
     {
         public const string Resources = "Resources";
-        public const string Assets = "Assets";
-        public const string MapData = "MapData";
-        public const string Tiled = "Tiled";
+        public const string Assets    = "Assets";
+        public const string MapData   = "MapData";
+        public const string Tiled     = "Tiled";
+        public const string UserMaps  = "UserMaps";
+        public const string Sprites   = "Sprites";
+        public const string Settings  = "Settings";
+        public const string Sound     = "Sound";
+    }
 
+    /// <summary>Fil-extensions som återkommer på flera ställen.</summary>
+    public static class FileExt
+    {
+        public const string Png  = ".png";
+        public const string Json = ".json";
+    }
+
+    /// <summary>Fil-namn (utan extension) för persistent data i Settings-mappen.</summary>
+    public static class DataFile
+    {
+        public const string Settings  = @"\settings";
+        public const string HighScore = @"\highscore";
     }
 
 }

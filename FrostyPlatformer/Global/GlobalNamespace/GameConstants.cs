@@ -125,6 +125,13 @@ namespace FrostyPlatformer.Global
 
 
         // ─────────────────────────────────────────────
+        // Parallax-bakgrund
+        // ─────────────────────────────────────────────
+        public const float ParallaxScrollSky = 0.10f;  // Nästan statisk himmel — ger djup av avlägsen horisont
+        public const float ParallaxScrollMid = 0.30f;  // Rör sig tydligt men märkbart långsammare än tiles (1.0)
+
+
+        // ─────────────────────────────────────────────
         // Stridsvärden
         // ─────────────────────────────────────────────
         public const float KnockbackMultiplierX = 3.0f;
