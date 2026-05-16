@@ -34,6 +34,9 @@ namespace FrostyPlatformer.States
         private readonly GameServices _services;
         private readonly IRenderContext _rc;
 
+        // Parallax-bakgrundssystem — skapas en gång, säsongen sätts i Enter().
+        private readonly IParallaxSystem _parallax;
+
         // Fysik-tillstånd
         private bool  _bPower;
         private int   _rememberJumpCollision;
@@ -56,11 +59,18 @@ namespace FrostyPlatformer.States
         {
             _services = services;
             _rc       = services.RenderContext;
+            _parallax = new ParallaxSystem();
         }
 
         public void Enter(GameContext context)
         {
             _services.ClearSwitchedState();
+
+            // Välj parallax-bakgrund för den aktuella kartans årstid.
+            // Världskartan och okända kartor returnerar null → inga lager ritas.
+            var season = SeasonHelper.FromMapName(context.CurrentLevel?.Name);
+            if (season.HasValue)
+                _parallax.SetSeason(season.Value);
 
             context.ActiveObjects.RemoveAll(x =>
                 context.CollectedEnergiIds.Any(id => id == x.CoinId));
@@ -216,6 +226,10 @@ namespace FrostyPlatformer.States
 
                 // Fyll bakgrunden för områden utanför kartgränsen (t.ex. smala kartor på bred skärm).
                 _rc.FillRect(0, 0, context.ScreenWidth, context.ScreenHeight, RenderColor.Black);
+
+                // Rita parallax-bakgrundslager (himmel → mellanskikt) bakom tiles.
+                // Lager som inte har fått en årstid (t.ex. världskartan) ritar ingenting.
+                _parallax.Draw(_rc, cam.OffsetX, context.ScreenWidth, context.ScreenHeight);
 
                 foreach (var call in _services.TileRenderer.GetDrawCalls(cam, context.CurrentLevel))
                     _rc.DrawPartialSprite(SpriteId.MapTileSheet,
@@ -639,7 +653,7 @@ namespace FrostyPlatformer.States
 
             int toSpawn = Math.Min(SpillPerFrame, _energiRain.RemainingToSpawn);
             for (int i = 0; i < toSpawn; i++)
-                context.ActiveObjects.Add(new DynamicItem(sx, sy, _services.Assets.GetItem("energi")!, whenCollectable));
+                context.ActiveObjects.Add(new DynamicItem(sx, sy, _services.Assets.GetItem(ItemRef.Energi)!, whenCollectable));
 
             _energiRain.RemainingToSpawn -= toSpawn;
             if (_energiRain.RemainingToSpawn == 0)

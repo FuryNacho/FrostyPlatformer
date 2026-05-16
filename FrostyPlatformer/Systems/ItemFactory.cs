@@ -1,5 +1,6 @@
 #nullable enable
 using FrostyPlatformer.Core;
+using FrostyPlatformer.Global.GlobalNamespace;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Models.Items;
 using System;
@@ -29,7 +30,7 @@ namespace FrostyPlatformer.Systems
         public DynamicItem Create(ItemType type, float x, float y, IAssets assets, int collectable = 0, int id = 0) =>
             type switch
             {
-                ItemType.Energi => new DynamicItem(x, y, assets.GetItem("energi")!, collectable, id),
+                ItemType.Energi => new DynamicItem(x, y, assets.GetItem(ItemRef.Energi)!, collectable, id),
                 _               => throw new ArgumentOutOfRangeException(nameof(type), type, $"Okänd itemtyp: {type}")
             };
     }

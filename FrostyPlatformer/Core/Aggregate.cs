@@ -73,27 +73,26 @@ namespace FrostyPlatformer.Core
 
         private void LoadSprites()
         {
-            LoadSprite("tilesheetspring", PathSprites, @"\tilesheetspring", ".png");
-            LoadSprite("tilesheetsummer", PathSprites, @"\tilesheetsummer", ".png");
-            LoadSprite("tilesheetfall", PathSprites, @"\tilesheetfall", ".png");
-            LoadSprite("tilesheetwinter", PathSprites, @"\tilesheetwinter", ".png");
+            LoadSprite(SpriteRef.TileSheetSpring,   PathSprites, @"\tilesheetspring",   ".png");
+            LoadSprite(SpriteRef.TileSheetSummer,   PathSprites, @"\tilesheetsummer",   ".png");
+            LoadSprite(SpriteRef.TileSheetFall,     PathSprites, @"\tilesheetfall",     ".png");
+            LoadSprite(SpriteRef.TileSheetWinter,   PathSprites, @"\tilesheetwinter",   ".png");
 
+            LoadSprite(SpriteRef.TileSheetWorldMap, PathSprites, @"\tilesheetwm",       ".png");
+            LoadSprite(SpriteRef.Font,              PathSprites, @"\font",              ".png");
+            LoadSprite(SpriteRef.Hero,              PathSprites, @"\hero",              ".png");
+            LoadSprite(SpriteRef.Items,             PathSprites, @"\items",             ".png");
 
-            LoadSprite("tilesheetwm", PathSprites, @"\tilesheetwm", ".png");
-            LoadSprite("font",        PathSprites, @"\font",        ".png");
-            LoadSprite("hero",        PathSprites, @"\hero",        ".png");
-            LoadSprite("items",       PathSprites, @"\items",       ".png");
+            LoadSprite(SpriteRef.EnemyIcicle,       PathSprites, @"\enemyzero",         ".png");
+            LoadSprite(SpriteRef.EnemyPenguin,      PathSprites, @"\enemyone",          ".png");
+            LoadSprite(SpriteRef.EnemyWalrus,       PathSprites, @"\enemytwo",          ".png");
+            LoadSprite(SpriteRef.EnemyFrost,        PathSprites, @"\enemythree",        ".png");
+            LoadSprite(SpriteRef.EnemyBoss,         PathSprites, @"\enemyboss",         ".png");
+            LoadSprite(SpriteRef.EnemyWind,         PathSprites, @"\enemywind",         ".png");
 
-            LoadSprite("enemyzero", PathSprites, @"\enemyzero", ".png");
-            LoadSprite("enemyone", PathSprites, @"\enemyone", ".png");
-            LoadSprite("enemytwo", PathSprites, @"\enemytwo", ".png");
-            LoadSprite("enemythree", PathSprites, @"\enemythree", ".png");
-            LoadSprite("enemyboss", PathSprites, @"\enemyboss", ".png");
-
-            LoadSprite("splashstart", PathSprites, @"\splashstart", ".png");
-            LoadSprite("splashend",   PathSprites, @"\splashend",   ".png");
-            LoadSprite("endart",      PathSprites, @"\endart",      ".png");
-
+            LoadSprite(SplashScreenRef.Start,       PathSprites, @"\splashstart",       ".png");
+            LoadSprite(SplashScreenRef.End,         PathSprites, @"\splashend",         ".png");
+            LoadSprite(SpriteRef.EndArt,            PathSprites, @"\endart",            ".png");
         }
 
         private void LoadSprite(string FriendlyName, string FilePath, string FileName, string FileExtension)
@@ -143,7 +142,7 @@ namespace FrostyPlatformer.Core
         private void LoadItems()
         {
             var e = new ItemEnergi();
-            MapItems.Add("energi", e);
+            MapItems.Add(ItemRef.Energi, e);
         }
 
         private void LoadSettings()

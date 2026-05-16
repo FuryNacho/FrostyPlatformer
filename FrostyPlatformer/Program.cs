@@ -362,20 +362,38 @@ namespace FrostyPlatformer
                 if (path != null) _renderContext.RegisterSprite(id, path);
             }
 
-            Reg(Rendering.SpriteId.Font,              agg.GetSpritePath("font"));
-            Reg(Rendering.SpriteId.Items,             agg.GetSpritePath("items"));
-            Reg(Rendering.SpriteId.Hero,              agg.GetSpritePath("hero"));
-            Reg(Rendering.SpriteId.EnemyPenguin,      agg.GetSpritePath("enemyone"));
-            Reg(Rendering.SpriteId.EnemyWalrus,       agg.GetSpritePath("enemytwo"));
-            Reg(Rendering.SpriteId.EnemyFrost,        agg.GetSpritePath("enemythree"));
-            Reg(Rendering.SpriteId.EnemyIcicle,       agg.GetSpritePath("enemyzero"));
-            Reg(Rendering.SpriteId.EnemyBoss,         agg.GetSpritePath("enemyboss"));
-            Reg(Rendering.SpriteId.EnemyWind,         agg.GetSpritePath("enemywind"));
-            Reg(Rendering.SpriteId.WorldMapTileSheet,  agg.GetSpritePath("tilesheetwm"));
+            Reg(Rendering.SpriteId.Font,              agg.GetSpritePath(SpriteRef.Font));
+            Reg(Rendering.SpriteId.Items,             agg.GetSpritePath(SpriteRef.Items));
+            Reg(Rendering.SpriteId.Hero,              agg.GetSpritePath(SpriteRef.Hero));
+            Reg(Rendering.SpriteId.EnemyPenguin,      agg.GetSpritePath(SpriteRef.EnemyPenguin));
+            Reg(Rendering.SpriteId.EnemyWalrus,       agg.GetSpritePath(SpriteRef.EnemyWalrus));
+            Reg(Rendering.SpriteId.EnemyFrost,        agg.GetSpritePath(SpriteRef.EnemyFrost));
+            Reg(Rendering.SpriteId.EnemyIcicle,       agg.GetSpritePath(SpriteRef.EnemyIcicle));
+            Reg(Rendering.SpriteId.EnemyBoss,         agg.GetSpritePath(SpriteRef.EnemyBoss));
+            Reg(Rendering.SpriteId.EnemyWind,         agg.GetSpritePath(SpriteRef.EnemyWind));
+            Reg(Rendering.SpriteId.WorldMapTileSheet,  agg.GetSpritePath(SpriteRef.TileSheetWorldMap));
             Reg(Rendering.SpriteId.SplashStart,        agg.GetSpritePath(SplashScreenRef.Start));
             Reg(Rendering.SpriteId.SplashEnd,          agg.GetSpritePath(SplashScreenRef.End));
-            Reg(Rendering.SpriteId.EndArt,             agg.GetSpritePath("endart"));
+            Reg(Rendering.SpriteId.EndArt,             agg.GetSpritePath(SpriteRef.EndArt));
             Reg(Rendering.SpriteId.MapTileSheet,       CurrentMap.SpritePath);
+
+            // ── Parallax-bakgrundslager ──────────────────────────────────────────
+            // Bilderna är 512×224 spelpixlar (PNG med alpha-kanal för mid-lager).
+            // Sökvägen byggs direkt utan att gå via Aggregate — samma rot som övriga sprites.
+            var bgPath = System.IO.Path.Combine(agg.ReadWrite.GetRoot,
+                                                "Resources", "Assets", "Sprites");
+            void RegBg(Rendering.SpriteId id, string file)
+                => _renderContext.RegisterSprite(id,
+                       System.IO.Path.Combine(bgPath, file));
+
+            RegBg(Rendering.SpriteId.ParallaxSkySpring,  "parallax_sky_spring.png");
+            RegBg(Rendering.SpriteId.ParallaxMidSpring,  "parallax_mid_spring.png");
+            RegBg(Rendering.SpriteId.ParallaxSkySummer,  "parallax_sky_summer.png");
+            RegBg(Rendering.SpriteId.ParallaxMidSummer,  "parallax_mid_summer.png");
+            RegBg(Rendering.SpriteId.ParallaxSkyFall,    "parallax_sky_fall.png");
+            RegBg(Rendering.SpriteId.ParallaxMidFall,    "parallax_mid_fall.png");
+            RegBg(Rendering.SpriteId.ParallaxSkyWinter,  "parallax_sky_winter.png");
+            RegBg(Rendering.SpriteId.ParallaxMidWinter,  "parallax_mid_winter.png");
         }
 
         private void RegisterSounds()
