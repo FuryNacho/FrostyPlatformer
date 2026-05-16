@@ -84,6 +84,14 @@ namespace FrostyPlatformer
         private float    _elapsed     = 0f;
         private TimeSpan _runningTime = TimeSpan.Zero;
 
+        // ── Frame-tidsmätning (diagnostik) ───────────────────────────────────
+        // Loggar bara när Update tar > SpikeThresholdMs eller MonoGame flaggar
+        // IsRunningSlowly (catch-up). Cooldown stoppar log-storm vid sustained lag.
+        private readonly System.Diagnostics.Stopwatch _updateWatch   = new();
+        private          double                        _nextSpikeLog  = 0;
+        private const    double                        SpikeThresholdMs = 12.0;
+        private const    double                        SpikeLogCooldown = 0.5;
+
         // ── Skärmkonstanter ───────────────────────────────────────────────────
         private const int ScreenW = GameConstants.ScreenWidth;
         private const int ScreenH = GameConstants.ScreenHeight;
@@ -135,8 +143,12 @@ namespace FrostyPlatformer
             _graphics = new GraphicsDeviceManager(this);
             _graphics.PreferredBackBufferWidth  = ScreenW * PixW;
             _graphics.PreferredBackBufferHeight = ScreenH * PixH;
-            IsFixedTimeStep        = true;
-            TargetElapsedTime      = TimeSpan.FromSeconds(1.0 / 60.0);
+            // Variabelt tidssteg + VSync: loopen synkroniseras med skärmens faktiska Hz
+            // (60, 75, 144, 165 Hz etc.) utan ackumulatordrift. IsFixedTimeStep = true
+            // orsakar periodiska catch-up-uppdateringar på skärmar som inte kör exakt
+            // 60 Hz, vilket upplevs som sporadiskt ryck trots att Update-kroppen är snabb.
+            // All fysik och kameralerp använder elapsed-tid och är frame-rate-oberoende.
+            IsFixedTimeStep = false;
             Window.AllowUserResizing = true;
             Content.RootDirectory  = ".";
             Window.Title           = "Frosty Platformer";
@@ -254,9 +266,34 @@ namespace FrostyPlatformer
                 _graphics.ToggleFullScreen();
             _prevKeyboard = kb;
 
+            _updateWatch.Restart();
             _stateManager.Update(_context, _elapsed);
+            _updateWatch.Stop();
+
+            LogFrameSpike(gameTime);
 
             base.Update(gameTime);
+        }
+
+        /// <summary>
+        /// Loggar frames där Update-kroppen tar för lång tid eller MonoGame kör catch-up.
+        /// Utdata syns i VS Output-fönstret (Debug-bygge). Cooldown förhindrar log-storm
+        /// vid sustained lagg — rapporterar max en rad var SpikeLogCooldown sekunder.
+        /// </summary>
+        [System.Diagnostics.Conditional("DEBUG")]
+        private void LogFrameSpike(GameTime gameTime)
+        {
+            double ms       = _updateWatch.Elapsed.TotalMilliseconds;
+            double totalSec = gameTime.TotalGameTime.TotalSeconds;
+            bool   slow     = gameTime.IsRunningSlowly || ms > SpikeThresholdMs;
+
+            if (!slow || totalSec < _nextSpikeLog) return;
+
+            _nextSpikeLog = totalSec + SpikeLogCooldown;
+            System.Diagnostics.Debug.WriteLine(
+                $"[SPIKE] Update={ms:F1}ms | obj={_context.ActiveObjects.Count}" +
+                $" | t={totalSec:F1}s" +
+                (gameTime.IsRunningSlowly ? " | RunningSlowly" : ""));
         }
 
         /// <summary>
