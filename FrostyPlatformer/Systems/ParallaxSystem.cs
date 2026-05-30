@@ -94,6 +94,11 @@ namespace FrostyPlatformer.Systems
                 new ParallaxLayer(SpriteId.ParallaxSkyWinter, scrollFactor: GameConstants.ParallaxScrollSky),
                 new ParallaxLayer(SpriteId.ParallaxMidWinter, scrollFactor: GameConstants.ParallaxScrollMid),
             },
+            [Season.Custom] = new[]
+            {
+                new ParallaxLayer(SpriteId.ParallaxSkyCustom, scrollFactor: GameConstants.ParallaxScrollSky),
+                new ParallaxLayer(SpriteId.ParallaxMidCustom, scrollFactor: GameConstants.ParallaxScrollMid),
+            },
         };
     }
 }

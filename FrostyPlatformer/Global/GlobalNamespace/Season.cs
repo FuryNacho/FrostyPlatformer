@@ -30,6 +30,9 @@ namespace FrostyPlatformer.Global.GlobalNamespace
 
         /// <summary>Banor 7–9 (mapseven, mapeight, mapnine): snö, is och vintermörker.</summary>
         Winter,
+
+        /// <summary>Användarbyggda banor (slot1–slot7): mörk nattbakgrund med snöstämning.</summary>
+        Custom,
     }
 
     /// <summary>
@@ -49,6 +52,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
             MapName.MapThree or MapName.MapFour                             => Season.Summer,
             MapName.MapFive  or MapName.MapSix                              => Season.Fall,
             MapName.MapSeven or MapName.MapEight or MapName.MapNine         => Season.Winter,
+            _ when mapName != null && mapName.StartsWith("slot")            => Season.Custom,
             _                                                                => null,
         };
     }

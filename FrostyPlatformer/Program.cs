@@ -395,6 +395,8 @@ namespace FrostyPlatformer
             RegBg(Rendering.SpriteId.ParallaxMidFall,    "parallax_mid_fall.png");
             RegBg(Rendering.SpriteId.ParallaxSkyWinter,  "parallax_sky_winter.png");
             RegBg(Rendering.SpriteId.ParallaxMidWinter,  "parallax_mid_winter.png");
+            RegBg(Rendering.SpriteId.ParallaxSkyCustom,  "parallax_sky_custom.png");
+            RegBg(Rendering.SpriteId.ParallaxMidCustom,  "parallax_mid_custom.png");
         }
 
         private void RegisterSounds()

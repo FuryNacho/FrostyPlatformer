@@ -80,6 +80,7 @@ namespace FrostyPlatformer.Core
             Spr(SpriteRef.TileSheetSummer);
             Spr(SpriteRef.TileSheetFall);
             Spr(SpriteRef.TileSheetWinter);
+            Spr(SpriteRef.TileSheetCustom);
             Spr(SpriteRef.TileSheetWorldMap);
             Spr(SpriteRef.Font);
             Spr(SpriteRef.Hero);

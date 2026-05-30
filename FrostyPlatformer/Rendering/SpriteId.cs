@@ -94,5 +94,11 @@ namespace FrostyPlatformer.Rendering
 
         /// <summary>Vinter — mellanskikt (gransiluetter med snö, transparens).</summary>
         ParallaxMidWinter,
+
+        /// <summary>Anpassad bana — himmelslager.</summary>
+        ParallaxSkyCustom,
+
+        /// <summary>Anpassad bana — mellanskikt med transparens.</summary>
+        ParallaxMidCustom,
     }
 }

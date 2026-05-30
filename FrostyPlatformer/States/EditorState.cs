@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using FrostyPlatformer.Core;
 using FrostyPlatformer.Global;
+using FrostyPlatformer.Global.GlobalNamespace;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Rendering;
 using FrostyPlatformer.Systems;
@@ -731,9 +732,10 @@ namespace FrostyPlatformer.States
 
         private void RegisterTilesheet(string tilesetSource)
         {
-            // TilesetSource är t.ex. "tilesheetspring.tsx" — Aggregate-nyckeln är samma utan ".tsx"
-            string assetName = tilesetSource.Replace(".tsx", "");
-            string? path = _services.Assets.GetSpritePath(assetName);
+            // Editorn visar alltid den transparenta custom-tileseeten, oavsett vad kartan
+            // har sparat som TilesetSource. Transparensen krävs för att parallax-lagret
+            // ska synas bakom tiles när banan spelas.
+            string? path = _services.Assets.GetSpritePath(SpriteRef.TileSheetCustom);
             if (path != null)
                 _rc.RegisterSprite(SpriteId.MapTileSheet, path);
         }

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using FrostyPlatformer.Core;
 using FrostyPlatformer.Global;
+using FrostyPlatformer.Global.GlobalNamespace;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Rendering;
 
@@ -191,8 +192,9 @@ namespace FrostyPlatformer.States
 
         private void RegisterTilesheet(string tilesetSource)
         {
-            string assetName = tilesetSource.Replace(".tsx", "");
-            string? path     = _services.Assets.GetSpritePath(assetName);
+            // Användarbanor använder alltid den transparenta custom-tileseeten
+            // så att parallax-bakgrunden syns bakom tiles.
+            string? path = _services.Assets.GetSpritePath(SpriteRef.TileSheetCustom);
             if (path != null)
                 _rc.RegisterSprite(SpriteId.MapTileSheet, path);
         }

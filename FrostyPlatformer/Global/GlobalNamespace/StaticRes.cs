@@ -19,6 +19,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public static readonly string TileSheetFall    = UseTransparentTileSheets ? "tilesheet_transparent_fall"    : "tilesheetfall";
         public static readonly string TileSheetWinter  = UseTransparentTileSheets ? "tilesheet_transparent_winter"  : "tilesheetwinter";
         public const string TileSheetWorldMap = "tilesheetwm";
+        public const string TileSheetCustom   = "tilesheet_transparent_Custom";
 
         // Karaktärer och UI
         public const string Font  = "font";
