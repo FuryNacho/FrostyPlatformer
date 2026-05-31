@@ -40,7 +40,7 @@ namespace FrostyPlatformer.States
         // Sätt till true för att aktivera världskarte-editering (StopPoint-läge +
         // tilesheetwm). Dolt för vanliga spelare — editorn beter sig normalt när false.
         // static readonly (inte const) förhindrar CS0162-varning för gatad kod.
-        private static readonly bool DevMode = false;
+        private static readonly bool DevMode = true;
 
         // ── Kamerakonstanter ────────────────────────────────────────────────────
         private const float ScrollSpeed = 8.0f;
