@@ -126,6 +126,10 @@ namespace UnitTest
             => Assert.AreEqual(SpriteRef.TileSheetCustom, SpriteRef.TileSheetForTileset("tilesheetcustom.tsx"));
 
         [TestMethod]
+        public void TileSheetForTileset_WorldMap_ReturnsWorldMapSheet()
+            => Assert.AreEqual(SpriteRef.TileSheetWorldMap, SpriteRef.TileSheetForTileset("tilesheetwm.tsx"));
+
+        [TestMethod]
         public void TileSheetForTileset_UnknownOrNull_FallsBackToCustomSheet()
         {
             Assert.AreEqual(SpriteRef.TileSheetCustom, SpriteRef.TileSheetForTileset("nonsense.tsx"));

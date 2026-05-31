@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using FrostyPlatformer.Core;
 using FrostyPlatformer.Global;
 using FrostyPlatformer.Global.GlobalNamespace;
@@ -143,6 +144,12 @@ namespace FrostyPlatformer.States
             "tilesheetfall.tsx",   "tilesheetwinter.tsx",
             "tilesheetcustom.tsx"
         };
+
+        // I DevMode går även världskartans egen tilesheet att välja.
+        private static readonly string[] KnownTilesetsDevMode =
+            KnownTilesets.Concat(new[] { "tilesheetwm.tsx" }).ToArray();
+
+        private static string[] AvailableTilesets => DevMode ? KnownTilesetsDevMode : KnownTilesets;
 
         /// <summary>Skapar ett nytt EditorState.</summary>
         /// <param name="services">Gemensamma speltjänster (input, kamera, renderer m.m.).</param>
@@ -808,13 +815,11 @@ namespace FrostyPlatformer.States
 
         private void RegisterTilesheet(string tilesetSource)
         {
-            // Världskartan i DevMode använder sin egen tilesheet (tilesheetwm). Övriga
-            // kartor använder den transparenta tilesheet som matchar vald TilesetSource —
-            // transparensen krävs för att parallax-lagret ska synas bakom tiles vid spel.
-            string spriteRef = DevMode && _mapId == MapName.WorldMap
-                ? SpriteRef.TileSheetWorldMap
-                : SpriteRef.TileSheetForTileset(tilesetSource);
-            string? path = _services.Assets.GetSpritePath(spriteRef);
+            // Använd den tilesheet som matchar kartans valda TilesetSource. För vanliga
+            // banor är det en transparent säsongs-sheet (transparensen krävs för att
+            // parallax-lagret ska synas bakom tiles vid spel); för världskartan i DevMode
+            // väljs tilesheetwm — men styrt av kartdatan, inte av ett hårdkodat undantag.
+            string? path = _services.Assets.GetSpritePath(SpriteRef.TileSheetForTileset(tilesetSource));
             if (path != null)
                 _rc.RegisterSprite(SpriteId.MapTileSheet, path);
         }
@@ -893,7 +898,7 @@ namespace FrostyPlatformer.States
                     _newMapHeightIdx  = Math.Clamp(_newMapHeightIdx  + delta, 0, HeightPresets.Length - 1);
                     break;
                 case 2:
-                    _newMapTilesetIdx = (_newMapTilesetIdx + delta + KnownTilesets.Length) % KnownTilesets.Length;
+                    _newMapTilesetIdx = (_newMapTilesetIdx + delta + AvailableTilesets.Length) % AvailableTilesets.Length;
                     break;
             }
         }
@@ -917,7 +922,7 @@ namespace FrostyPlatformer.States
                 Height         = h,
                 TileIndex      = new int[w * h],
                 AttributeIndex = new int[w * h],
-                TilesetSource  = KnownTilesets[_newMapTilesetIdx],
+                TilesetSource  = AvailableTilesets[_newMapTilesetIdx],
                 SpawnX         = 1,
                 SpawnY         = 1
             };
@@ -957,7 +962,7 @@ namespace FrostyPlatformer.States
             {
                 $"< {WidthPresets[_newMapWidthIdx]} >",
                 $"< {HeightPresets[_newMapHeightIdx]} >",
-                $"< {KnownTilesets[_newMapTilesetIdx]} >"
+                $"< {AvailableTilesets[_newMapTilesetIdx]} >"
             };
 
             for (int i = 0; i < 3; i++)

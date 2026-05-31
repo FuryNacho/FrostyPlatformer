@@ -36,6 +36,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
                 "tilesheetfall"   => TileSheetFall,
                 "tilesheetwinter" => TileSheetWinter,
                 "tilesheetcustom" => TileSheetCustom,
+                "tilesheetwm"     => TileSheetWorldMap,
                 _                 => TileSheetCustom,
             };
         }
