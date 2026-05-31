@@ -1,5 +1,6 @@
 #nullable enable
 using FrostyPlatformer.Global.GlobalNamespace;
+using FrostyPlatformer.Models;
 
 namespace FrostyPlatformer.Systems
 {
@@ -40,6 +41,36 @@ namespace FrostyPlatformer.Systems
                 default: return null;
             }
         }
+
+        // ── Nod-navigation (ej stödd av legacy-implementationen) ─────────────────
+
+        /// <inheritdoc/>
+        /// <remarks>Stöds ej av WorldMapSystem — använd TiledWorldMapSystem.</remarks>
+        public PlacedObject? GetCurrentNode(int tileX, int tileY) => null;
+
+        /// <inheritdoc/>
+        /// <remarks>Stöds ej av WorldMapSystem — använd TiledWorldMapSystem.</remarks>
+        public PlacedObject? GetNextNode(PlacedObject current, int dX, int dY) => null;
+
+        /// <inheritdoc/>
+        /// <remarks>Stöds ej av WorldMapSystem — använd TiledWorldMapSystem.</remarks>
+        public NodeState GetNodeState(PlacedObject node, int stageCompleted) => NodeState.Locked;
+
+        /// <inheritdoc/>
+        public (int TileX, int TileY) GetSpawnTile(int spawnAtWorldMap, int defaultTileX, int defaultTileY)
+        {
+            var (fx, fy) = GetSpawnPosition(spawnAtWorldMap);
+            return ((int)fx, (int)fy);
+        }
+
+        /// <inheritdoc/>
+        public int GetStageIndex(string subType) => subType switch
+        {
+            "mapone"   => 1, "maptwo"   => 2, "mapthree" => 3,
+            "mapfour"  => 4, "mapfive"  => 5, "mapsix"   => 6,
+            "mapseven" => 7, "mapeight" => 8, "mapnine"  => 9,
+            _          => -1
+        };
 
         /// <inheritdoc/>
         public (float X, float Y) GetSpawnPosition(int spawnAtWorldMap)

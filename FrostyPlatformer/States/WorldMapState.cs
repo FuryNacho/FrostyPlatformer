@@ -1,5 +1,5 @@
 #nullable enable
-using System.Collections.Generic;
+using System;
 using System.Linq;
 using FrostyPlatformer.Core;
 using FrostyPlatformer.Global;
@@ -7,62 +7,79 @@ using FrostyPlatformer.Global.GlobalNamespace;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Models.Objects;
 using FrostyPlatformer.Rendering;
+using FrostyPlatformer.Systems;
 
 namespace FrostyPlatformer.States
 {
     /// <summary>
-    /// Hanterar världskartan — hjälten rör sig bland stage-ikoner och väljer nästa bana.
+    /// Hanterar världskartan — hjälten navigerar diskret mellan stoppunkt-noder
+    /// och väljer nästa bana.
     /// </summary>
     /// <remarks>
     /// MÖNSTER: State Machine (konkret tillstånd)
     ///
     /// MOTIVERING:
-    /// Extraherat från Program.DisplayWorldMap (ca 820 rader). Isolerar
-    /// unlockAllStages, no1–no8, currentStage och hasAccumulatedAllSpeed
-    /// som tidigare låg som lösa fält i Program.cs.
+    /// Ursprungligen använde WorldMapState hårdkodade X-koordinater (WorldMapStage1X …
+    /// WorldMapStage9X) och nio bool-flaggor (_no1 … _no9) för att avgöra vilken nod
+    /// spelaren befann sig på. Det kopplade karttopologin hårt till koden — flytta en
+    /// nod och logiken slutade fungera tyst. Nu delegeras all nod-logik till
+    /// IWorldMapSystem.GetCurrentNode / GetNextNode / GetNodeState, som arbetar mot
+    /// PlacedObject-stoppunkter från worldmap.json. WorldMapState hanterar bara
+    /// input, rörelsedelegering och state-övergångar.
+    ///
+    /// Navigation är strikt 4-riktningsbaserad (höger/vänster/upp/ned) som i SMB3.
+    /// Spelaren rör sig kontinuerligt mot _targetNode och snäpps till nod-positionen
+    /// när den anlänt inom ArrivalThreshold.
     ///
     /// ANVÄNDNING:
     /// Aktiveras från MenuState ("Start New Game"/"Resume"), SettingsState (Load)
-    /// och PauseState (Select). unlockAll-parametern sätts av Konami-koden i
-    /// PauseState.
+    /// och PauseState (Select). unlockAll-parametern sätts av Konami-koden i PauseState.
     /// </remarks>
     internal sealed class WorldMapState : IGameState
     {
-        private readonly GameServices _services;
+        // Rörelsehastighet i tiles/sekund (matchar tidigare vx = 3)
+        private const float MoveSpeed = 3.0f;
+
+        // Spelaren snäpps till nod-positionen när Manhattan-distansen underskrider
+        // detta värde. Sätts generöst (0.4 tiles) för att täcka frame-rate-variation.
+        private const float ArrivalThreshold = 0.4f;
+
+        // Fallback-spawn om SpawnAtWorldMap saknar matchande nod i worldmap.json
+        private const int DefaultSpawnTileX = 3;
+        private const int DefaultSpawnTileY = 8;
+
+        private readonly GameServices  _services;
         private readonly IRenderContext _rc;
 
-        // Världskart-specifikt tillstånd
-        private bool _unlockAll;
-        private bool _no1 = true, _no2, _no3, _no4, _no5, _no6, _no7, _no8, _no9;
-        private int  _currentStage;
-        private bool _hasAccumulated;
+        private bool          _unlockAll;
+        private bool          _hasAccumulated;
+        private PlacedObject? _currentNode;   // noden spelaren befinner sig på
+        private PlacedObject? _targetNode;    // noden spelaren rör sig mot
 
         public WorldMapState(GameServices services, bool unlockAll = false)
         {
-            _services   = services;
-            _rc         = services.RenderContext;
-            _unlockAll  = unlockAll;
+            _services  = services;
+            _rc        = services.RenderContext;
+            _unlockAll = unlockAll;
         }
 
         public void Enter(GameContext context)
         {
             _hasAccumulated = false;
-            _currentStage   = 0;
+            _currentNode    = null;
+            _targetNode     = null;
         }
 
         public void Update(GameContext context, float elapsed)
         {
             _services.Script.Tick(elapsed);
 
-            if (_currentStage == 0)
-                _currentStage = _services.Settings.ActivePlayer.StageCompleted;
-
             // Ljud
-            _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundGame);
-            _services.Audio.Pause(Global.GlobalNamespace.SoundRef.BGSoundEnd);
-            _services.Audio.Pause(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
-            if (!_services.Audio.IsPlaying(Global.GlobalNamespace.SoundRef.BGSoundWorld))
-                _services.Audio.Play(Global.GlobalNamespace.SoundRef.BGSoundWorld);
+            _services.Audio.Stop(SoundRef.BGSoundGame);
+            _services.Audio.Pause(SoundRef.BGSoundEnd);
+            _services.Audio.Pause(SoundRef.BGSoundFinalStage);
+            if (!_services.Audio.IsPlaying(SoundRef.BGSoundWorld))
+                _services.Audio.Play(SoundRef.BGSoundWorld);
 
             if (_services.Settings.ActivePlayer.ShowEnd)
             {
@@ -71,6 +88,7 @@ namespace FrostyPlatformer.States
                 return;
             }
 
+            // Återställ spelaren en gång vid enter
             if (!_hasAccumulated)
             {
                 _hasAccumulated = true;
@@ -80,52 +98,56 @@ namespace FrostyPlatformer.States
                 context.Player.ChangeStageKnockBackReset();
             }
 
+            // Ladda världskartan om den inte redan är aktiv
             int spawn = _services.Settings.ActivePlayer.SpawnAtWorldMap;
-            var (corrX, corrY) = _services.WorldMap.GetSpawnPosition(spawn);
+            var (spawnTileX, spawnTileY) = _services.WorldMap.GetSpawnTile(
+                spawn, DefaultSpawnTileX, DefaultSpawnTileY);
 
             if (context.CurrentLevel?.Name != MapName.WorldMap)
             {
-                _services.ChangeMap(MapName.WorldMap, corrX, corrY);
+                _services.ChangeMap(MapName.WorldMap, spawnTileX, spawnTileY);
                 _services.Input.ButtonsHasGoneIdle = false;
             }
 
-            if (context.Player!.vx == 0 && context.Player.vy == 0 &&
-                (context.Player.px != corrX || context.Player.py != corrY))
+            // Snäpp till spawn-nod vid uppstart (innan spelaren rört sig)
+            if (context.Player!.vx == 0 && context.Player.vy == 0
+                && _currentNode == null && _targetNode == null)
             {
-                context.Player.vx = 0; context.Player.vy = 0;
-                context.Player.px = corrX; context.Player.py = corrY;
+                context.Player.px = spawnTileX;
+                context.Player.py = spawnTileY;
+                _currentNode = _services.WorldMap.GetCurrentNode(spawnTileX, spawnTileY);
             }
 
             _services.Input.Poll();
 
-            // Input
-            if (_services.Input.IsWindowFocused && context.Player.vx == 0 && context.Player.vy == 0)
+            // Input — enbart när spelaren är stilla och inte mitt i en rörelse
+            bool canInput = _services.Input.IsWindowFocused
+                         && context.Player.vx == 0 && context.Player.vy == 0
+                         && _targetNode == null;
+
+            if (canInput)
             {
-                if (!_services.Input.ButtonsHasGoneIdle && _services.Input.IsIdle && !_services.Input.IsAnyKeyPressed)
+                if (!_services.Input.ButtonsHasGoneIdle
+                    && _services.Input.IsIdle && !_services.Input.IsAnyKeyPressed)
                     _services.Input.ButtonsHasGoneIdle = true;
 
-                if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsUpDown)
-                    context.Player.vy = -3.0f;
-                if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsDownDown)
-                    context.Player.vy = 3.0f;
-
-                if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsRightDown)
+                if (_services.Input.ButtonsHasGoneIdle)
                 {
-                    if (_unlockAll || (_currentStage != 0 && _currentStage <= _services.Settings.ActivePlayer.StageCompleted))
-                        context.Player.vx = 3;
-                }
+                    if (_services.Input.IsRightDown)  TryStartMovement(context.Player,  1,  0);
+                    if (_services.Input.IsLeftDown)   TryStartMovement(context.Player, -1,  0);
+                    if (_services.Input.IsDownDown)   TryStartMovement(context.Player,  0,  1);
+                    if (_services.Input.IsUpDown)     TryStartMovement(context.Player,  0, -1);
 
-                if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsConfirmPressed)
-                {
-                    if (TryEnterStage(spawn, context)) return;
-                }
+                    if (_services.Input.IsConfirmPressed)
+                        if (TryEnterStage(context)) return;
 
-                if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsCancelPressed)
-                {
-                    context.MenuNavigation = Enum.MenuState.PauseMenu;
-                    _services.Input.ButtonsHasGoneIdle = false;
-                    _services.StateManager.Transition(new MenuState(_services), context);
-                    return;
+                    if (_services.Input.IsCancelPressed)
+                    {
+                        context.MenuNavigation = Enum.MenuState.PauseMenu;
+                        _services.Input.ButtonsHasGoneIdle = false;
+                        _services.StateManager.Transition(new MenuState(_services), context);
+                        return;
+                    }
                 }
             }
 
@@ -144,7 +166,6 @@ namespace FrostyPlatformer.States
                     context.CurrentLevel.Width, context.CurrentLevel.Height,
                     context.ScreenWidth, context.ScreenHeight);
 
-                // Fyll bakgrunden för områden utanför kartgränsen (t.ex. smala kartor på bred skärm).
                 _rc.FillRect(0, 0, context.ScreenWidth, context.ScreenHeight, RenderColor.Black);
 
                 foreach (var call in _services.TileRenderer.GetDrawCalls(cam, context.CurrentLevel))
@@ -159,19 +180,80 @@ namespace FrostyPlatformer.States
                 if (hero != null) hero.DrawSelf(_rc, cam.OffsetX, cam.OffsetY);
             }
 
-            string stageText = "        World Map. Stage: " +
-                               (_currentStage == 0 ? 1 : _currentStage) +
-                               "                     ";
+            // Visa nästa bana att klara (StageCompleted + 1)
+            int displayStage = _services.Settings.ActivePlayer.StageCompleted + 1;
+            string stageText = "        World Map. Stage: " + displayStage + "                     ";
             _rc.DrawText(stageText, 0, 217);
             HudRenderer.Draw(_rc, context);
         }
 
         public void Exit(GameContext context) { }
 
-        // ── Banval ───────────────────────────────────────────────────────────────
-        private bool TryEnterStage(int spawnSlot, GameContext context)
+        // ── Nod-navigation ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Försöker starta rörelse mot nästa nod i given riktning.
+        /// Blockeras om nästa nod är Locked (och _unlockAll ej satt).
+        /// </summary>
+        private void TryStartMovement(DynamicGameObject hero, int dX, int dY)
         {
-            var entry = _services.WorldMap.GetStageEntry(spawnSlot);
+            if (_currentNode == null) return;
+
+            var next = _services.WorldMap.GetNextNode(_currentNode, dX, dY);
+            if (next == null) return;
+
+            int completed = _services.Settings.ActivePlayer.StageCompleted;
+            var state     = _services.WorldMap.GetNodeState(next, completed);
+
+            if (!_unlockAll && state == NodeState.Locked) return;
+
+            hero.vx     = dX * MoveSpeed;
+            hero.vy     = dY * MoveSpeed;
+            _targetNode = next;
+        }
+
+        /// <summary>
+        /// Kontrollerar om spelaren anlänt till _targetNode.
+        /// Snäpper till exakt tile-position, uppdaterar _currentNode och sparar progression.
+        /// </summary>
+        private void UpdateNodeArrival(DynamicGameObject hero)
+        {
+            if (_targetNode == null) return;
+
+            float dist = Math.Abs(hero.px - _targetNode.TileX) + Math.Abs(hero.py - _targetNode.TileY);
+            if (dist > ArrivalThreshold) return;
+
+            hero.px      = _targetNode.TileX;
+            hero.py      = _targetNode.TileY;
+            hero.vx      = 0f;
+            hero.vy      = 0f;
+            _currentNode = _targetNode;
+            _targetNode  = null;
+
+            // Spara vilken bana-nod spelaren nådde (junctions sparas ej — ingen stage-ändring)
+            int stageIdx = _services.WorldMap.GetStageIndex(_currentNode.SubType);
+            if (stageIdx > 0)
+                _services.Settings.ActivePlayer.SpawnAtWorldMap = stageIdx;
+        }
+
+        // ── Banval ──────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Startar banan som _currentNode pekar på, om noden är nåbar.
+        /// Junction-noder och Locked-noder (utan unlockAll) ignoreras.
+        /// </summary>
+        private bool TryEnterStage(GameContext context)
+        {
+            if (_currentNode == null) return false;
+
+            int stageIdx = _services.WorldMap.GetStageIndex(_currentNode.SubType);
+            if (stageIdx < 1) return false;
+
+            int completed = _services.Settings.ActivePlayer.StageCompleted;
+            var state     = _services.WorldMap.GetNodeState(_currentNode, completed);
+            if (!_unlockAll && state == NodeState.Locked) return false;
+
+            var entry = _services.WorldMap.GetStageEntry(stageIdx);
             if (entry == null) return false;
 
             _hasAccumulated = false;
@@ -181,21 +263,23 @@ namespace FrostyPlatformer.States
             return true;
         }
 
-        // ── Objektuppdatering + kollision (ekvivalent med DisplayWorldMap loop) ──
+        // ── Objektuppdatering + kollision ───────────────────────────────────────────
+
         private void UpdateObjects(GameContext context, float elapsed)
         {
             var map = context.CurrentLevel!;
 
             foreach (var obj in context.ActiveObjects)
             {
-                if (obj.IsHero) UpdateHeroStageStop(obj, context);
+                if (obj.IsHero) UpdateNodeArrival(obj);
 
+                // Uppdatera visuellt tillstånd på overlay-objekt (stage-ikoner)
                 if (obj is DynamicCreatureOverlayWorldMap)
                 {
                     int completed = _services.Settings.ActivePlayer.StageCompleted;
-                    if (obj.Id < completed + 1)         obj.StageStatus = Enum.StageStatus.Passed;
-                    else if (obj.Id == completed + 1)   obj.StageStatus = Enum.StageStatus.Current;
-                    else                                 obj.StageStatus = Enum.StageStatus.NotPassed;
+                    if      (obj.Id < completed + 1) obj.StageStatus = Enum.StageStatus.Passed;
+                    else if (obj.Id == completed + 1) obj.StageStatus = Enum.StageStatus.Current;
+                    else                              obj.StageStatus = Enum.StageStatus.NotPassed;
                 }
 
                 float newX = obj.px + obj.vx * elapsed;
@@ -205,7 +289,7 @@ namespace FrostyPlatformer.States
                 newX = ResolveHorizontal(obj, newX, map, border);
                 newY = ResolveVertical(obj, newX, newY, map);
 
-                // Dynamisk kollision (aldrig aktuellt på världskartan i praktiken)
+                // Dynamisk kollision (sällan aktuellt på världskartan)
                 float dx = newX, dy = newY;
                 foreach (var other in context.ActiveObjects)
                 {
@@ -240,44 +324,6 @@ namespace FrostyPlatformer.States
                 obj.py = dy;
                 obj.Update(elapsed, context.Player!);
             }
-        }
-
-        private void UpdateHeroStageStop(DynamicGameObject hero, GameContext context)
-        {
-            int completed = _services.Settings.ActivePlayer.StageCompleted;
-            float p = hero.px;
-
-            if (CheckStageZone(p, GameConstants.WorldMapStage1X, _no1, completed, 0))
-            { SetStage(1, context); hero.vx = 0; }
-            else if (CheckStageZone(p, GameConstants.WorldMapStage2X, _no2, completed, 1))
-            { SetStage(2, context); hero.vx = 0; }
-            else if (CheckStageZone(p, GameConstants.WorldMapStage3X, _no3, completed, 2))
-            { SetStage(3, context); hero.vx = 0; }
-            else if (CheckStageZone(p, GameConstants.WorldMapStage4X, _no4, completed, 3))
-            { SetStage(4, context); hero.vx = 0; }
-            else if (CheckStageZone(p, GameConstants.WorldMapStage5X, _no5, completed, 4))
-            { SetStage(5, context); hero.vx = 0; }
-            else if (CheckStageZone(p, GameConstants.WorldMapStage6X, _no6, completed, 5))
-            { SetStage(6, context); hero.vx = 0; }
-            else if (CheckStageZone(p, GameConstants.WorldMapStage7X, _no7, completed, 6))
-            { SetStage(7, context); hero.vx = 0; }
-            else if (CheckStageZone(p, GameConstants.WorldMapStage8X, _no8, completed, 7))
-            { SetStage(8, context); hero.vx = 0; }
-            else if (CheckStageZone(p, GameConstants.WorldMapStage9X, _no9, completed, 8))
-            { SetStage(9, context); hero.vx = 0; }
-        }
-
-        private static bool CheckStageZone(float px, float stageX, bool noFlag, int completed, int stageIdx)
-            => (!noFlag || completed == stageIdx) &&
-               (px >= stageX && px <= stageX + GameConstants.WorldMapStageTolerance);
-
-        private void SetStage(int stage, GameContext context)
-        {
-            _no1 = stage == 1; _no2 = stage == 2; _no3 = stage == 3; _no4 = stage == 4;
-            _no5 = stage == 5; _no6 = stage == 6; _no7 = stage == 7; _no8 = stage == 8;
-            _no9 = stage == 9;
-            _services.Settings.ActivePlayer.SpawnAtWorldMap = stage;
-            _currentStage = stage;
         }
 
         private static float ResolveHorizontal(DynamicGameObject obj, float newX, Map map, float border)

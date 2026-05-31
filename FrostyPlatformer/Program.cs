@@ -18,6 +18,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using FrostyPlatformer.Engine.MonoGame;
@@ -182,7 +183,11 @@ namespace FrostyPlatformer
 
             _questSystem    = new QuestSystem(_context);
             _itemSystem     = new ItemSystem(_context);
-            _worldMapSystem = new WorldMapSystem();
+            var wmLevelObj  = Core.Aggregate.Instance.GetMapData(MapName.WorldMap);
+            var stopPoints  = wmLevelObj?.Objects
+                                  .Where(o => o.ObjectType == "StopPoint")
+                                  .ToList() ?? new List<PlacedObject>();
+            _worldMapSystem = new TiledWorldMapSystem(stopPoints);
             _saveLoadSystem = new SaveLoadSystem(
                 _context,
                 new SaveGameRepository(),

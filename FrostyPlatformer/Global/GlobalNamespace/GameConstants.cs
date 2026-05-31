@@ -84,20 +84,6 @@ namespace FrostyPlatformer.Global
         public const int  PerfectEndingHealth  = 100;    // Hälsotröskel för perfekt slut
 
 
-        // ─────────────────────────────────────────────
-        // Världskarta – stagepositioner (x-koordinater)
-        // ─────────────────────────────────────────────
-        public const float WorldMapStage1X  = 3.0f;
-        public const float WorldMapStage2X  = 6.0f;
-        public const float WorldMapStage3X  = 9.0f;
-        public const float WorldMapStage4X  = 12.0f;
-        public const float WorldMapStage5X  = 15.0f;
-        public const float WorldMapStage6X  = 18.0f;
-        public const float WorldMapStage7X  = 21.0f;
-        public const float WorldMapStage8X  = 24.0f;
-        public const float WorldMapStage9X  = 27.0f;
-        public const float WorldMapStageTolerance = 0.1f; // Tolerans för positionsjämförelse
-
 
         // ─────────────────────────────────────────────
         // Hastighetsbegränsning (velocity clamp)

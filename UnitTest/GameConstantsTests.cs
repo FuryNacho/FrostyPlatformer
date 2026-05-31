@@ -112,31 +112,6 @@ namespace UnitTest
         }
 
         // ─────────────────────────────────────────────
-        // Världskarta
-        // ─────────────────────────────────────────────
-
-        [TestMethod]
-        public void WorldMapStages_AreEvenlySpaced()
-        {
-            float spacing = GameConstants.WorldMapStage2X - GameConstants.WorldMapStage1X;
-
-            Assert.AreEqual(GameConstants.WorldMapStage3X - GameConstants.WorldMapStage2X, spacing, 0.01f);
-            Assert.AreEqual(GameConstants.WorldMapStage4X - GameConstants.WorldMapStage3X, spacing, 0.01f);
-            Assert.AreEqual(GameConstants.WorldMapStage5X - GameConstants.WorldMapStage4X, spacing, 0.01f);
-            Assert.AreEqual(GameConstants.WorldMapStage6X - GameConstants.WorldMapStage5X, spacing, 0.01f);
-            Assert.AreEqual(GameConstants.WorldMapStage7X - GameConstants.WorldMapStage6X, spacing, 0.01f);
-            Assert.AreEqual(GameConstants.WorldMapStage8X - GameConstants.WorldMapStage7X, spacing, 0.01f);
-        }
-
-        [TestMethod]
-        public void WorldMapStageTolerance_IsPositiveAndSmall()
-        {
-            Assert.IsTrue(GameConstants.WorldMapStageTolerance > 0f);
-            Assert.IsTrue(GameConstants.WorldMapStageTolerance < 1f,
-                "Toleransen ska vara mindre än en tile-bredd");
-        }
-
-        // ─────────────────────────────────────────────
         // Spellogik
         // ─────────────────────────────────────────────
 
