@@ -834,45 +834,6 @@ namespace FrostyPlatformer.Models.Objects
         }
     }
 
-    public class DynamicCreatureOverlayWorldMap : Creature
-    {
-
-        //public DynamicCreatureOverlayWorldMap() : base("overlayworldmap", Core.Aggregate.Instance.GetSprite("worldmap"))
-        public DynamicCreatureOverlayWorldMap() : base("overlayworldmap", SpriteId.WorldMapTileSheet)
-        {
-            Friendly = true;
-            Health = 100;
-            MaxHealth = 100;
-            SolidVsDynamic = false;
-            SolidVsMap = true;
-            DamageGiven = 0;
-        }
-
-        
-
-        public override void DrawSelf(IRenderContext gfx, float ox, float oy)
-        {
-            int sheetOffsetX = 0 * 16;
-            int sheetOffsetY = 1 * 16;
-
-            if (StageStatus == Enum.StageStatus.NotPassed)
-            {
-                sheetOffsetX = 2 * 16;
-            }
-            else if (StageStatus == Enum.StageStatus.Current)
-            {
-                sheetOffsetX = 1 * 16;
-            }
-
-            int screenX = ToPixel(px, ox);
-            int screenY = ToPixel(py, oy);
-            gfx.DrawPartialSprite(SpriteId, screenX, screenY, sheetOffsetX, sheetOffsetY, 16, 32);
-        }
-
-        // Passivt overlagobjekt — inget autonomt beteende.
-        public override void Behaviour(float fElapsedTime, DynamicGameObject? player = null) { }
-    }
-
     public class DynamicCreatureOverlay : Creature
     {
 

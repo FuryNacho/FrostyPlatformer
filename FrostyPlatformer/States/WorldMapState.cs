@@ -273,15 +273,6 @@ namespace FrostyPlatformer.States
             {
                 if (obj.IsHero) UpdateNodeArrival(obj);
 
-                // Uppdatera visuellt tillstånd på overlay-objekt (stage-ikoner)
-                if (obj is DynamicCreatureOverlayWorldMap)
-                {
-                    int completed = _services.Settings.ActivePlayer.StageCompleted;
-                    if      (obj.Id < completed + 1) obj.StageStatus = Enum.StageStatus.Passed;
-                    else if (obj.Id == completed + 1) obj.StageStatus = Enum.StageStatus.Current;
-                    else                              obj.StageStatus = Enum.StageStatus.NotPassed;
-                }
-
                 float newX = obj.px + obj.vx * elapsed;
                 float newY = obj.py + obj.vy * elapsed;
 

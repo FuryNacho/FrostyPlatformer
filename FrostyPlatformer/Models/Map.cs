@@ -109,7 +109,7 @@ namespace FrostyPlatformer.Models
             this.CreateObj = new CreateObj()
             {
                 levelObj = assets.GetMapData(MapName.WorldMap),
-                spritePath = assets.GetSpritePath(SpriteRef.TileSheetWorldMap), // tilesheetwm //tilesheetone
+                spritePath = assets.GetSpritePath(SpriteRef.TileSheetWorldMap), // tilesheetwm
                 name = MapName.WorldMap,
             };
 
@@ -123,34 +123,9 @@ namespace FrostyPlatformer.Models
 
         public override bool PopulateDynamics(List<DynamicGameObject> ListDynamicObjs)
         {
-            // Läs stoppunkter direkt från kartdata — inga hårdkodade positioner.
-            // Varje StopPoint med icke-tom SubType (dvs en faktisk bana, inte korsning)
-            // får ett overlay-objekt placerat på exakt den tile-positionen.
-            var objects = CreateObj.levelObj?.Objects ?? new List<PlacedObject>();
-
-            foreach (var obj in objects)
-            {
-                if (obj.ObjectType != "StopPoint" || string.IsNullOrEmpty(obj.SubType))
-                    continue;
-
-                int id = obj.SubType switch
-                {
-                    "mapone"   => 1, "maptwo"   => 2, "mapthree" => 3,
-                    "mapfour"  => 4, "mapfive"  => 5, "mapsix"   => 6,
-                    "mapseven" => 7, "mapeight" => 8, "mapnine"  => 9,
-                    _          => 0
-                };
-                if (id == 0) continue;
-
-                var overlay = new DynamicCreatureOverlayWorldMap();
-                ListDynamicObjs.Add(overlay);
-                overlay.px          = obj.TileX;
-                overlay.py          = obj.TileY;
-                overlay.Name        = "overlayworldmap";
-                overlay.Id          = id;
-                overlay.StageStatus = Enum.StageStatus.NotPassed;
-            }
-
+            // Världskartan renderas som vilken bana som helst: bara tile-lagret.
+            // Stoppunkter lever i kartdatan och tolkas av WorldMap-tjänsten för
+            // nod-navigeringen — de behöver inga dynamiska objekt här.
             return true;
         }
 
