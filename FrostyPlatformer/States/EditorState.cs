@@ -583,7 +583,11 @@ namespace FrostyPlatformer.States
         {
             if (_levelObj == null) return;
 
-            if (!_levelObj.HasSpawn)
+            // Världskartan har ingen traditionell spawn — positionen styrs av SpawnAtWorldMap
+            // i save-datan och WorldMapSystem.GetSpawnPosition(). Spawn-kravet gäller bara
+            // vanliga banor där hjälten faktiskt spawnar på en specifik tile.
+            bool isWorldMap = _mapId == MapName.WorldMap;
+            if (!isWorldMap && !_levelObj.HasSpawn)
             {
                 ShowMessage("No spawn set — place spawn (G) before saving!");
                 return;
@@ -820,12 +824,25 @@ namespace FrostyPlatformer.States
         /// <summary>
         /// Öppnar slot-pickern med de 7 fasta användarkartorna.
         /// Slottar utan sparad fil visas som tomma.
+        /// I DevMode visas världskartan som en extra rad överst.
         /// </summary>
         private void OpenMapPicker()
         {
             _pickerEntries = new List<MapPickerEntry>();
             var existing   = new System.Collections.Generic.HashSet<string>(
                 _services.UserMaps.GetAvailableMapIds());
+
+            // DevMode: världskarta-rad överst — särskiljer sig tydligt från slot-filerna
+            if (DevMode)
+            {
+                bool wmExists = existing.Contains(MapName.WorldMap);
+                _pickerEntries.Add(new MapPickerEntry
+                {
+                    Label   = wmExists ? $"World Map  [{MapName.WorldMap}]" : "World Map  [Empty]",
+                    SlotId  = MapName.WorldMap,
+                    IsEmpty = !wmExists
+                });
+            }
 
             for (int i = 1; i <= MaxUserSlots; i++)
             {
