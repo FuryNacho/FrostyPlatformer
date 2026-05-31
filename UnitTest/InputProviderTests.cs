@@ -164,6 +164,19 @@ namespace UnitTest
         }
 
         [TestMethod]
+        public void IsEditorToggleStopPoint_IsFalse_ByDefault()
+        {
+            Assert.IsFalse(_input.IsEditorToggleStopPoint);
+        }
+
+        [TestMethod]
+        public void IsEditorToggleStopPoint_CanBeSimulated()
+        {
+            _input.IsEditorToggleStopPoint = true;
+            Assert.IsTrue(_input.IsEditorToggleStopPoint);
+        }
+
+        [TestMethod]
         public void IsEditorNew_IsFalse_ByDefault()
         {
             Assert.IsFalse(_input.IsEditorNew);

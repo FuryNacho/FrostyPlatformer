@@ -103,6 +103,12 @@ namespace FrostyPlatformer.Systems
         bool IsEditorToggleEnemy { get; }
 
         /// <summary>
+        /// True den frame som W-tangenten trycks ned. Används av EditorState (DevMode)
+        /// för att växla till stoppunkt-redigeringsläge för världskartan.
+        /// </summary>
+        bool IsEditorToggleStopPoint { get; }
+
+        /// <summary>
         /// True den frame som Ctrl+S trycks ned. Används av EditorState för att spara kartan.
         /// </summary>
         bool IsEditorSave { get; }

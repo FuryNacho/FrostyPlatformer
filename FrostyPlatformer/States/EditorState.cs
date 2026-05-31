@@ -32,10 +32,16 @@ namespace FrostyPlatformer.States
     /// mönster som alla andra states. Escape leder tillbaka till MenuState.
     /// </remarks>
     /// <summary>Redigeringsläge i editorn — styr vad musklick gör.</summary>
-    internal enum EditorMode { Tiles, Collision, Spawn, Goal, Pickup, Enemy }
+    internal enum EditorMode { Tiles, Collision, Spawn, Goal, Pickup, Enemy, StopPoint }
 
     internal sealed class EditorState : IGameState
     {
+        // ── Developer-gate ───────────────────────────────────────────────────────
+        // Sätt till true för att aktivera världskarte-editering (StopPoint-läge +
+        // tilesheetwm). Dolt för vanliga spelare — editorn beter sig normalt när false.
+        // static readonly (inte const) förhindrar CS0162-varning för gatad kod.
+        private static readonly bool DevMode = false;
+
         // ── Kamerakonstanter ────────────────────────────────────────────────────
         private const float ScrollSpeed = 8.0f;
 
@@ -61,6 +67,8 @@ namespace FrostyPlatformer.States
             new RenderColor(220, 60, 60, 210);
         private static readonly RenderColor MapBoundsColor =
             new RenderColor(255, 200, 0, 230);
+        private static readonly RenderColor StopPointMarkerColor =
+            new RenderColor(180, 80, 220, 220);
 
         private readonly GameServices   _services;
         private readonly IRenderContext _rc;
@@ -76,9 +84,18 @@ namespace FrostyPlatformer.States
         private bool                _undoMode;       // toggle via U — LMB raderar istället för målar
         private int                 _selectedPickupSubType;
         private int                 _selectedEnemySubType;
+        private int                 _selectedStopPointSubType;
 
         private static readonly string[] PickupSubTypes = { "Energy" };
         private static readonly string[] EnemySubTypes  = { "Penguin", "Walrus", "Frost" };
+        // Tom sträng = korsning (ingen bana). Ordningen matchar den naturliga banlistan.
+        private static readonly string[] StopPointSubTypes =
+        {
+            "",
+            MapName.MapOne, MapName.MapTwo,   MapName.MapThree,
+            MapName.MapFour, MapName.MapFive,  MapName.MapSix,
+            MapName.MapSeven, MapName.MapEight, MapName.MapNine
+        };
 
         // ── HUD-meddelanden ─────────────────────────────────────────────────────
         private string _hudMessage     = "";
@@ -271,6 +288,18 @@ namespace FrostyPlatformer.States
                     }
                 }
             }
+            if (DevMode && _services.Input.IsEditorToggleStopPoint)
+            {
+                if (_mode != EditorMode.StopPoint)
+                {
+                    _mode = EditorMode.StopPoint;
+                    _selectedStopPointSubType = 0;
+                }
+                else
+                {
+                    _mode = EditorMode.Tiles;
+                }
+            }
 
             if (_mode == EditorMode.Pickup && PickupSubTypes.Length > 1)
             {
@@ -278,6 +307,13 @@ namespace FrostyPlatformer.States
                     _selectedPickupSubType = (_selectedPickupSubType - 1 + PickupSubTypes.Length) % PickupSubTypes.Length;
                 if (_services.Input.IsRightPressed)
                     _selectedPickupSubType = (_selectedPickupSubType + 1) % PickupSubTypes.Length;
+            }
+            if (_mode == EditorMode.StopPoint)
+            {
+                if (_services.Input.IsLeftPressed)
+                    _selectedStopPointSubType = (_selectedStopPointSubType - 1 + StopPointSubTypes.Length) % StopPointSubTypes.Length;
+                if (_services.Input.IsRightPressed)
+                    _selectedStopPointSubType = (_selectedStopPointSubType + 1) % StopPointSubTypes.Length;
             }
             if (_services.Input.IsEditorUndoPressed)
                 _undoMode = !_undoMode;
@@ -296,6 +332,7 @@ namespace FrostyPlatformer.States
                 else if (_mode == EditorMode.Spawn)     HandleSpawnPlacement(_editorCam);
                 else if (_mode == EditorMode.Goal)      HandleGoalPlacement(_editorCam);
                 else if (_mode == EditorMode.Pickup)    HandlePickupPlacement(_editorCam);
+                else if (_mode == EditorMode.StopPoint) HandleStopPointPlacement(_editorCam);
                 else                                    HandleEnemyPlacement(_editorCam);
             }
             else if (_mode == EditorMode.Tiles)
@@ -351,6 +388,7 @@ namespace FrostyPlatformer.States
                 DrawGoalMarker(_editorCam, mapAreaWidth);
             DrawPickupMarkers(_editorCam, mapAreaWidth);
             DrawEnemyMarkers(_editorCam, mapAreaWidth);
+            if (DevMode) DrawStopPointMarkers(_editorCam, mapAreaWidth);
 
             bool mouseInMap = _services.Input.MouseX < mapAreaWidth;
             if (mouseInMap)
@@ -703,6 +741,39 @@ namespace FrostyPlatformer.States
             _isDirty = true;
         }
 
+        /// <summary>
+        /// Placerar en stoppunkt (LMB) eller tar bort den på tilen (RMB).
+        /// En stoppunkt per tile — befintlig ersätts vid ny placering.
+        /// SubType väljs med vänster/höger piltangent; tom sträng = korsning.
+        /// </summary>
+        private void HandleStopPointPlacement(CameraView cam)
+        {
+            bool clearPressed = _services.Input.IsMouseRightPressed
+                             || (_undoMode && _services.Input.IsMouseLeftPressed);
+            bool placePressed = !_undoMode && _services.Input.IsMouseLeftPressed;
+            if (!placePressed && !clearPressed) return;
+
+            var (tx, ty) = EditorMath.ScreenToTile(
+                _services.Input.MouseX, _services.Input.MouseY, cam);
+
+            if (tx < 0 || tx >= _mapAdapter!.Width || ty < 0 || ty >= _mapAdapter!.Height) return;
+
+            _levelObj!.Objects.RemoveAll(
+                o => o.ObjectType == "StopPoint" && o.TileX == tx && o.TileY == ty);
+
+            if (placePressed)
+            {
+                _levelObj.Objects.Add(new PlacedObject
+                {
+                    ObjectType = "StopPoint",
+                    SubType    = StopPointSubTypes[_selectedStopPointSubType],
+                    TileX      = tx,
+                    TileY      = ty
+                });
+            }
+            _isDirty = true;
+        }
+
         // ── Kartladdning ─────────────────────────────────────────────────────────
 
         /// <summary>
@@ -732,10 +803,14 @@ namespace FrostyPlatformer.States
 
         private void RegisterTilesheet(string tilesetSource)
         {
-            // Editorn visar alltid den transparenta custom-tileseeten, oavsett vad kartan
+            // I DevMode och för worldmap används världskartans tilesheet (tilesheetwm).
+            // Annars visas alltid den transparenta custom-tileseeten, oavsett vad kartan
             // har sparat som TilesetSource. Transparensen krävs för att parallax-lagret
             // ska synas bakom tiles när banan spelas.
-            string? path = _services.Assets.GetSpritePath(SpriteRef.TileSheetCustom);
+            string spriteRef = DevMode && _mapId == MapName.WorldMap
+                ? SpriteRef.TileSheetWorldMap
+                : SpriteRef.TileSheetCustom;
+            string? path = _services.Assets.GetSpritePath(spriteRef);
             if (path != null)
                 _rc.RegisterSprite(SpriteId.MapTileSheet, path);
         }
@@ -1123,6 +1198,43 @@ namespace FrostyPlatformer.States
             }
         }
 
+        /// <summary>
+        /// Ritar en lila fylld ruta med kort label för varje stoppunkt på världskartan.
+        /// Visas bara i DevMode. Label: "JX" för korsning, siffra för bana (1–9).
+        /// </summary>
+        private void DrawStopPointMarkers(CameraView cam, int mapAreaWidth)
+        {
+            int ts     = GameConstants.TileSize;
+            int margin = 1;
+            var c      = StopPointMarkerColor;
+
+            foreach (var obj in _levelObj!.Objects)
+            {
+                if (obj.ObjectType != "StopPoint") continue;
+
+                var (sx, sy) = EditorMath.TileToScreen(obj.TileX, obj.TileY, cam);
+                if (sx >= mapAreaWidth) continue;
+
+                _rc.FillRect(sx + margin, sy + margin, ts - margin * 2, ts - margin * 2, c);
+                _rc.DrawText(StopPointLabel(obj.SubType), sx + margin + 2, sy + margin + 2);
+            }
+        }
+
+        private static string StopPointLabel(string subType) => subType switch
+        {
+            ""                => "JX",
+            MapName.MapOne    => "1",
+            MapName.MapTwo    => "2",
+            MapName.MapThree  => "3",
+            MapName.MapFour   => "4",
+            MapName.MapFive   => "5",
+            MapName.MapSix    => "6",
+            MapName.MapSeven  => "7",
+            MapName.MapEight  => "8",
+            MapName.MapNine   => "9",
+            _                 => "?"
+        };
+
         private void DrawCursor(int tileX, int tileY, CameraView cam)
         {
             var (cx, cy) = EditorMath.TileToScreen(tileX, tileY, cam);
@@ -1148,12 +1260,13 @@ namespace FrostyPlatformer.States
 
             string modeLabel = _mode switch
             {
-                EditorMode.Collision => "COL",
-                EditorMode.Spawn     => "SPAWN",
-                EditorMode.Goal      => "GOAL",
-                EditorMode.Pickup    => "ITEM",
-                EditorMode.Enemy     => "ENEMY",
-                _                    => "TILES"
+                EditorMode.Collision  => "COL",
+                EditorMode.Spawn      => "SPAWN",
+                EditorMode.Goal       => "GOAL",
+                EditorMode.Pickup     => "ITEM",
+                EditorMode.Enemy      => "ENEMY",
+                EditorMode.StopPoint  => "STOP",
+                _                     => "TILES"
             };
 
             string tileInfo = hoverTileX >= 0
@@ -1172,30 +1285,38 @@ namespace FrostyPlatformer.States
             int pickups = _levelObj.Objects.FindAll(o => o.ObjectType == "Pickup").Count;
             int enemies = _levelObj.Objects.FindAll(o => o.ObjectType == "Enemy").Count;
 
+            int stopPoints = _levelObj.Objects.FindAll(o => o.ObjectType == "StopPoint").Count;
+            string stopSubType = StopPointSubTypes[_selectedStopPointSubType];
+            string stopLabel   = stopSubType.Length > 0 ? stopSubType : "junction";
+
             string modeInfo = _mode switch
             {
-                EditorMode.Spawn  => spawnInfo,
-                EditorMode.Goal   => goalInfo,
-                EditorMode.Pickup => $"p:{pickups}",
-                EditorMode.Enemy  => $"e:{enemies} {EnemySubTypes[_selectedEnemySubType]}",
-                _                 => spawnInfo   // Tiles + Collision
+                EditorMode.Spawn      => spawnInfo,
+                EditorMode.Goal       => goalInfo,
+                EditorMode.Pickup     => $"p:{pickups}",
+                EditorMode.Enemy      => $"e:{enemies} {EnemySubTypes[_selectedEnemySubType]}",
+                EditorMode.StopPoint  => $"sp:{stopPoints} [{stopLabel}]",
+                _                     => spawnInfo   // Tiles + Collision
             };
 
             string mouseCtrl = _mode switch
             {
-                EditorMode.Collision => "LMB=solid RMB=clr",
-                EditorMode.Spawn     => "LMB=set RMB=clr",
-                EditorMode.Goal      => "LMB=set RMB=clr",
-                EditorMode.Pickup    => "LMB=add RMB=del",
-                EditorMode.Enemy     => "LMB=add RMB=del",
-                _                    => "LMB=tile RMB=del"
+                EditorMode.Collision  => "LMB=solid RMB=clr",
+                EditorMode.Spawn      => "LMB=set RMB=clr",
+                EditorMode.Goal       => "LMB=set RMB=clr",
+                EditorMode.Pickup     => "LMB=add RMB=del",
+                EditorMode.Enemy      => "LMB=add RMB=del",
+                EditorMode.StopPoint  => "LMB=add RMB=del  </> subtype",
+                _                     => "LMB=tile RMB=del"
             };
 
             bool   undoActive = _undoMode;
             string dirtyMark  = _isDirty ? "*" : "";
             string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  b:{_selectedTileId}";
             string row2 = $"{tileInfo}  {modeInfo}  {mouseCtrl}";
-            string row3 = "C=col G=spawn T=goal I=item E=enemy U=undo";
+            string row3 = DevMode
+                ? "C=col G=spawn T=goal I=item E=enemy W=stop U=undo"
+                : "C=col G=spawn T=goal I=item E=enemy U=undo";
             string row4 = undoActive ? "[UNDO MODE - LMB erases]" : "L=maps  Ctrl+S=save  F5=preview";
 
             const int hudHeight = 44;
