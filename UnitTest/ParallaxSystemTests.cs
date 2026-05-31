@@ -75,6 +75,64 @@ namespace UnitTest
                 "Okänt kartnamn ska returnera null.");
 
         // ─────────────────────────────────────────────
+        // SeasonHelper.FromTilesetSource
+        // ─────────────────────────────────────────────
+
+        [TestMethod]
+        public void FromTilesetSource_Spring_ReturnsSpring()
+            => Assert.AreEqual(Season.Spring, SeasonHelper.FromTilesetSource("tilesheetspring.tsx"));
+
+        [TestMethod]
+        public void FromTilesetSource_Summer_ReturnsSummer()
+            => Assert.AreEqual(Season.Summer, SeasonHelper.FromTilesetSource("tilesheetsummer.tsx"));
+
+        [TestMethod]
+        public void FromTilesetSource_Fall_ReturnsFall()
+            => Assert.AreEqual(Season.Fall, SeasonHelper.FromTilesetSource("tilesheetfall.tsx"));
+
+        [TestMethod]
+        public void FromTilesetSource_Winter_ReturnsWinter()
+            => Assert.AreEqual(Season.Winter, SeasonHelper.FromTilesetSource("tilesheetwinter.tsx"));
+
+        [TestMethod]
+        public void FromTilesetSource_Custom_ReturnsCustom()
+            => Assert.AreEqual(Season.Custom, SeasonHelper.FromTilesetSource("tilesheetcustom.tsx"));
+
+        [TestMethod]
+        public void FromTilesetSource_UnknownOrNull_FallsBackToCustom()
+        {
+            Assert.AreEqual(Season.Custom, SeasonHelper.FromTilesetSource("nonsense.tsx"));
+            Assert.AreEqual(Season.Custom, SeasonHelper.FromTilesetSource(null));
+        }
+
+        [TestMethod]
+        public void FromTilesetSource_IsCaseInsensitiveAndTrims()
+            => Assert.AreEqual(Season.Winter, SeasonHelper.FromTilesetSource("  TileSheetWinter.TSX  "));
+
+        // ─────────────────────────────────────────────
+        // SpriteRef.TileSheetForTileset
+        // ─────────────────────────────────────────────
+
+        [TestMethod]
+        public void TileSheetForTileset_Spring_ReturnsSpringSheet()
+            => Assert.AreEqual(SpriteRef.TileSheetSpring, SpriteRef.TileSheetForTileset("tilesheetspring.tsx"));
+
+        [TestMethod]
+        public void TileSheetForTileset_Winter_ReturnsWinterSheet()
+            => Assert.AreEqual(SpriteRef.TileSheetWinter, SpriteRef.TileSheetForTileset("tilesheetwinter.tsx"));
+
+        [TestMethod]
+        public void TileSheetForTileset_Custom_ReturnsCustomSheet()
+            => Assert.AreEqual(SpriteRef.TileSheetCustom, SpriteRef.TileSheetForTileset("tilesheetcustom.tsx"));
+
+        [TestMethod]
+        public void TileSheetForTileset_UnknownOrNull_FallsBackToCustomSheet()
+        {
+            Assert.AreEqual(SpriteRef.TileSheetCustom, SpriteRef.TileSheetForTileset("nonsense.tsx"));
+            Assert.AreEqual(SpriteRef.TileSheetCustom, SpriteRef.TileSheetForTileset(null));
+        }
+
+        // ─────────────────────────────────────────────
         // ParallaxSystem — inget lager innan SetSeason
         // ─────────────────────────────────────────────
 

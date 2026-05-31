@@ -21,6 +21,12 @@ namespace FrostyPlatformer.Models
         public int Height { get; set; }
         public string Name { get; set; }
         public string? SpritePath { get; set; }
+
+        /// <summary>
+        /// Explicit årstid för parallax-bakgrunden. Sätts av användarbanor utifrån
+        /// vald tileset. Null för inbyggda banor — då härleds årstiden ur kartnamnet.
+        /// </summary>
+        public Season? MapSeason { get; set; }
         /// <summary>
         /// Plural for index
         /// </summary>

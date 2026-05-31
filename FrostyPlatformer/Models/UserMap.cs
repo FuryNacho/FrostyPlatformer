@@ -48,8 +48,8 @@ namespace FrostyPlatformer.Models
             ItemFactory  = new ItemFactory();
             _level       = level;
 
-            string  assetName  = level.TilesetSource.Replace(".tsx", "");
-            string? spritePath = assets.GetSpritePath(assetName);
+            string? spritePath = assets.GetSpritePath(SpriteRef.TileSheetForTileset(level.TilesetSource));
+            MapSeason = SeasonHelper.FromTilesetSource(level.TilesetSource);
 
             Create(new CreateObj
             {

@@ -55,5 +55,23 @@ namespace FrostyPlatformer.Global.GlobalNamespace
             _ when mapName != null && mapName.StartsWith("slot")            => Season.Custom,
             _                                                                => null,
         };
+
+        /// <summary>
+        /// Returnerar årstiden för en kartas valda tileset (.tsx-filnamn).
+        /// Används för användarbanor där parallaxen ska matcha vald tilesheet,
+        /// inte kartnamnet. Okänd källa faller tillbaka på <see cref="Season.Custom"/>.
+        /// </summary>
+        public static Season FromTilesetSource(string? tilesetSource)
+        {
+            string key = (tilesetSource ?? "").Trim().ToLowerInvariant().Replace(".tsx", "");
+            return key switch
+            {
+                "tilesheetspring" => Season.Spring,
+                "tilesheetsummer" => Season.Summer,
+                "tilesheetfall"   => Season.Fall,
+                "tilesheetwinter" => Season.Winter,
+                _                 => Season.Custom,
+            };
+        }
     }
 }

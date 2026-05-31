@@ -140,7 +140,8 @@ namespace FrostyPlatformer.States
         private static readonly string[] KnownTilesets =
         {
             "tilesheetspring.tsx", "tilesheetsummer.tsx",
-            "tilesheetfall.tsx",   "tilesheetwinter.tsx"
+            "tilesheetfall.tsx",   "tilesheetwinter.tsx",
+            "tilesheetcustom.tsx"
         };
 
         /// <summary>Skapar ett nytt EditorState.</summary>
@@ -807,13 +808,12 @@ namespace FrostyPlatformer.States
 
         private void RegisterTilesheet(string tilesetSource)
         {
-            // I DevMode och för worldmap används världskartans tilesheet (tilesheetwm).
-            // Annars visas alltid den transparenta custom-tileseeten, oavsett vad kartan
-            // har sparat som TilesetSource. Transparensen krävs för att parallax-lagret
-            // ska synas bakom tiles när banan spelas.
+            // Världskartan i DevMode använder sin egen tilesheet (tilesheetwm). Övriga
+            // kartor använder den transparenta tilesheet som matchar vald TilesetSource —
+            // transparensen krävs för att parallax-lagret ska synas bakom tiles vid spel.
             string spriteRef = DevMode && _mapId == MapName.WorldMap
                 ? SpriteRef.TileSheetWorldMap
-                : SpriteRef.TileSheetCustom;
+                : SpriteRef.TileSheetForTileset(tilesetSource);
             string? path = _services.Assets.GetSpritePath(spriteRef);
             if (path != null)
                 _rc.RegisterSprite(SpriteId.MapTileSheet, path);

@@ -192,9 +192,9 @@ namespace FrostyPlatformer.States
 
         private void RegisterTilesheet(string tilesetSource)
         {
-            // Användarbanor använder alltid den transparenta custom-tileseeten
-            // så att parallax-bakgrunden syns bakom tiles.
-            string? path = _services.Assets.GetSpritePath(SpriteRef.TileSheetCustom);
+            // Använd den transparenta tilesheet som matchar kartans valda tileset
+            // så att rätt parallax-bakgrund syns bakom tiles.
+            string? path = _services.Assets.GetSpritePath(SpriteRef.TileSheetForTileset(tilesetSource));
             if (path != null)
                 _rc.RegisterSprite(SpriteId.MapTileSheet, path);
         }

@@ -1,3 +1,4 @@
+#nullable enable
 namespace FrostyPlatformer.Global.GlobalNamespace
 {
     /// <summary>
@@ -20,6 +21,24 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public static readonly string TileSheetWinter  = UseTransparentTileSheets ? "tilesheet_transparent_winter"  : "tilesheetwinter";
         public const string TileSheetWorldMap = "tilesheetwm";
         public const string TileSheetCustom   = "tilesheet_transparent_Custom";
+
+        /// <summary>
+        /// Mappar en kartas TilesetSource (.tsx-filnamn) till rätt transparenta
+        /// tilesheet-sprite. Okänd eller saknad källa faller tillbaka på custom-tileseeten.
+        /// </summary>
+        public static string TileSheetForTileset(string? tilesetSource)
+        {
+            string key = (tilesetSource ?? "").Trim().ToLowerInvariant().Replace(".tsx", "");
+            return key switch
+            {
+                "tilesheetspring" => TileSheetSpring,
+                "tilesheetsummer" => TileSheetSummer,
+                "tilesheetfall"   => TileSheetFall,
+                "tilesheetwinter" => TileSheetWinter,
+                "tilesheetcustom" => TileSheetCustom,
+                _                 => TileSheetCustom,
+            };
+        }
 
         // Karaktärer och UI
         public const string Font  = "font";

@@ -66,9 +66,11 @@ namespace FrostyPlatformer.States
         {
             _services.ClearSwitchedState();
 
-            // Välj parallax-bakgrund för den aktuella kartans årstid.
-            // Världskartan och okända kartor returnerar null → inga lager ritas.
-            var season = SeasonHelper.FromMapName(context.CurrentLevel?.Name);
+            // Välj parallax-bakgrund för den aktuella kartans årstid. Användarbanor
+            // bär sin årstid explicit (utifrån vald tileset); inbyggda banor härleds
+            // ur kartnamnet. Världskartan och okända kartor → null → inga lager ritas.
+            var season = context.CurrentLevel?.MapSeason
+                         ?? SeasonHelper.FromMapName(context.CurrentLevel?.Name);
             if (season.HasValue)
                 _parallax.SetSeason(season.Value);
 
