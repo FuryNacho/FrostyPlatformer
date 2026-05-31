@@ -123,83 +123,33 @@ namespace FrostyPlatformer.Models
 
         public override bool PopulateDynamics(List<DynamicGameObject> ListDynamicObjs)
         {
+            // Läs stoppunkter direkt från kartdata — inga hårdkodade positioner.
+            // Varje StopPoint med icke-tom SubType (dvs en faktisk bana, inte korsning)
+            // får ett overlay-objekt placerat på exakt den tile-positionen.
+            var objects = CreateObj.levelObj?.Objects ?? new List<PlacedObject>();
 
-            //Overlay
-            #region overlay
-            DynamicGameObject overlay1 = new DynamicCreatureOverlayWorldMap();
-            ListDynamicObjs.Add(overlay1);
-            overlay1.px = 3;
-            overlay1.py = 8;
-            overlay1.Name = "overlayworldmap";
-            overlay1.Id = 1;
-            overlay1.StageStatus = Enum.StageStatus.NotPassed;
+            foreach (var obj in objects)
+            {
+                if (obj.ObjectType != "StopPoint" || string.IsNullOrEmpty(obj.SubType))
+                    continue;
 
-            DynamicGameObject overlay2 = new DynamicCreatureOverlayWorldMap();
-            ListDynamicObjs.Add(overlay2);
-            overlay2.px = 6;
-            overlay2.py = 8;
-            overlay2.Name = "overlayworldmap";
-            overlay2.Id = 2;
-            overlay2.StageStatus = Enum.StageStatus.NotPassed;
+                int id = obj.SubType switch
+                {
+                    "mapone"   => 1, "maptwo"   => 2, "mapthree" => 3,
+                    "mapfour"  => 4, "mapfive"  => 5, "mapsix"   => 6,
+                    "mapseven" => 7, "mapeight" => 8, "mapnine"  => 9,
+                    _          => 0
+                };
+                if (id == 0) continue;
 
-            DynamicGameObject overlay3 = new DynamicCreatureOverlayWorldMap();
-            ListDynamicObjs.Add(overlay3);
-            overlay3.px = 9;
-            overlay3.py = 8;
-            overlay3.Name = "overlayworldmap";
-            overlay3.Id = 3;
-            overlay3.StageStatus = Enum.StageStatus.NotPassed;
-
-            DynamicGameObject overlay4 = new DynamicCreatureOverlayWorldMap();
-            ListDynamicObjs.Add(overlay4);
-            overlay4.px = 12;
-            overlay4.py = 8;
-            overlay4.Name = "overlayworldmap";
-            overlay4.Id = 4;
-            overlay4.StageStatus = Enum.StageStatus.NotPassed;
-
-            DynamicGameObject overlay5 = new DynamicCreatureOverlayWorldMap();
-            ListDynamicObjs.Add(overlay5);
-            overlay5.px = 15;
-            overlay5.py = 8;
-            overlay5.Name = "overlayworldmap";
-            overlay5.Id = 5;
-            overlay5.StageStatus = Enum.StageStatus.NotPassed;
-
-            DynamicGameObject overlay6 = new DynamicCreatureOverlayWorldMap();
-            ListDynamicObjs.Add(overlay6);
-            overlay6.px = 18;
-            overlay6.py = 8;
-            overlay6.Name = "overlayworldmap";
-            overlay6.Id = 6;
-            overlay6.StageStatus = Enum.StageStatus.NotPassed;
-
-            DynamicGameObject overlay7 = new DynamicCreatureOverlayWorldMap();
-            ListDynamicObjs.Add(overlay7);
-            overlay7.px = 21;
-            overlay7.py = 8;
-            overlay7.Name = "overlayworldmap";
-            overlay7.Id = 7;
-            overlay7.StageStatus = Enum.StageStatus.NotPassed;
-
-            DynamicGameObject overlay8 = new DynamicCreatureOverlayWorldMap();
-            ListDynamicObjs.Add(overlay8);
-            overlay8.px = 24;
-            overlay8.py = 8;
-            overlay8.Name = "overlayworldmap";
-            overlay8.Id = 8;
-            overlay8.StageStatus = Enum.StageStatus.NotPassed;
-
-            DynamicGameObject overlay9 = new DynamicCreatureOverlayWorldMap();
-            ListDynamicObjs.Add(overlay9);
-            overlay9.px = 27;
-            overlay9.py = 8;
-            overlay9.Name = "overlayworldmap";
-            overlay9.Id = 9;
-            overlay9.StageStatus = Enum.StageStatus.NotPassed;
-
-            #endregion
-
+                var overlay = new DynamicCreatureOverlayWorldMap();
+                ListDynamicObjs.Add(overlay);
+                overlay.px          = obj.TileX;
+                overlay.py          = obj.TileY;
+                overlay.Name        = "overlayworldmap";
+                overlay.Id          = id;
+                overlay.StageStatus = Enum.StageStatus.NotPassed;
+            }
 
             return true;
         }

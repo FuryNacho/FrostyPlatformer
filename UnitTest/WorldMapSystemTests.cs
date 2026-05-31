@@ -180,9 +180,20 @@ public class WorldMapSystemTests
     }
 
     [TestMethod]
-    public void GetSpawnTile_ZeroStage_ReturnsDefault()
+    public void GetSpawnTile_ZeroStage_ReturnsMapeoneNode()
     {
+        // spawnAtWorldMap=0 (nytt spel) behandlas som bana 1 — returnerar mapone-nodens position.
         var (tX, tY) = MakeLinear().GetSpawnTile(spawnAtWorldMap: 0, 2, 8);
+        Assert.AreEqual(5, tX);
+        Assert.AreEqual(8, tY);
+    }
+
+    [TestMethod]
+    public void GetSpawnTile_ZeroStage_NoNodes_ReturnsDefault()
+    {
+        // Inga noder alls → faller tillbaka på default-koordinaterna.
+        var sys = new TiledWorldMapSystem(new List<PlacedObject>());
+        var (tX, tY) = sys.GetSpawnTile(spawnAtWorldMap: 0, 2, 8);
         Assert.AreEqual(2, tX);
         Assert.AreEqual(8, tY);
     }

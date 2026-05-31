@@ -102,12 +102,11 @@ namespace FrostyPlatformer.Systems
         /// <inheritdoc/>
         public (int TileX, int TileY) GetSpawnTile(int spawnAtWorldMap, int defaultTileX, int defaultTileY)
         {
-            if (spawnAtWorldMap >= 1 && spawnAtWorldMap <= 9)
-            {
-                string subType = StageIndexToSubType(spawnAtWorldMap);
-                var node = _nodes.FirstOrDefault(n => n.SubType == subType);
-                if (node != null) return (node.TileX, node.TileY);
-            }
+            // Nytt spel (0) behandlas som bana 1 — spelaren startar alltid vid mapone-noden.
+            int effective = spawnAtWorldMap >= 1 && spawnAtWorldMap <= 9 ? spawnAtWorldMap : 1;
+            string subType = StageIndexToSubType(effective);
+            var node = _nodes.FirstOrDefault(n => n.SubType == subType);
+            if (node != null) return (node.TileX, node.TileY);
             return (defaultTileX, defaultTileY);
         }
 
