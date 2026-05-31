@@ -100,6 +100,12 @@ namespace FrostyPlatformer.Systems
         }
 
         /// <inheritdoc/>
+        public IEnumerable<(int TileX, int TileY)> GetCompletedNodeTiles(int stageCompleted)
+            => _nodes
+                .Where(n => GetNodeState(n, stageCompleted) == NodeState.Completed)
+                .Select(n => (n.TileX, n.TileY));
+
+        /// <inheritdoc/>
         public (int TileX, int TileY) GetSpawnTile(int spawnAtWorldMap, int defaultTileX, int defaultTileY)
         {
             // Nytt spel (0) behandlas som bana 1 — spelaren startar alltid vid mapone-noden.

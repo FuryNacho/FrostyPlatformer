@@ -169,6 +169,39 @@ public class WorldMapSystemTests
         Assert.AreEqual(NodeState.Junction, sys.GetNodeState(node, 9));
     }
 
+    // ── GetCompletedNodeTiles ───────────────────────────────────────────────────
+
+    [TestMethod]
+    public void GetCompletedNodeTiles_NoneCompleted_ReturnsEmpty()
+    {
+        // stageCompleted=0: mapone är Current, maptwo Locked — inga avklarade.
+        var tiles = MakeLinear().GetCompletedNodeTiles(0);
+        Assert.AreEqual(0, new List<(int, int)>(tiles).Count);
+    }
+
+    [TestMethod]
+    public void GetCompletedNodeTiles_FirstCompleted_ReturnsMaponeTile()
+    {
+        // stageCompleted=1: mapone är avklarad, maptwo Current.
+        var tiles = new List<(int, int)>(MakeLinear().GetCompletedNodeTiles(1));
+        CollectionAssert.AreEquivalent(new List<(int, int)> { (5, 8) }, tiles);
+    }
+
+    [TestMethod]
+    public void GetCompletedNodeTiles_AllCompleted_ReturnsAllStageTiles_NoJunctions()
+    {
+        // stageCompleted=2: både mapone och maptwo avklarade. Junctions ska aldrig ingå.
+        var tiles = new List<(int, int)>(MakeLinear().GetCompletedNodeTiles(2));
+        CollectionAssert.AreEquivalent(new List<(int, int)> { (5, 8), (11, 8) }, tiles);
+    }
+
+    [TestMethod]
+    public void GetCompletedNodeTiles_EmptyNodeList_ReturnsEmpty()
+    {
+        var sys = new TiledWorldMapSystem(new List<PlacedObject>());
+        Assert.AreEqual(0, new List<(int, int)>(sys.GetCompletedNodeTiles(9)).Count);
+    }
+
     // ── GetSpawnTile ───────────────────────────────────────────────────────────
 
     [TestMethod]

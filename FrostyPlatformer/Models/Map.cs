@@ -206,7 +206,7 @@ namespace FrostyPlatformer.Models
                 {
                     Core.Aggregate.Instance.Settings!.ActivePlayer.StageCompleted = 1;
                 }
-                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 2;
+                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 1;
                 Script.AddCommand(new CommandChangeMap((target as Teleport)!.MapName, (target as Teleport)!.MapPosX, (target as Teleport)!.MapPosY));
             }
 
@@ -315,7 +315,7 @@ namespace FrostyPlatformer.Models
                 {
                     Core.Aggregate.Instance.Settings!.ActivePlayer.StageCompleted = 2;
                 }
-                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 3;
+                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 2;
                 Script.AddCommand(new CommandChangeMap((target as Teleport)!.MapName, (target as Teleport)!.MapPosX, (target as Teleport)!.MapPosY));
             }
 
@@ -426,7 +426,7 @@ namespace FrostyPlatformer.Models
                     Core.Aggregate.Instance.Settings!.ActivePlayer.StageCompleted = 3;
 
                 }
-                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 4;
+                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 3;
                 Script.AddCommand(new CommandChangeMap((target as Teleport)!.MapName, (target as Teleport)!.MapPosX, (target as Teleport)!.MapPosY));
             }
 
@@ -639,7 +639,7 @@ namespace FrostyPlatformer.Models
                     Core.Aggregate.Instance.Settings!.ActivePlayer.StageCompleted = 4;
 
                 }
-                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 5;
+                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 4;
                 Script.AddCommand(new CommandChangeMap((target as Teleport)!.MapName, (target as Teleport)!.MapPosX, (target as Teleport)!.MapPosY));
             }
 
@@ -795,7 +795,7 @@ namespace FrostyPlatformer.Models
                     Core.Aggregate.Instance.Settings!.ActivePlayer.StageCompleted = 5;
 
                 }
-                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 6;
+                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 5;
                 Script.AddCommand(new CommandChangeMap((target as Teleport)!.MapName, (target as Teleport)!.MapPosX, (target as Teleport)!.MapPosY));
             }
 
@@ -962,7 +962,7 @@ namespace FrostyPlatformer.Models
                     // Flag this is final stage
 
                 }
-                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 7;
+                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 6;
 
                 Script.AddCommand(new CommandChangeMap((target as Teleport)!.MapName, (target as Teleport)!.MapPosX, (target as Teleport)!.MapPosY));
             }
@@ -1457,7 +1457,7 @@ namespace FrostyPlatformer.Models
                     // Flag this is final stage
 
                 }
-                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 8;
+                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 7;
                 Script.AddCommand(new CommandChangeMap((target as Teleport)!.MapName, (target as Teleport)!.MapPosX, (target as Teleport)!.MapPosY));
             }
 
@@ -1925,7 +1925,7 @@ namespace FrostyPlatformer.Models
                     Core.Aggregate.Instance.HasSwitchedState = true;
 
                 }
-                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 9;
+                Core.Aggregate.Instance.Settings!.ActivePlayer.SpawnAtWorldMap = 8;
                 Script.AddCommand(new CommandChangeMap((target as Teleport)!.MapName, (target as Teleport)!.MapPosX, (target as Teleport)!.MapPosY));
             }
 

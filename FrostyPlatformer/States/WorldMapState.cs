@@ -48,6 +48,11 @@ namespace FrostyPlatformer.States
         private const int DefaultSpawnTileX = 3;
         private const int DefaultSpawnTileY = 8;
 
+        // Tilesheet-index (tilesheetwm) för avklarad-markören — "gula pricken" på
+        // rad 4, kolumn 3 (0-baserat index 17). Ritas ovanpå nodens vanliga
+        // bana-markör (rad 4, kolumn 1) när stoppunktens bana är avklarad.
+        private const int CompletedMarkerTileIndex = 17;
+
         private readonly GameServices  _services;
         private readonly IRenderContext _rc;
 
@@ -173,6 +178,8 @@ namespace FrostyPlatformer.States
                         call.ScreenX, call.ScreenY, call.SpriteX, call.SpriteY,
                         call.TileWidth, call.TileHeight);
 
+                DrawCompletedNodeMarkers(cam);
+
                 foreach (var obj in context.ActiveObjects)
                     obj.DrawSelf(_rc, cam.OffsetX, cam.OffsetY);
 
@@ -185,6 +192,28 @@ namespace FrostyPlatformer.States
             string stageText = "        World Map. Stage: " + displayStage + "                     ";
             _rc.DrawText(stageText, 0, 217);
             HudRenderer.Draw(_rc, context);
+        }
+
+        // Ritar avklarad-markören (gul prick) ovanpå varje avklarad bana-nod. Tilen är
+        // opak, så den täcker nodens vanliga bana-markör helt. Position beräknas som i
+        // TileMapRenderer: round((tile - offset) * tileSize) — samma sub-pixel-avrundning
+        // så markören sitter exakt på tile-rutan vid scrollning.
+        private void DrawCompletedNodeMarkers(CameraView cam)
+        {
+            int completed = _services.Settings.ActivePlayer.StageCompleted;
+
+            int sx      = CompletedMarkerTileIndex % GameConstants.TileSheetColumns;
+            int sy      = CompletedMarkerTileIndex / GameConstants.TileSheetColumns;
+            int spriteX = sx * cam.TileWidth;
+            int spriteY = sy * cam.TileHeight;
+
+            foreach (var (tileX, tileY) in _services.WorldMap.GetCompletedNodeTiles(completed))
+            {
+                int screenX = (int)Math.Round((tileX - cam.OffsetX) * cam.TileWidth,  MidpointRounding.AwayFromZero);
+                int screenY = (int)Math.Round((tileY - cam.OffsetY) * cam.TileHeight, MidpointRounding.AwayFromZero);
+                _rc.DrawPartialSprite(SpriteId.WorldMapTileSheet,
+                    screenX, screenY, spriteX, spriteY, cam.TileWidth, cam.TileHeight);
+            }
         }
 
         public void Exit(GameContext context) { }

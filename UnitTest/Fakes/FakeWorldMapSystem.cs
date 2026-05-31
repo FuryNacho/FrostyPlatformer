@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Systems;
 
@@ -31,6 +32,10 @@ namespace UnitTest.Fakes
         /// <summary>Returvärde från GetStageIndex().</summary>
         public int StageIndexResult { get; set; } = 1;
 
+        /// <summary>Returvärde från GetCompletedNodeTiles().</summary>
+        public IEnumerable<(int TileX, int TileY)> CompletedNodeTilesResult { get; set; }
+            = new List<(int, int)>();
+
         // ── Anropsräknare ──────────────────────────────────────────────────────
 
         public int GetStageEntryCallCount { get; private set; }
@@ -43,6 +48,9 @@ namespace UnitTest.Fakes
         public PlacedObject? GetNextNode(PlacedObject current, int dX, int dY) => NextNodeResult;
 
         public NodeState GetNodeState(PlacedObject node, int stageCompleted) => NodeStateResult;
+
+        public IEnumerable<(int TileX, int TileY)> GetCompletedNodeTiles(int stageCompleted)
+            => CompletedNodeTilesResult;
 
         public (int TileX, int TileY) GetSpawnTile(int spawnAtWorldMap, int defaultTileX, int defaultTileY)
             => SpawnTileResult;

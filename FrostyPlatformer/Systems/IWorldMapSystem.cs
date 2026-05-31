@@ -49,6 +49,13 @@ namespace FrostyPlatformer.Systems
         NodeState GetNodeState(PlacedObject node, int stageCompleted);
 
         /// <summary>
+        /// Returnerar tile-positionerna för alla bana-noder som är avklarade
+        /// (NodeState.Completed) vid given progression. Används av WorldMapState för
+        /// att rita avklarad-markören ovanpå nodens vanliga markör-tile.
+        /// </summary>
+        IEnumerable<(int TileX, int TileY)> GetCompletedNodeTiles(int stageCompleted);
+
+        /// <summary>
         /// Returnerar tile-koordinaterna spelaren ska placeras på när världskartan öppnas.
         /// spawnAtWorldMap 1–9 slår upp stoppunkten vars SubType matchar banan.
         /// spawnAtWorldMap 0 eller okänt värde returnerar (defaultTileX, defaultTileY).

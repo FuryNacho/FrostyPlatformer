@@ -1,4 +1,6 @@
 #nullable enable
+using System;
+using System.Collections.Generic;
 using FrostyPlatformer.Global.GlobalNamespace;
 using FrostyPlatformer.Models;
 
@@ -55,6 +57,11 @@ namespace FrostyPlatformer.Systems
         /// <inheritdoc/>
         /// <remarks>Stöds ej av WorldMapSystem — använd TiledWorldMapSystem.</remarks>
         public NodeState GetNodeState(PlacedObject node, int stageCompleted) => NodeState.Locked;
+
+        /// <inheritdoc/>
+        /// <remarks>Stöds ej av WorldMapSystem — använd TiledWorldMapSystem.</remarks>
+        public IEnumerable<(int TileX, int TileY)> GetCompletedNodeTiles(int stageCompleted)
+            => Array.Empty<(int, int)>();
 
         /// <inheritdoc/>
         public (int TileX, int TileY) GetSpawnTile(int spawnAtWorldMap, int defaultTileX, int defaultTileY)
