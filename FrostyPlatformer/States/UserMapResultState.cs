@@ -20,7 +20,7 @@ namespace FrostyPlatformer.States
     ///
     /// ANVÄNDNING:
     /// Preview: skapas av GameplayState när portalen nås och IsPreviewMode är satt.
-    ///          slotId = null → ingen rekordkoll, Enter/Esc → returnState (EditState).
+    ///          slotId = null → ingen rekordkoll, valfri knapp → returnState (EditState).
     /// My Maps: skapas av GameplayState när portalen nås och UserMapSlotId är satt.
     ///          slotId != null → jämför med UserMapScoreRepository; nytt rekord →
     ///          EnterHighScoreState med callback som sparar via UserMapScores.
@@ -38,7 +38,7 @@ namespace FrostyPlatformer.States
         /// </summary>
         /// <param name="services">Gemensamma speltjänster.</param>
         /// <param name="runTime">Uppmätt genomspelningstid.</param>
-        /// <param name="returnState">State att gå tillbaka till vid Enter/Esc.</param>
+        /// <param name="returnState">State att gå tillbaka till efter resultatet.</param>
         /// <param name="slotId">
         /// Slot-ID för My Maps-körning. Null = preview-läge (ingen rekordkoll).
         /// </param>
@@ -87,8 +87,10 @@ namespace FrostyPlatformer.States
 
         private void UpdatePreview(GameContext context)
         {
+            // Det finns inget annat att göra här än att gå tillbaka — vilken knapp
+            // som helst (tangent eller gamepad) duger. Samma mönster som EndState.
             if (_services.Input.ButtonsHasGoneIdle &&
-                (_services.Input.IsConfirmPressed || _services.Input.IsCancelPressed))
+                (_services.Input.IsAnyKeyPressed || !_services.Input.IsIdle))
             {
                 _services.Input.ButtonsHasGoneIdle = false;
                 _services.StateManager.Transition(_returnState, context);
@@ -101,7 +103,7 @@ namespace FrostyPlatformer.States
             int cy = context.ScreenHeight / 2;
             _rc.DrawText("Level complete!",  cx - 56, cy - 20);
             _rc.DrawText($"Time: {FormatTime(_runTime)}", cx - 36, cy - 8);
-            _rc.DrawText("Enter/Esc = back", cx - 60, cy + 8);
+            _rc.DrawText("Press any button", cx - 64, cy + 8);
         }
 
         // ── My Maps-variant (rekordkoll + namnsinmatning) ─────────────────────────
@@ -111,9 +113,13 @@ namespace FrostyPlatformer.States
             var existing = _services.UserMapScores.GetRecord(_slotId!);
             bool isNewRecord = existing == null || _runTime < existing.BestTime;
 
-            if (_services.Input.ButtonsHasGoneIdle)
+            if (!_services.Input.ButtonsHasGoneIdle) return;
+
+            if (isNewRecord)
             {
-                if (isNewRecord && _services.Input.IsConfirmPressed)
+                // Nytt rekord = ett verkligt val: Enter/A sparar namn, Esc/B hoppar
+                // över. Här krävs specifika knappar — inte "vilken som helst".
+                if (_services.Input.IsConfirmPressed)
                 {
                     _services.Input.ButtonsHasGoneIdle = false;
                     var slotId  = _slotId!;
@@ -126,13 +132,18 @@ namespace FrostyPlatformer.States
                         context);
                     return;
                 }
-                if (_services.Input.IsCancelPressed ||
-                    (!isNewRecord && _services.Input.IsConfirmPressed))
+                if (_services.Input.IsCancelPressed)
                 {
                     _services.Input.ButtonsHasGoneIdle = false;
                     _services.StateManager.Transition(_returnState, context);
                     return;
                 }
+            }
+            // Inget rekord = inget val, bara tillbaka. Vilken knapp som helst duger.
+            else if (_services.Input.IsAnyKeyPressed || !_services.Input.IsIdle)
+            {
+                _services.Input.ButtonsHasGoneIdle = false;
+                _services.StateManager.Transition(_returnState, context);
             }
         }
 
@@ -161,7 +172,7 @@ namespace FrostyPlatformer.States
             else
             {
                 _rc.DrawText($"Best: {FormatTime(bestTime!.Value)}", cx - 36, cy - 4);
-                _rc.DrawText("Enter/Esc = back",     cx - 60, cy + 10);
+                _rc.DrawText("Press any button",     cx - 64, cy + 10);
             }
         }
 
