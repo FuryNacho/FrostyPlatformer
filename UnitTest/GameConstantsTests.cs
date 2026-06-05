@@ -116,9 +116,13 @@ namespace UnitTest
         // ─────────────────────────────────────────────
 
         [TestMethod]
-        public void JumpBufferFrames_IsPositive()
+        public void GraceWindowSeconds_ArePositive()
         {
-            Assert.IsTrue(GameConstants.JumpBufferFrames > 0);
+            Assert.IsTrue(GameConstants.JumpBufferSeconds > 0f);
+            Assert.IsTrue(GameConstants.CeilingBonkSeconds > 0f);
+            Assert.IsTrue(GameConstants.EnemyStompWindowSeconds > 0f);
+            Assert.IsTrue(GameConstants.CoyoteFallCutoffSeconds > 0f);
+            Assert.IsTrue(GameConstants.CoyoteFallCapSeconds > GameConstants.CoyoteFallCutoffSeconds);
         }
 
         [TestMethod]

@@ -24,7 +24,7 @@ namespace UnitTest
         public void ApplyGravity_Hero_Rising_NoBPower_IncreasesVyWithNormalGravity()
         {
             var obj = new DynamicGameObject { IsHero = true, vy = -5.0f };
-            int rjc = -1;
+            float rjc = 0f;
 
             PhysicsSystem.ApplyGravity(obj, isHero: true, bPower: false, ref rjc, Elapsed);
 
@@ -37,7 +37,7 @@ namespace UnitTest
         public void ApplyGravity_Hero_Rising_BPower_IncreasesVyWithPowerJumpGravity()
         {
             var obj = new DynamicGameObject { IsHero = true, vy = -5.0f };
-            int rjc = -1;
+            float rjc = 0f;
 
             PhysicsSystem.ApplyGravity(obj, isHero: true, bPower: true, ref rjc, Elapsed);
 
@@ -50,7 +50,7 @@ namespace UnitTest
         public void ApplyGravity_Hero_Falling_UsesHeavyGravity()
         {
             var obj = new DynamicGameObject { IsHero = true, vy = 2.0f };
-            int rjc = -1;
+            float rjc = 0f;
 
             PhysicsSystem.ApplyGravity(obj, isHero: true, bPower: false, ref rjc, Elapsed);
 
@@ -63,7 +63,7 @@ namespace UnitTest
         public void ApplyGravity_NonHero_UsesNormalGravity()
         {
             var obj = new DynamicGameObject { IsHero = false, vy = 0.0f };
-            int rjc = -1;
+            float rjc = 0f;
 
             PhysicsSystem.ApplyGravity(obj, isHero: false, bPower: false, ref rjc, Elapsed);
 
@@ -73,30 +73,29 @@ namespace UnitTest
         }
 
         [TestMethod]
-        public void ApplyGravity_RememberJumpCollision_DecreasesEachFrame()
+        public void ApplyGravity_RememberJumpCollision_DecreasesByElapsedEachFrame()
         {
             var obj = new DynamicGameObject { IsHero = true, vy = -3.0f };
-            int rjc = 3;
+            float rjc = GameConstants.CeilingBonkSeconds;
 
             PhysicsSystem.ApplyGravity(obj, isHero: true, bPower: false, ref rjc, Elapsed);
 
-            Assert.AreEqual(2, rjc, "rememberJumpCollision ska minska med 1 per frame.");
+            Assert.AreEqual(GameConstants.CeilingBonkSeconds - Elapsed, rjc, 0.0001f,
+                "rememberJumpCollision ska räknas ned med elapsed-tid per frame.");
         }
 
         [TestMethod]
-        public void ApplyGravity_RememberJumpCollision_Zero_SuppressesGravity()
+        public void ApplyGravity_RememberJumpCollision_Zero_AppliesGravity()
         {
-            // rjc >= 0 men ännu inte < 0 → ingen gravitation appliceras
+            // rjc <= 0 → fönstret är slut → gravitation tillämpas igen.
             var obj = new DynamicGameObject { IsHero = true, vy = -3.0f };
             float vyBefore = obj.vy;
-            int rjc = 0; // kommer bli -1 EFTER minskning, men check är < 0
+            float rjc = 0f;
 
             PhysicsSystem.ApplyGravity(obj, isHero: true, bPower: false, ref rjc, Elapsed);
 
-            // rjc var 0, minskas till -1, sedan är rememberJumpCollision < 0 → gravitation tillämpas
-            // (tröskeln gäller just EFTER minskning)
             Assert.IsTrue(obj.vy > vyBefore,
-                "När rjc startar på 0 minskar den till -1 i samma frame → gravitation tillämpas.");
+                "När rjc är 0 är fönstret slut → gravitation tillämpas på stigande hjälte.");
         }
 
         [TestMethod]
@@ -104,7 +103,7 @@ namespace UnitTest
         {
             var obj = new DynamicGameObject { IsHero = true, vy = -3.0f };
             float vyBefore = obj.vy;
-            int rjc = 5; // minskas till 4, fortfarande >= 0 → gravitation undertrycks
+            float rjc = GameConstants.CeilingBonkSeconds; // räknas ned men förblir > 0 → gravitation undertrycks
 
             PhysicsSystem.ApplyGravity(obj, isHero: true, bPower: false, ref rjc, Elapsed);
 

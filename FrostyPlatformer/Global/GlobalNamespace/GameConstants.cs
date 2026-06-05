@@ -56,9 +56,17 @@ namespace FrostyPlatformer.Global
 
 
         // ─────────────────────────────────────────────
-        // Hopp – buffer och coyote time
+        // Hopp – buffer, coyote time och studs-fönster (sekunder)
         // ─────────────────────────────────────────────
-        public const int JumpBufferFrames  = 5;    // Antal frames hoppet "minns" knapptryckning
+        // Tidsbaserade "grace"-fönster. Uttrycks som frames/60 så att den
+        // ursprungliga 60 Hz-känslan bevaras, men eftersom de räknas ned med
+        // elapsed-tid i stället för 1/frame blir spelkänslan frame-rate-oberoende
+        // (samma realtid på 60, 120 och 144 Hz).
+        public const float JumpBufferSeconds      = 5.0f  / 60.0f; // Hoppet "minns" knapptryckning
+        public const float CeilingBonkSeconds     = 5.0f  / 60.0f; // Gravitation undertrycks efter takkontakt
+        public const float EnemyStompWindowSeconds = 5.0f / 60.0f; // Studshopp tillåts efter stamp på fiende
+        public const float CoyoteFallCutoffSeconds = 3.0f / 60.0f; // Efter så lång fritt fall stängs coyote-time
+        public const float CoyoteFallCapSeconds   = 10.0f / 60.0f; // Tak för fall-räknaren (undviker obegränsad tillväxt)
 
 
         // ─────────────────────────────────────────────

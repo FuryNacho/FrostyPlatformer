@@ -38,10 +38,13 @@ namespace FrostyPlatformer.States
         private readonly IParallaxSystem _parallax;
 
         // Fysik-tillstånd
+        // _rememberJumpCollision, _jumpMemory, _fallCounter och _enemyJump är tidsbaserade
+        // "grace"-fönster i sekunder (räknas ned/upp med elapsed), inte frame-räknare —
+        // se GameConstants.*Seconds. Det gör spelkänslan frame-rate-oberoende.
         private bool  _bPower;
-        private int   _rememberJumpCollision;
-        private int   _jumpMemory;
-        private int   _fallCounter;
+        private float _rememberJumpCollision;
+        private float _jumpMemory;
+        private float _fallCounter;
         private bool  _allowCoyoteTime;
         private int   _tempMemJumpCounter;
         private int   _tempMemCoyoteCounter;
@@ -49,7 +52,7 @@ namespace FrostyPlatformer.States
         private float _maxR, _maxL;
 
         // Fiende-AI
-        private int _enemyJump;
+        private float _enemyJump;
 
         // Energi-regn vid träff
         private readonly EnergiRainObject _energiRain = new EnergiRainObject();
@@ -91,7 +94,7 @@ namespace FrostyPlatformer.States
             }
 
             context.Player!.vx = 0;
-            _enemyJump = -1;
+            _enemyJump = 0f;
         }
 
         public void Update(GameContext context, float elapsed)
@@ -132,7 +135,7 @@ namespace FrostyPlatformer.States
                 return;
             }
 
-            if (_enemyJump > -1) _enemyJump--;
+            if (_enemyJump > 0f) _enemyJump -= elapsed;
 
             if (context.Player!.Health < 1)
             {
@@ -300,14 +303,14 @@ namespace FrostyPlatformer.States
             if (jumpDown)
             {
                 if (_services.Input.JumpButtonDownReleaseOnce)
-                    _jumpMemory = 5;
+                    _jumpMemory = GameConstants.JumpBufferSeconds;
 
                 if (_services.Input.JumpButtonState < 3)
                     _services.Input.JumpButtonState++;
 
                 if ((hero.vy == 0 && _services.Input.JumpButtonDownRelease) ||
                     (_allowCoyoteTime && _services.Input.JumpButtonDownReleaseOnce) ||
-                    _enemyJump > -1)
+                    _enemyJump > 0f)
                 {
                     if (hero.vy != 0 && _allowCoyoteTime)
                         _tempMemCoyoteCounter++;
@@ -316,8 +319,8 @@ namespace FrostyPlatformer.States
 
                     hero.vy = GameConstants.JumpVelocity;
                     _services.Input.JumpButtonDownRelease = false;
-                    _jumpMemory = -1;
-                    _enemyJump = -1;
+                    _jumpMemory = 0f;
+                    _enemyJump = 0f;
                 }
                 _services.Input.JumpButtonDownReleaseOnce = false;
             }
@@ -333,12 +336,12 @@ namespace FrostyPlatformer.States
                 }
             }
 
-            if (_jumpMemory > 0 && hero.Grounded)
+            if (_jumpMemory > 0f && hero.Grounded)
             {
                 _tempMemJumpCounter++;
                 hero.vy = GameConstants.JumpVelocity;
                 _services.Input.JumpButtonDownRelease = false;
-                _jumpMemory = -1;
+                _jumpMemory = 0f;
             }
 
             // Höger
@@ -412,7 +415,7 @@ namespace FrostyPlatformer.States
             float fBorder = GameConstants.CollisionBorderPrecision;
 
             // Gravitation
-            int rjc = _rememberJumpCollision;
+            float rjc = _rememberJumpCollision;
             PhysicsSystem.ApplyGravity(obj, obj.IsHero, _bPower, ref rjc, elapsed);
             _rememberJumpCollision = rjc;
 
@@ -436,7 +439,7 @@ namespace FrostyPlatformer.States
             float newX = obj.px + obj.vx * elapsed;
             float newY = obj.py + obj.vy * elapsed;
 
-            if (obj.IsHero && _rememberJumpCollision >= 0)
+            if (obj.IsHero && _rememberJumpCollision > 0f)
                 if (newY > obj.py) newY = obj.py;
 
             // Horisontell kollision (karta)
@@ -460,9 +463,9 @@ namespace FrostyPlatformer.States
             // Vertikal kollision (karta)
             if (obj.vy <= 0)
             {
-                if (obj.IsHero) { _jumpMemory = -1; _allowCoyoteTime = false; _fallCounter = 0; if (context.HeroAirBornState < 3) context.HeroAirBornState++; }
+                if (obj.IsHero) { _jumpMemory = 0f; _allowCoyoteTime = false; _fallCounter = 0f; if (context.HeroAirBornState < 3) context.HeroAirBornState++; }
                 var (adjY, hitCeil, _) = CollisionSystem.ResolveVertical(newX, newY, obj.vy, map);
-                if (hitCeil) { newY = adjY; obj.vy = 0; if (obj.IsHero && _rememberJumpCollision < 0) _rememberJumpCollision = 5; }
+                if (hitCeil) { newY = adjY; obj.vy = 0; if (obj.IsHero && _rememberJumpCollision <= 0f) _rememberJumpCollision = GameConstants.CeilingBonkSeconds; }
                 if (obj.IsHero) context.HeroLandedState = 0;
             }
             else
@@ -475,7 +478,7 @@ namespace FrostyPlatformer.States
                         newY = adjY; obj.vy = 0; obj.Grounded = true;
                         if (obj.IsHero)
                         {
-                            _fallCounter = 0; _allowCoyoteTime = true;
+                            _fallCounter = 0f; _allowCoyoteTime = true;
                             if (context.HeroLandedState < 3) context.HeroLandedState++;
                             if (context.HeroLandedState <= 1)
                                 _services.Audio.Play(Global.GlobalNamespace.SoundRef.Land);
@@ -485,9 +488,9 @@ namespace FrostyPlatformer.States
                 if (obj.IsHero)
                 {
                     context.HeroAirBornState = 0;
-                    if (_jumpMemory >= 0) _jumpMemory--;
-                    if (obj.vy > 1 && _fallCounter < 10) _fallCounter++;
-                    if (_fallCounter > 3) _allowCoyoteTime = false;
+                    if (_jumpMemory > 0f) _jumpMemory -= elapsed;
+                    if (obj.vy > 1 && _fallCounter < GameConstants.CoyoteFallCapSeconds) _fallCounter += elapsed;
+                    if (_fallCounter > GameConstants.CoyoteFallCutoffSeconds) _allowCoyoteTime = false;
                 }
             }
 
@@ -640,11 +643,11 @@ namespace FrostyPlatformer.States
                 if (!victim.IsAttackable) return;
                 victim.IsAttackable = false;
                 victim.Health -= 10;
-                if (victim.Health <= 0) { victim.Health = 0; victim.Redundant = true; victim.RemoveCount = 1; _enemyJump = 5; }
+                if (victim.Health <= 0) { victim.Health = 0; victim.Redundant = true; victim.RemoveCount = 1; _enemyJump = GameConstants.EnemyStompWindowSeconds; }
             }
             else if (!victim.IsIndestructible)
             {
-                victim.Health = 0; victim.Redundant = true; victim.RemoveCount = 1; _enemyJump = 5;
+                victim.Health = 0; victim.Redundant = true; victim.RemoveCount = 1; _enemyJump = GameConstants.EnemyStompWindowSeconds;
             }
         }
 

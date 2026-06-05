@@ -35,39 +35,40 @@ namespace FrostyPlatformer.Systems
         ///   • Stiger uppåt, normalt  → normal gravitation (GravityNormal)
         ///   • Faller neråt           → tyngre gravitation (GravityHeavy)
         ///
-        /// rememberJumpCollision minskas med 1 varje frame (räknar ned taket-kontaktfönster).
+        /// rememberJumpCollision räknas ned med elapsed-tid (taket-kontaktfönstret i sekunder);
+        /// medan det är &gt; 0 undertrycks gravitationen för en stigande hjälte.
         /// Alla andra objekt får GravityNormal oavsett riktning.
         /// </summary>
         /// <param name="obj">Spelobj som ska uppdateras.</param>
         /// <param name="isHero">Sant om obj är spelaren.</param>
         /// <param name="bPower">Sant om B-knappen (snabbläge) är nedtryckt.</param>
         /// <param name="rememberJumpCollision">
-        ///     Räknare för taket-kontaktfönster.
-        ///     Skickas som ref och minskas här.
+        ///     Återstående tid (sekunder) för taket-kontaktfönstret.
+        ///     Skickas som ref och räknas ned här.
         /// </param>
         /// <param name="elapsed">Tid sedan förra frame (sekunder).</param>
         public static void ApplyGravity(
             DynamicGameObject obj,
             bool isHero,
             bool bPower,
-            ref int rememberJumpCollision,
+            ref float rememberJumpCollision,
             float elapsed)
         {
             if (isHero)
             {
-                if (rememberJumpCollision > -1)
-                    rememberJumpCollision--;
+                if (rememberJumpCollision > 0f)
+                    rememberJumpCollision -= elapsed;
 
                 if (obj.vy < 0) // stiger uppåt
                 {
                     if (bPower)
                     {
-                        if (rememberJumpCollision < 0)
+                        if (rememberJumpCollision <= 0f)
                             obj.vy += GameConstants.GravityPowerJump * elapsed;
                     }
                     else
                     {
-                        if (rememberJumpCollision < 0)
+                        if (rememberJumpCollision <= 0f)
                             obj.vy += GameConstants.GravityNormal * elapsed;
                     }
                 }
