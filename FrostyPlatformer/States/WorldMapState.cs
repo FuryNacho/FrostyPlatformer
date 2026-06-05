@@ -159,8 +159,11 @@ namespace FrostyPlatformer.States
             if (context.CurrentLevel != null)
                 UpdateObjects(context, elapsed);
 
+            // Världskartan ska ha en statisk kamera — direkt centrerad på hjälten utan
+            // den mjuka lerp-följningen som banorna använder (den ger en "efterglidande"
+            // känsla när hjälten stannar, vilket känns fel på en diskret nod-karta).
             if (context.Player != null && context.CurrentLevel != null)
-                _services.Camera.Advance(context.Player.px, context.Player.py, elapsed);
+                _services.Camera.SnapTo(context.Player.px, context.Player.py);
         }
 
         public void Draw(IRenderContext renderContext, GameContext context)
@@ -187,10 +190,19 @@ namespace FrostyPlatformer.States
                 if (hero != null) hero.DrawSelf(_rc, cam.OffsetX, cam.OffsetY);
             }
 
-            // Visa nästa bana att klara (StageCompleted + 1)
+            // Banner längst ned: nästa bana att klara (StageCompleted + 1).
+            // Full bredd (svart stapel) med horisontellt och vertikalt centrerad text.
             int displayStage = _services.Settings.ActivePlayer.StageCompleted + 1;
-            string stageText = "        World Map. Stage: " + displayStage + "                     ";
-            _rc.DrawText(stageText, 0, 217);
+            string stageText = "World Map. Stage: " + displayStage;
+
+            const int fontSize     = 8;  // Teckensnittet är 8×8 px per tecken
+            const int bannerHeight = 11;
+            int bannerY = context.ScreenHeight - bannerHeight;
+            int textX   = Math.Max(0, (context.ScreenWidth - stageText.Length * fontSize) / 2);
+            int textY   = bannerY + (bannerHeight - fontSize) / 2;
+
+            _rc.FillRect(0, bannerY, context.ScreenWidth, bannerHeight, RenderColor.Black);
+            _rc.DrawText(stageText, textX, textY);
             HudRenderer.Draw(_rc, context);
         }
 
