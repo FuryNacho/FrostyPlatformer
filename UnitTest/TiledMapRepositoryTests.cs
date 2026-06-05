@@ -446,6 +446,32 @@ namespace UnitTest
             CollectionAssert.AreEqual(original.AttributeIndex, loaded!.AttributeIndex);
         }
 
+        // ── Delete — fil-I/O ─────────────────────────────────────────────────
+
+        [TestMethod]
+        public void Delete_ExistingFile_RemovesFile()
+        {
+            Directory.CreateDirectory(_tempDir!);
+            var path = Path.Combine(_tempDir!, "slot1.json");
+            File.WriteAllText(path, MinimalJson);
+            var repo = new TiledMapRepository(_tempDir!);
+
+            repo.Delete("slot1");
+
+            Assert.IsFalse(File.Exists(path));
+        }
+
+        [TestMethod]
+        public void Delete_MissingFile_NoThrow()
+        {
+            Directory.CreateDirectory(_tempDir!);
+            var repo = new TiledMapRepository(_tempDir!);
+
+            repo.Delete("doesnotexist");
+
+            Assert.IsFalse(File.Exists(Path.Combine(_tempDir!, "doesnotexist.json")));
+        }
+
         // ── GetAvailableMapIds — scanDirectory-läge (E3d) ────────────────────
 
         [TestMethod]

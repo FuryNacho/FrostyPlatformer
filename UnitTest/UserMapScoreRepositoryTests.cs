@@ -97,5 +97,41 @@ namespace UnitTest
             Assert.IsNotNull(result);
             Assert.AreEqual("slot3", result.SlotId);
         }
+
+        // ── DeleteRecord ──────────────────────────────────────────────────────
+
+        [TestMethod]
+        public void DeleteRecord_ExistingRecord_RemovesIt()
+        {
+            var repo = new FakeUserMapScoreRepository();
+            repo.SaveRecord("slot1", "ACE", T(1, 30));
+
+            repo.DeleteRecord("slot1");
+
+            Assert.IsNull(repo.GetRecord("slot1"));
+        }
+
+        [TestMethod]
+        public void DeleteRecord_NonExistingRecord_NoThrow()
+        {
+            var repo = new FakeUserMapScoreRepository();
+
+            repo.DeleteRecord("slot9");
+
+            Assert.IsNull(repo.GetRecord("slot9"));
+        }
+
+        [TestMethod]
+        public void DeleteRecord_OnlyDeletesTargetSlot()
+        {
+            var repo = new FakeUserMapScoreRepository();
+            repo.SaveRecord("slot1", "AAA", T(1, 0));
+            repo.SaveRecord("slot2", "BBB", T(2, 0));
+
+            repo.DeleteRecord("slot1");
+
+            Assert.IsNull(repo.GetRecord("slot1"));
+            Assert.IsNotNull(repo.GetRecord("slot2"));
+        }
     }
 }

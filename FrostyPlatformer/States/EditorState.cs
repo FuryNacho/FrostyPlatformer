@@ -41,7 +41,7 @@ namespace FrostyPlatformer.States
         // Sätt till true för att aktivera världskarte-editering (StopPoint-läge +
         // tilesheetwm). Dolt för vanliga spelare — editorn beter sig normalt när false.
         // static readonly (inte const) förhindrar CS0162-varning för gatad kod.
-        private static readonly bool DevMode = true;
+        private static readonly bool DevMode = false;
 
         // ── Kamerakonstanter ────────────────────────────────────────────────────
         private const float ScrollSpeed = 8.0f;
@@ -118,13 +118,13 @@ namespace FrostyPlatformer.States
         private const int PickerStartY     = 24;
 
         private static readonly RenderColor PickerOverlayColor = new RenderColor(0,   0,   0,  180);
-        private static readonly RenderColor PickerSelectColor  = new RenderColor(50,  80, 160, 220);
 
         private sealed class MapPickerEntry
         {
             public string Label   { get; init; } = "";
             public string SlotId  { get; init; } = "";
             public bool   IsEmpty { get; init; }
+            public bool   IsBack  { get; init; }
         }
 
         // ── Ny-karta-dialog ──────────────────────────────────────────────────────
@@ -132,9 +132,14 @@ namespace FrostyPlatformer.States
         private int     _newMapWidthIdx    = 3;   // index i WidthPresets  → 32
         private int     _newMapHeightIdx   = 3;   // index i HeightPresets → 24
         private int     _newMapTilesetIdx;         // index i KnownTilesets → tilesheetspring
-        private int     _newMapDialogField;        // 0=bredd, 1=höjd, 2=tileset
+        private int     _newMapDialogField;        // 0=bredd, 1=höjd, 2=tileset, 3=create, 4=back
         private bool    _newMapPendingDirty;
         private string? _pendingNewSlotId;         // vilket slot N-dialogen ska spara till
+
+        // Dialogen är en vertikal meny: tre värderader följt av två handlingsrader.
+        private const int NewMapFieldCount  = 5;
+        private const int NewMapCreateField = 3;
+        private const int NewMapBackField   = 4;
 
         private static readonly int[]    WidthPresets  = { 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 192, 256 };
         private static readonly int[]    HeightPresets = { 14, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 192, 256 };
@@ -194,10 +199,7 @@ namespace FrostyPlatformer.States
             {
                 if (_showNewMapDialog)
                 {
-                    _showNewMapDialog    = false;
-                    _newMapPendingDirty  = false;
-                    _pendingNewSlotId    = null;
-                    OpenMapPicker();      // gå tillbaka till pickern
+                    CancelNewMapDialog();
                     return;
                 }
                 if (_showMapPicker)
@@ -861,6 +863,10 @@ namespace FrostyPlatformer.States
                 });
             }
 
+            // Tillbaka-rad sist — samma "aktiva back" som övriga menyer har, så man
+            // inte måste känna till Esc-genvägen.
+            _pickerEntries.Add(new MapPickerEntry { Label = "Back", IsBack = true });
+
             _pickerIndex        = 0;
             _pickerPendingDirty = false;
             _showMapPicker      = true;
@@ -877,14 +883,29 @@ namespace FrostyPlatformer.States
         private void UpdateNewMapDialog()
         {
             if (_services.Input.IsDownPressed)
-                _newMapDialogField = (_newMapDialogField + 1) % 3;
+                _newMapDialogField = (_newMapDialogField + 1) % NewMapFieldCount;
             if (_services.Input.IsUpPressed)
-                _newMapDialogField = (_newMapDialogField + 2) % 3;
+                _newMapDialogField = (_newMapDialogField + NewMapFieldCount - 1) % NewMapFieldCount;
 
+            // Vänster/höger justerar bara värderaderna (0–2); handlingsraderna ignorerar dem.
             if (_services.Input.IsRightPressed) ChangeNewMapField(+1);
             if (_services.Input.IsLeftPressed)  ChangeNewMapField(-1);
 
-            if (_services.Input.IsConfirmPressed && !_services.Input.IsEditorSave) ConfirmNewMap();
+            // Confirm aktiverar markerad handlingsrad — Esc backar fortfarande direkt.
+            if (_services.Input.IsConfirmPressed && !_services.Input.IsEditorSave)
+            {
+                if (_newMapDialogField == NewMapCreateField)    ConfirmNewMap();
+                else if (_newMapDialogField == NewMapBackField) CancelNewMapDialog();
+            }
+        }
+
+        /// <summary>Stänger ny-karta-dialogen och återgår till slot-pickern.</summary>
+        private void CancelNewMapDialog()
+        {
+            _showNewMapDialog   = false;
+            _newMapPendingDirty = false;
+            _pendingNewSlotId   = null;
+            OpenMapPicker();
         }
 
         private void ChangeNewMapField(int delta)
@@ -945,36 +966,57 @@ namespace FrostyPlatformer.States
 
         private void DrawNewMapDialogOverlay(GameContext context)
         {
-            const int boxX = 100, boxY = 70, boxW = 200, boxH = 90;
-            const int labelX = boxX + 8, valueX = boxX + 72;
-            const int lineH = 14;
+            const int FontW = GameConstants.FontCharWidth;
+            const int LineH = 14;
 
             _rc.FillRect(0, 0, context.ScreenWidth, context.ScreenHeight, PickerOverlayColor);
-            _rc.FillRect(boxX, boxY, boxW, boxH, new RenderColor(20, 20, 30, 240));
+
+            int cx = context.ScreenWidth / 2;
 
             string title = _pendingNewSlotId != null
                 ? $"NEW MAP  ({_pendingNewSlotId})"
                 : "NEW MAP";
-            _rc.DrawText(title, labelX, boxY + 4);
+            _rc.DrawText(title, cx - (title.Length * FontW) / 2, 24);
 
-            string[] labels = { "Width:", "Height:", "Tileset:" };
-            string[] values =
+            // Värderaderna har vänsterjusterade etiketter (padding 9) så att < >-värdena
+            // ligger i linje; handlingsraderna är rena menyval.
+            string[] rows =
             {
-                $"< {WidthPresets[_newMapWidthIdx]} >",
-                $"< {HeightPresets[_newMapHeightIdx]} >",
-                $"< {AvailableTilesets[_newMapTilesetIdx]} >"
+                $"{"Width:",-9}< {WidthPresets[_newMapWidthIdx]} >",
+                $"{"Height:",-9}< {HeightPresets[_newMapHeightIdx]} >",
+                $"{"Tileset:",-9}< {ShortTilesetName(AvailableTilesets[_newMapTilesetIdx])} >",
+                "Create",
+                "Back"
             };
 
-            for (int i = 0; i < 3; i++)
+            // Centrera hela blocket på den bredaste raden (inkl. "> "-markörens 2 tecken).
+            int maxLen = 0;
+            foreach (var r in rows) if (r.Length > maxLen) maxLen = r.Length;
+            int blockX = cx - ((maxLen + 2) * FontW) / 2;
+
+            const int startY = 48;
+            for (int i = 0; i < rows.Length; i++)
             {
-                int y = boxY + 20 + i * lineH;
-                if (i == _newMapDialogField)
-                    _rc.FillRect(labelX - 2, y - 1, boxW - 12, lineH, PickerSelectColor);
-                _rc.DrawText(labels[i], labelX, y);
-                _rc.DrawText(values[i], valueX, y);
+                int  y        = startY + i * LineH;
+                bool selected = i == _newMapDialogField;
+                _rc.DrawText(selected ? $"> {rows[i]}" : $"  {rows[i]}", blockX, y);
             }
 
-            _rc.DrawText("Enter=create   Esc=back", labelX, boxY + boxH - 12);
+            if (_hudMessageTimer > 0f)
+                _rc.DrawText(_hudMessage,
+                    cx - (_hudMessage.Length * FontW) / 2,
+                    startY + rows.Length * LineH + 6);
+        }
+
+        /// <summary>
+        /// Kortar ner ett tileset-filnamn för visning: "tilesheetspring.tsx" → "spring".
+        /// </summary>
+        private static string ShortTilesetName(string tileset)
+        {
+            string s = tileset;
+            if (s.EndsWith(".tsx")) s = s.Substring(0, s.Length - 4);
+            if (s.StartsWith("tilesheet")) s = s.Substring("tilesheet".Length);
+            return s.Length == 0 ? tileset : s;
         }
 
         private void UpdateMapPicker(GameContext context)
@@ -989,13 +1031,29 @@ namespace FrostyPlatformer.States
             // Exkludera Ctrl+S — IsConfirmPressed inkluderar S vilket annars
             // triggar en oavsiktlig kartladdning när användaren sparar med Ctrl+S.
             if (_services.Input.IsConfirmPressed && !_services.Input.IsEditorSave)
-                ConfirmPickerLoad();
+                ConfirmPickerLoad(context);
         }
 
-        private void ConfirmPickerLoad()
+        private void ConfirmPickerLoad(GameContext context)
         {
             if (_pickerEntries == null) return;
             var entry = _pickerEntries[_pickerIndex];
+
+            if (entry.IsBack)
+            {
+                // Samma beteende som Esc i pickern: ingen karta laddad → lämna
+                // editorn, annars stäng bara pickern.
+                if (_mapAdapter == null)
+                {
+                    context.MenuNavigation = Enum.MenuState.StartMenu;
+                    _services.StateManager.Transition(new MenuState(_services), context);
+                }
+                else
+                {
+                    CloseMapPicker();
+                }
+                return;
+            }
 
             if (entry.IsEmpty)
             {
@@ -1025,7 +1083,10 @@ namespace FrostyPlatformer.States
             if (_pickerEntries == null) return;
 
             _rc.FillRect(0, 0, context.ScreenWidth, context.ScreenHeight, PickerOverlayColor);
-            _rc.DrawText("YOUR MAPS   Up/Down=navigate   Enter=open/create   Esc=exit", PickerX, 8);
+
+            string header = "Select map to edit";
+            int hx = (context.ScreenWidth / 2) - ((header.Length * 8) / 2);
+            _rc.DrawText(header, hx, 8);
 
             int y = PickerStartY;
             for (int i = 0; i < _pickerEntries.Count; i++)
@@ -1033,17 +1094,8 @@ namespace FrostyPlatformer.States
                 var  entry    = _pickerEntries[i];
                 bool selected = i == _pickerIndex;
 
-                if (selected)
-                {
-                    string action = entry.IsEmpty ? "[Enter = new map]" : "[Enter = load]";
-                    _rc.FillRect(PickerX - 2, y - 1, context.ScreenWidth - PickerX * 2,
-                                 PickerLineHeight, PickerSelectColor);
-                    _rc.DrawText($"> {entry.Label}  {action}", PickerX, y);
-                }
-                else
-                {
-                    _rc.DrawText($"  {entry.Label}", PickerX, y);
-                }
+                // Markeras med "> "-prefix som övriga menyer — ingen avvikande ram.
+                _rc.DrawText(selected ? $"> {entry.Label}" : $"  {entry.Label}", PickerX, y);
 
                 y += PickerLineHeight;
             }

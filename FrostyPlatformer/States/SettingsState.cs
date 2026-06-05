@@ -67,8 +67,16 @@ namespace FrostyPlatformer.States
                 _services.Input.ButtonsHasGoneIdle = false;
             }
 
-            if (_services.Input.ButtonsHasGoneIdle &&
-                (_services.Input.IsCancelPressed || _services.Input.IsConfirmPressed))
+            // Tillbaka (cancel) — backar alltid, oavsett markörens position
+            if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsCancelPressed)
+            {
+                _services.Input.ButtonsHasGoneIdle = false;
+                HandleBack(context);
+                return;
+            }
+
+            // Välj (confirm)
+            if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsConfirmPressed)
             {
                 var sel = _currentOptions[_selectIndex - 1];
                 _services.Input.ButtonsHasGoneIdle = false;
@@ -151,23 +159,44 @@ namespace FrostyPlatformer.States
                     };
                     return DefaultListSave();
 
+                case Enum.MenuState.ClearMyMaps:
+                    header = "Clear My Maps";
+                    bread  = "Delete a map and its high score";
+                    return DefaultListUserMaps();
+
                 default:
                     return new List<OptionsObj>();
             }
+        }
+
+        /// <summary>
+        /// Backar ut ur den aktiva inställningsvyn till rätt förälder-meny.
+        /// Anropas både av "Back"-alternativet (confirm) och av cancel-knappen.
+        /// </summary>
+        private void HandleBack(GameContext context)
+        {
+            _services.Input.ButtonsHasGoneIdle = false;
+
+            // Save nås bara från pausmenyn på världskartan → backa tillbaka dit.
+            if (context.MenuNavigation == Enum.MenuState.Save)
+            {
+                _services.StateManager.Transition(new WorldMapState(_services), context);
+                return;
+            }
+
+            context.MenuNavigation = context.MenuNavigation switch
+            {
+                Enum.MenuState.Load => Enum.MenuState.StartMenu,
+                _                  => Enum.MenuState.SettingsMenu
+            };
+            _services.StateManager.Transition(new MenuState(_services), context);
         }
 
         private void HandleSelection(OptionsObj sel, GameContext context)
         {
             if (sel.OptionIsBack)
             {
-                _services.Input.ButtonsHasGoneIdle = false;
-                context.MenuNavigation = context.MenuNavigation switch
-                {
-                    Enum.MenuState.Load => Enum.MenuState.StartMenu,
-                    Enum.MenuState.Save => Enum.MenuState.PauseMenu,
-                    _                  => Enum.MenuState.SettingsMenu
-                };
-                _services.StateManager.Transition(new MenuState(_services), context);
+                HandleBack(context);
                 return;
             }
 
@@ -200,6 +229,15 @@ namespace FrostyPlatformer.States
                     else if (sel.OptionIsSlotTwo)   _services.Settings.ClearSaveSlot(2);
                     else if (sel.OptionIsSlotThree) _services.Settings.ClearSaveSlot(3);
                     _services.Settings.Save();
+                    break;
+
+                case Enum.MenuState.ClearMyMaps:
+                    // Kartan och dess high score-rekord hör ihop — rensa båda.
+                    if (sel.SlotIsUsed && sel.SlotId.Length > 0)
+                    {
+                        _services.UserMaps.Delete(sel.SlotId);
+                        _services.UserMapScores.DeleteRecord(sel.SlotId);
+                    }
                     break;
 
                 case Enum.MenuState.Load:
@@ -247,6 +285,31 @@ namespace FrostyPlatformer.States
                                  SlotIsUsed = slots.SlotThree.IsUsed },
                 new OptionsObj { Display = "Back", OptionIsBack = true }
             };
+        }
+
+        /// <summary>
+        /// Bygger listan över de 7 user map-slottarna (slot1..slot7) för Clear My
+        /// Maps. Tomma slots visas men är inte valbara (SlotIsUsed = false).
+        /// </summary>
+        private List<OptionsObj> DefaultListUserMaps()
+        {
+            const int MaxUserSlots = 7;
+            var existing = new HashSet<string>(_services.UserMaps.GetAvailableMapIds());
+
+            var list = new List<OptionsObj>();
+            for (int i = 1; i <= MaxUserSlots; i++)
+            {
+                string slotId = "slot" + i;
+                bool   isUsed = existing.Contains(slotId);
+                list.Add(new OptionsObj
+                {
+                    Display    = isUsed ? $"{i} {slotId}" : $"{i} Empty",
+                    SlotId     = slotId,
+                    SlotIsUsed = isUsed
+                });
+            }
+            list.Add(new OptionsObj { Display = "Back", OptionIsBack = true });
+            return list;
         }
     }
 }

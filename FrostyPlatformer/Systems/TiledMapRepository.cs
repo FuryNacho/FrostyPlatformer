@@ -165,6 +165,16 @@ namespace FrostyPlatformer.Systems
             File.WriteAllText(filePath, BuildTiledJson(level));
         }
 
+        /// <summary>
+        /// Tar bort kartfilen för angiven kart-ID. Gör inget om filen saknas.
+        /// </summary>
+        public void Delete(string mapId)
+        {
+            var filePath = Path.Combine(_basePath, mapId + ".json");
+            if (File.Exists(filePath))
+                File.Delete(filePath);
+        }
+
         // ── Konverteringslogik (internal för enhetstestning) ──────────────────
 
         /// <summary>

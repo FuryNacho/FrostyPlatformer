@@ -65,6 +65,17 @@ namespace FrostyPlatformer.Systems
             _rw.WriteJson(FilePath, FileName, FileExtension, list);
         }
 
+        /// <inheritdoc/>
+        public void DeleteRecord(string slotId)
+        {
+            var list = Load();
+            if (list == null) return;
+
+            int removed = list.RemoveAll(s => s.SlotId == slotId);
+            if (removed > 0)
+                _rw.WriteJson(FilePath, FileName, FileExtension, list);
+        }
+
         private List<UserMapScore>? Load()
             => _rw.ReadJson<List<UserMapScore>>(FilePath, FileName, FileExtension);
     }

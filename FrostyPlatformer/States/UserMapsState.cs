@@ -59,12 +59,15 @@ namespace FrostyPlatformer.States
 
             if (!_services.Input.IsWindowFocused) return;
 
+            // Sista raden är alltid "Back" — index == _slots.Count.
+            int backIndex = _slots.Count;
+
             if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsUpPressed && _selectedIndex > 0)
             {
                 _selectedIndex--;
                 _services.Input.ButtonsHasGoneIdle = false;
             }
-            if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsDownPressed && _selectedIndex < _slots.Count - 1)
+            if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsDownPressed && _selectedIndex < backIndex)
             {
                 _selectedIndex++;
                 _services.Input.ButtonsHasGoneIdle = false;
@@ -72,16 +75,17 @@ namespace FrostyPlatformer.States
 
             if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsCancelPressed)
             {
-                _services.Input.ButtonsHasGoneIdle = false;
-                context.MenuNavigation = Enum.MenuState.StartMenu;
-                _services.StateManager.Transition(new MenuState(_services), context);
+                GoBack(context);
                 return;
             }
 
-            if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsConfirmPressed && _slots.Count > 0)
+            if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsConfirmPressed)
             {
                 _services.Input.ButtonsHasGoneIdle = false;
-                StartMap(context, _slots[_selectedIndex]);
+                if (_selectedIndex < _slots.Count)
+                    StartMap(context, _slots[_selectedIndex]);
+                else
+                    GoBack(context);
             }
         }
 
@@ -100,6 +104,13 @@ namespace FrostyPlatformer.States
             _messageTimer = 3.0f;
         }
 
+        private void GoBack(GameContext context)
+        {
+            _services.Input.ButtonsHasGoneIdle = false;
+            context.MenuNavigation = Enum.MenuState.StartMenu;
+            _services.StateManager.Transition(new MenuState(_services), context);
+        }
+
         private List<string> BuildSlotList()
         {
             var result = new List<string>();
@@ -112,43 +123,45 @@ namespace FrostyPlatformer.States
 
         private void DrawList(GameContext context)
         {
-            int cx = context.ScreenWidth / 2;
+            const int RowHeight = 18;
+            int cx       = context.ScreenWidth / 2;
+            int startY   = 28;
 
             string header = "My Maps";
             _rc.DrawText(header, cx - (header.Length * GameConstants.FontCharWidth) / 2, 8);
 
+            // Tom lista: visa info ovanför Back-raden (som fortfarande är valbar).
             if (_slots.Count == 0)
             {
                 string empty = "No maps saved yet";
-                _rc.DrawText(empty, cx - (empty.Length * GameConstants.FontCharWidth) / 2, 30);
-                _rc.DrawText("Esc = back", cx - (10 * GameConstants.FontCharWidth) / 2, 46);
-                return;
+                _rc.DrawText(empty, cx - (empty.Length * GameConstants.FontCharWidth) / 2, startY);
+                startY += RowHeight;
             }
-
-            const int IconToTextGap = 25;
-            const int RowHeight     = 18;
-            int startY              = 28;
 
             for (int i = 0; i < _slots.Count; i++)
             {
                 string slotId = _slots[i];
                 var    record = _services.UserMapScores.GetRecord(slotId);
-                string time   = record != null ? FormatTime(record.BestTime) : "—";
-                string label  = $"{slotId}   {time}";
-
-                int screenX = cx - (IconToTextGap + label.Length * GameConstants.FontCharWidth) / 2;
-                int screenY = startY + i * RowHeight;
-
-                int srcX = (i == _selectedIndex) ? 0 : 16;
-                _rc.DrawPartialSprite(SpriteId.Items, screenX, screenY, srcX, 48, 16, 16);
-                _rc.DrawText(label, screenX + IconToTextGap, screenY + 5);
+                string time   = record != null ? FormatTime(record.BestTime) : "No high score set";
+                DrawRow(cx, startY + i * RowHeight, $"{slotId}   {time}", i == _selectedIndex);
             }
 
-            int helpY = startY + _slots.Count * RowHeight + 6;
-            _rc.DrawText("Enter = play   Esc = back", cx - (25 * GameConstants.FontCharWidth) / 2, helpY);
+            // Back-rad sist — samma markör-stil som kartraderna.
+            int backY = startY + _slots.Count * RowHeight;
+            DrawRow(cx, backY, "Back", _selectedIndex == _slots.Count);
 
             if (_messageTimer > 0f)
-                _rc.DrawText(_message, cx - (_message.Length * GameConstants.FontCharWidth) / 2, helpY + 14);
+                _rc.DrawText(_message, cx - (_message.Length * GameConstants.FontCharWidth) / 2, backY + RowHeight + 6);
+        }
+
+        /// <summary>Ritar en menyrad med ikon-markör, centrerad kring cx.</summary>
+        private void DrawRow(int cx, int y, string label, bool selected)
+        {
+            const int IconToTextGap = 25;
+            int screenX = cx - (IconToTextGap + label.Length * GameConstants.FontCharWidth) / 2;
+            int srcX    = selected ? 0 : 16;
+            _rc.DrawPartialSprite(SpriteId.Items, screenX, y, srcX, 48, 16, 16);
+            _rc.DrawText(label, screenX + IconToTextGap, y + 5);
         }
 
         private void StartMap(GameContext context, string slotId)

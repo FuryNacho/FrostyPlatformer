@@ -39,11 +39,11 @@ namespace FrostyPlatformer
         {
             None,
             StartMenu,
-            PauseMenu,
             SettingsMenu,
             Audio,
             ClearHighScore,
             ClearSavedGame,
+            ClearMyMaps,
             Load,
             Save,
             CreditsMenu

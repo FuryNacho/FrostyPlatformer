@@ -158,6 +158,54 @@ namespace UnitTest
             Assert.AreEqual(8, result!.Width);
         }
 
+        // ── Delete ────────────────────────────────────────────────────────────
+
+        [TestMethod]
+        public void Delete_ExistingMap_RemovesIt()
+        {
+            var repo = new FakeMapRepository();
+            repo.AddMap("slot1", MakeLevelObj());
+
+            repo.Delete("slot1");
+
+            Assert.IsNull(repo.Load("slot1"));
+        }
+
+        [TestMethod]
+        public void Delete_TracksCallCountAndLastDeletedId()
+        {
+            var repo = new FakeMapRepository();
+            repo.AddMap("slot2", MakeLevelObj());
+
+            repo.Delete("slot2");
+
+            Assert.AreEqual(1,       repo.DeleteCallCount);
+            Assert.AreEqual("slot2", repo.LastDeletedMapId);
+        }
+
+        [TestMethod]
+        public void Delete_UnknownMap_NoThrow()
+        {
+            var repo = new FakeMapRepository();
+
+            repo.Delete("doesnotexist");
+
+            Assert.AreEqual(1, repo.DeleteCallCount);
+        }
+
+        [TestMethod]
+        public void Delete_OnlyRemovesTargetMap()
+        {
+            var repo = new FakeMapRepository();
+            repo.AddMap("slot1", MakeLevelObj());
+            repo.AddMap("slot2", MakeLevelObj());
+
+            repo.Delete("slot1");
+
+            Assert.IsNull(repo.Load("slot1"));
+            Assert.IsNotNull(repo.Load("slot2"));
+        }
+
         // ── Konstruktor med dictionary ────────────────────────────────────────
 
         [TestMethod]

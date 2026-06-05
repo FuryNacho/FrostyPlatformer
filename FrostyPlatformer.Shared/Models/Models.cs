@@ -128,6 +128,10 @@ namespace FrostyPlatformer.Models
         public bool OptionIsSlotThree { get; set; }
 
         public bool SlotIsUsed { get; set; }
+
+        // Generiskt slot-ID för menyer som arbetar mot godtyckliga slots (t.ex.
+        // user maps "slot1".."slot7"), istället för de tre fasta save-slot-flaggorna.
+        public string SlotId { get; set; } = "";
     }
 
 

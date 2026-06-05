@@ -30,5 +30,10 @@ namespace FrostyPlatformer.Systems
         /// Sparar ett nytt rekord för angiven slot. Ersätter eventuellt befintligt rekord.
         /// </summary>
         void SaveRecord(string slotId, string handle, TimeSpan time);
+
+        /// <summary>
+        /// Tar bort rekordet för angiven slot. Gör inget om inget rekord finns.
+        /// </summary>
+        void DeleteRecord(string slotId);
     }
 }

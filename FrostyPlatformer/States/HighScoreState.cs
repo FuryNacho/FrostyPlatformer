@@ -65,10 +65,17 @@ namespace FrostyPlatformer.States
 
         public void Draw(IRenderContext renderContext, GameContext context)
         {
+            const int FontWidth = 8;
+
             string header = "Penguin After All High Score";
-            int hx = (context.ScreenWidth / 2) - ((header.Length * 8) / 2);
+            int hx = (context.ScreenWidth / 2) - ((header.Length * FontWidth) / 2);
             _rc.DrawText(header, hx, 10);
-            _rc.DrawText("    Name  Time        %", 8, 45);
+
+            // Tabellen centreras som block: kolumnrubriken och alla rader delar samma
+            // vänsterkant så kolumnerna fortsätter ligga i linje.
+            string colHeader = "    Name  Time        %";
+            int tableX = (context.ScreenWidth - colHeader.Length * FontWidth) / 2;
+            _rc.DrawText(colHeader, tableX, 45);
 
             int idx = 0;
             foreach (var row in _services.Score.GetList())
@@ -78,11 +85,13 @@ namespace FrostyPlatformer.States
                 string handle = row.Handle.Length < 5 ? row.Handle + "  " : row.Handle;
                 _rc.DrawText(" " + idx + ". " + handle + " " +
                              row.TimeSpan.ToString("hh':'mm':'ss") +
-                             "    " + row.Percent, 8, y);
+                             "    " + row.Percent, tableX, y);
             }
 
             const int BottomTextMargin = 14; // Pixlar från skärmens nederkant till textens överkant
-            _rc.DrawText("Press any button", 8, context.ScreenHeight - BottomTextMargin);
+            string prompt = "Press any button";
+            int px = (context.ScreenWidth / 2) - ((prompt.Length * FontWidth) / 2);
+            _rc.DrawText(prompt, px, context.ScreenHeight - BottomTextMargin);
         }
 
         public void Exit(GameContext context) { }

@@ -38,5 +38,10 @@ namespace FrostyPlatformer.Systems
         /// Skapar nödvändiga mappar om de inte finns.
         /// </summary>
         void Save(string mapId, LevelObj level);
+
+        /// <summary>
+        /// Tar bort kartan med angiven kart-ID. Gör inget om kartan inte finns.
+        /// </summary>
+        void Delete(string mapId);
     }
 }

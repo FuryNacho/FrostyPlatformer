@@ -180,12 +180,14 @@ namespace FrostyPlatformer.Engine.MonoGame
 
         public bool IsJumpReleased => KeyReleased(Keys.Up) || KeyReleased(Keys.Space) || PadRelease(Buttons.A);
 
+        // Modern joypad-konvention: A = bekräfta, B = tillbaka, Start = paus.
+        // Confirm/Cancel/Pause är medvetet åtskilda så att "backa" och "pausa"
+        // aldrig kan bli samma sak (vilket gav inkonsekvent menynavigering förut).
         public bool IsConfirmPressed => KeyPressed(Keys.Enter) || KeyPressed(Keys.Space)
-                                     || KeyPressed(Keys.X)     || KeyPressed(Keys.S)
                                      || PadPressed(Buttons.A);
 
-        public bool IsCancelPressed  => KeyPressed(Keys.Escape) || KeyPressed(Keys.P)
-                                     || PadPressed(Buttons.Start);
+        public bool IsCancelPressed  => KeyPressed(Keys.Escape) || KeyPressed(Keys.Back)
+                                     || PadPressed(Buttons.B);
 
         public bool IsPausePressed   => KeyPressed(Keys.Escape) || KeyPressed(Keys.P)
                                      || PadPressed(Buttons.Start);

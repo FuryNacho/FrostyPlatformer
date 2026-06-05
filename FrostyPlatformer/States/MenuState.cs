@@ -8,8 +8,8 @@ using FrostyPlatformer.Rendering;
 namespace FrostyPlatformer.States
 {
     /// <summary>
-    /// Hanterar spelets huvudmeny och alla sub-menyer (StartMenu, PauseMenu,
-    /// SettingsMenu, CreditsMenu).
+    /// Hanterar spelets huvudmeny och alla sub-menyer (StartMenu, SettingsMenu,
+    /// CreditsMenu). Pausen hanteras separat av PauseState.
     /// </summary>
     /// <remarks>
     /// MÖNSTER: State Machine (konkret tillstånd)
@@ -74,9 +74,16 @@ namespace FrostyPlatformer.States
                 _services.Input.ButtonsHasGoneIdle = false;
             }
 
-            // Välj
-            if (_services.Input.ButtonsHasGoneIdle &&
-                (_services.Input.IsCancelPressed || _services.Input.IsConfirmPressed))
+            // Tillbaka (cancel) — backa konsekvent, aldrig samma sak som "välj"
+            if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsCancelPressed)
+            {
+                _services.Input.ButtonsHasGoneIdle = false;
+                HandleCancel(context);
+                return;
+            }
+
+            // Välj (confirm)
+            if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsConfirmPressed)
             {
                 _services.Input.ButtonsHasGoneIdle = false;
                 HandleSelection(_currentMenuList[_selectedItem - 1], context);
@@ -119,30 +126,51 @@ namespace FrostyPlatformer.States
                         "Settings", "Credits", "Level Editor", "My Maps", "Exit Game"
                     };
 
-                case Enum.MenuState.PauseMenu:
-                    return new List<string> { "Resume", "Save", "Quit" };
-
                 case Enum.MenuState.SettingsMenu:
                     header = "Menu - Settings";
                     return new List<string>
                     {
-                        "Audio", "Clear High Score", "Clear Saved Game", "Back"
+                        "Audio", "Clear High Score", "Clear Saved Game", "Clear My Maps", "Back"
                     };
 
                 case Enum.MenuState.CreditsMenu:
                     header = "Credits";
-                    _selectedItem = 10; // sätt till sista (Back)
-                    return new List<string>
+                    var credits = new List<string>
                     {
                         "Developer:", "FuryNacho",
-                        "olcPixelGameEngine:", "Javidx9",
-                        //"Game Engine Port:", "DevChrome", //(Not used when upgrading to .net 8)
                         "Music and Sound:", "Fiskifickorna",
+                        //"olcPixelGameEngine:", "Javidx9",
+                        //"Game Engine Port:", "DevChrome", //(Not used when upgrading to .net 8)
+                        "",
                         "", "Back"
                     };
+                    _selectedItem = credits.Count; // markören parkeras på sista raden ("Back")
+                    return credits;
 
                 default:
                     return new List<string>();
+            }
+        }
+
+        /// <summary>
+        /// Hanterar "tillbaka"-knappen (cancel) konsekvent för varje meny-läge.
+        /// I huvudmenyn finns ingen förälder att backa till — då hoppar markören
+        /// istället ner till "Exit Game". Undermenyer backar till huvudmenyn.
+        /// </summary>
+        private void HandleCancel(GameContext context)
+        {
+            switch (context.MenuNavigation)
+            {
+                case Enum.MenuState.StartMenu:
+                    int exitIndex = _currentMenuList.IndexOf("Exit Game");
+                    if (exitIndex >= 0) _selectedItem = exitIndex + 1;
+                    break;
+
+                case Enum.MenuState.SettingsMenu:
+                case Enum.MenuState.CreditsMenu:
+                    _selectedItem = 1;
+                    context.MenuNavigation = Enum.MenuState.StartMenu;
+                    break;
             }
         }
 
@@ -155,19 +183,6 @@ namespace FrostyPlatformer.States
                     _services.Reset();
                     _services.Input.ButtonsHasGoneIdle = false;
                     _services.StateManager.Transition(new WorldMapState(_services), context);
-                    break;
-
-                case "Resume":
-                    _selectedItem = 1;
-                    _services.StateManager.Transition(new WorldMapState(_services), context);
-                    _services.Input.ButtonsHasGoneIdle = false;
-                    break;
-
-                case "Save":
-                    _selectedItem = 1;
-                    _services.Input.ButtonsHasGoneIdle = false;
-                    context.MenuNavigation = Enum.MenuState.Save;
-                    _services.StateManager.Transition(new SettingsState(_services), context);
                     break;
 
                 case "Load Saved Game":
@@ -201,15 +216,16 @@ namespace FrostyPlatformer.States
                     _services.StateManager.Transition(new SettingsState(_services), context);
                     break;
 
+                case "Clear My Maps":
+                    _services.Input.ButtonsHasGoneIdle = false;
+                    context.MenuNavigation = Enum.MenuState.ClearMyMaps;
+                    _services.StateManager.Transition(new SettingsState(_services), context);
+                    break;
+
                 case "Back":
                     _selectedItem = 1;
                     _services.Input.ButtonsHasGoneIdle = false;
                     context.MenuNavigation = Enum.MenuState.StartMenu;
-                    break;
-
-                case "Quit":
-                    context.MenuNavigation = Enum.MenuState.StartMenu;
-                    _services.Input.ButtonsHasGoneIdle = false;
                     break;
 
                 case "Level Editor":

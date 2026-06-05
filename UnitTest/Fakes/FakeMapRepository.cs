@@ -60,5 +60,16 @@ namespace UnitTest.Fakes
             LastSavedMapId = mapId;
             _maps[mapId] = level;
         }
+
+        public int DeleteCallCount { get; private set; }
+        public string? LastDeletedMapId { get; private set; }
+
+        /// <summary>Tar bort kartposten ur minnet — gör inget om den saknas.</summary>
+        public void Delete(string mapId)
+        {
+            DeleteCallCount++;
+            LastDeletedMapId = mapId;
+            _maps.Remove(mapId);
+        }
     }
 }

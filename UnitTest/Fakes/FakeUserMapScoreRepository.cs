@@ -26,5 +26,7 @@ namespace UnitTest.Fakes
                 SetAt    = DateTime.Now,
             };
         }
+
+        public void DeleteRecord(string slotId) => _records.Remove(slotId);
     }
 }

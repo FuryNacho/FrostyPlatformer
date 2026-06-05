@@ -365,7 +365,7 @@ namespace FrostyPlatformer.States
             // Pause
             if (!_services.Input.ButtonsHasGoneIdle && _services.Input.IsIdle && !_services.Input.IsAnyKeyPressed)
                 _services.Input.ButtonsHasGoneIdle = true;
-            if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsCancelPressed)
+            if (_services.Input.ButtonsHasGoneIdle && _services.Input.IsPausePressed)
             {
                 _services.Input.ButtonsHasGoneIdle = false;
                 if (context.IsPreviewMode)
@@ -373,7 +373,7 @@ namespace FrostyPlatformer.States
                 else if (context.UserMapSlotId != null)
                     ReturnToUserMaps(context);
                 else
-                    _services.StateManager.Transition(new PauseState(_services), context);
+                    _services.StateManager.Transition(new PauseState(_services, PauseOrigin.Gameplay), context);
                 return;
             }
 

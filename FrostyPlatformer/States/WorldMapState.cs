@@ -146,11 +146,10 @@ namespace FrostyPlatformer.States
                     if (_services.Input.IsConfirmPressed)
                         if (TryEnterStage(context)) return;
 
-                    if (_services.Input.IsCancelPressed)
+                    if (_services.Input.IsPausePressed)
                     {
-                        context.MenuNavigation = Enum.MenuState.PauseMenu;
                         _services.Input.ButtonsHasGoneIdle = false;
-                        _services.StateManager.Transition(new MenuState(_services), context);
+                        _services.StateManager.Transition(new PauseState(_services, PauseOrigin.WorldMap), context);
                         return;
                     }
                 }
