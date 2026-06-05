@@ -55,6 +55,18 @@ namespace UnitTest.Fakes
         public bool IsEditorUndoPressed     { get; set; }
         public bool IsEditorPreviewPlay     { get; set; }
 
+        // Editorns gamepad-styrning
+        public float LeftStickX { get; set; }
+        public float LeftStickY { get; set; }
+        public bool IsEditorScrollLeft      { get; set; }
+        public bool IsEditorScrollRight     { get; set; }
+        public bool IsEditorScrollUp        { get; set; }
+        public bool IsEditorScrollDown      { get; set; }
+        public bool IsEditorPrimaryDown      { get; set; }
+        public bool IsEditorPrimaryPressed   { get; set; }
+        public bool IsEditorSecondaryDown    { get; set; }
+        public bool IsEditorSecondaryPressed { get; set; }
+
         // Mus-input
         public int  MouseX              { get; set; }
         public int  MouseY              { get; set; }

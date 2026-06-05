@@ -125,5 +125,94 @@ namespace UnitTest
             Assert.AreEqual(origTileX, backTileX, "Round-trip tileX ska stämma");
             Assert.AreEqual(origTileY, backTileY, "Round-trip tileY ska stämma");
         }
+
+        // ── UpdateCursor — delad mus/gamepad-markör ──────────────────────────────
+
+        [TestMethod]
+        public void UpdateCursor_MouseMoved_SnapsToMousePosition()
+        {
+            // Senast rörda enhet vinner: musrörelse snäpper markören dit absolut.
+            var (x, y) = EditorMath.UpdateCursor(
+                prevX: 10f, prevY: 10f,
+                mouseMoved: true, mouseX: 100, mouseY: 80,
+                stickX: 0.9f, stickY: 0.9f, speed: 160f, dt: 0.016f,
+                maxX: 255, maxY: 223);
+            Assert.AreEqual(100f, x);
+            Assert.AreEqual(80f, y);
+        }
+
+        [TestMethod]
+        public void UpdateCursor_MouseMoved_ClampsToScreen()
+        {
+            var (x, y) = EditorMath.UpdateCursor(
+                prevX: 0f, prevY: 0f,
+                mouseMoved: true, mouseX: 9999, mouseY: -50,
+                stickX: 0f, stickY: 0f, speed: 160f, dt: 0.016f,
+                maxX: 255, maxY: 223);
+            Assert.AreEqual(255f, x);
+            Assert.AreEqual(0f, y);
+        }
+
+        [TestMethod]
+        public void UpdateCursor_StickInDeadZone_KeepsPreviousPosition()
+        {
+            // Dödzonad stick = 0 → markören står still när musen inte rörts.
+            var (x, y) = EditorMath.UpdateCursor(
+                prevX: 50f, prevY: 60f,
+                mouseMoved: false, mouseX: 0, mouseY: 0,
+                stickX: 0f, stickY: 0f, speed: 160f, dt: 0.016f,
+                maxX: 255, maxY: 223);
+            Assert.AreEqual(50f, x);
+            Assert.AreEqual(60f, y);
+        }
+
+        [TestMethod]
+        public void UpdateCursor_StickMovesCursorIncrementally()
+        {
+            // Full stick åt höger i 1 sekund med 160 px/s → +160 px från prevX.
+            var (x, _) = EditorMath.UpdateCursor(
+                prevX: 50f, prevY: 60f,
+                mouseMoved: false, mouseX: 0, mouseY: 0,
+                stickX: 1f, stickY: 0f, speed: 160f, dt: 1f,
+                maxX: 255, maxY: 223);
+            Assert.AreEqual(210f, x);
+        }
+
+        [TestMethod]
+        public void UpdateCursor_StickYPositive_MovesCursorUp()
+        {
+            // Skärm-Y växer nedåt; spak-Y positiv = uppåt → Y minskar.
+            var (_, y) = EditorMath.UpdateCursor(
+                prevX: 50f, prevY: 100f,
+                mouseMoved: false, mouseX: 0, mouseY: 0,
+                stickX: 0f, stickY: 1f, speed: 160f, dt: 1f,
+                maxX: 255, maxY: 223);
+            Assert.AreEqual(0f, y); // 100 - 160 = -60 → klampas till 0
+        }
+
+        [TestMethod]
+        public void UpdateCursor_StickMovement_ClampsToScreenBounds()
+        {
+            var (x, y) = EditorMath.UpdateCursor(
+                prevX: 250f, prevY: 5f,
+                mouseMoved: false, mouseX: 0, mouseY: 0,
+                stickX: 1f, stickY: 1f, speed: 160f, dt: 1f,
+                maxX: 255, maxY: 223);
+            Assert.AreEqual(255f, x);  // 250 + 160 → klampas till 255
+            Assert.AreEqual(0f, y);    // 5 - 160 → klampas till 0
+        }
+
+        [TestMethod]
+        public void UpdateCursor_MouseMovedTakesPriorityOverStick()
+        {
+            // Båda aktiva samma frame: mus vinner (mouseMoved kollas först).
+            var (x, y) = EditorMath.UpdateCursor(
+                prevX: 50f, prevY: 50f,
+                mouseMoved: true, mouseX: 30, mouseY: 40,
+                stickX: 1f, stickY: 1f, speed: 160f, dt: 1f,
+                maxX: 255, maxY: 223);
+            Assert.AreEqual(30f, x);
+            Assert.AreEqual(40f, y);
+        }
     }
 }

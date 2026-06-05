@@ -46,6 +46,10 @@ namespace FrostyPlatformer.States
         // ── Kamerakonstanter ────────────────────────────────────────────────────
         private const float ScrollSpeed = 8.0f;
 
+        // ── Markörkonstanter ────────────────────────────────────────────────────
+        // Analogspakens markörfart i skärmpixlar/sekund vid fullt utslag.
+        private const float CursorSpeed = 160.0f;
+
         // ── Palette-layout ──────────────────────────────────────────────────────
         private const int PalettePadding = 2;
         private const int PaletteWidth   =
@@ -86,6 +90,15 @@ namespace FrostyPlatformer.States
         private int                 _selectedPickupSubType;
         private int                 _selectedEnemySubType;
         private int                 _selectedStopPointSubType;
+
+        // ── Delad markör (mus + analogspak) ──────────────────────────────────────
+        // Editorn har en enda markör som styrs av antingen musen (absolut) eller
+        // vänster analogspak (inkrementellt). Senast rörda enhet vinner — båda är
+        // alltid aktiva. Placering och palettval läser markören, inte musen direkt.
+        private float               _cursorX;
+        private float               _cursorY;
+        private int                 _prevMouseX;
+        private int                 _prevMouseY;
 
         private static readonly string[] PickupSubTypes = { "Energy" };
         private static readonly string[] EnemySubTypes  = { "Penguin", "Walrus", "Frost" };
@@ -170,6 +183,12 @@ namespace FrostyPlatformer.States
         /// </summary>
         public void Enter(GameContext context)
         {
+            // Initiera den delade markören till musens nuvarande position.
+            _cursorX    = _services.Input.MouseX;
+            _cursorY    = _services.Input.MouseY;
+            _prevMouseX = _services.Input.MouseX;
+            _prevMouseY = _services.Input.MouseY;
+
             // Returning from preview — keep current map and editor state intact
             if (_mapAdapter != null)
             {
@@ -190,6 +209,16 @@ namespace FrostyPlatformer.States
             _services.Input.Poll();
 
             if (!_services.Input.IsWindowFocused) return;
+
+            // Markör-bokföring varje frame (även under dialoger) så att växling
+            // mellan mus och analogspak förblir korrekt. mouseMoved fångas innan
+            // _prevMouse uppdateras; själva markörflytten sker i huvudgrenen nedan.
+            int  curMouseX  = _services.Input.MouseX;
+            int  curMouseY  = _services.Input.MouseY;
+            bool mouseMoved = curMouseX != _prevMouseX || curMouseY != _prevMouseY
+                           || _services.Input.IsMouseLeftDown || _services.Input.IsMouseRightDown;
+            _prevMouseX = curMouseX;
+            _prevMouseY = curMouseY;
 
             if (_hudMessageTimer > 0f)
                 _hudMessageTimer -= deltaTime;
@@ -269,6 +298,13 @@ namespace FrostyPlatformer.States
                 _mapAdapter.Width, _mapAdapter.Height,
                 mapAreaWidth, context.ScreenHeight);
 
+            // Flytta den delade markören (mus ELLER analogspak; senast rörda vinner).
+            (_cursorX, _cursorY) = EditorMath.UpdateCursor(
+                _cursorX, _cursorY, mouseMoved, curMouseX, curMouseY,
+                _services.Input.LeftStickX, _services.Input.LeftStickY,
+                CursorSpeed, deltaTime,
+                context.ScreenWidth - 1, context.ScreenHeight - 1);
+
             HandleCameraScroll(deltaTime, _mapAdapter.Width, _mapAdapter.Height, visX, visY);
 
             if (_services.Input.IsEditorSave) HandleSave();
@@ -334,8 +370,8 @@ namespace FrostyPlatformer.States
                 return;
             }
 
-            bool mouseInMap = _services.Input.MouseX < mapAreaWidth;
-            if (mouseInMap)
+            bool cursorInMap = CursorX < mapAreaWidth;
+            if (cursorInMap)
             {
                 if      (_mode == EditorMode.Tiles)     HandleTilePainting(_editorCam);
                 else if (_mode == EditorMode.Collision) HandleCollisionPainting(_editorCam);
@@ -400,10 +436,10 @@ namespace FrostyPlatformer.States
             DrawEnemyMarkers(_editorCam, mapAreaWidth);
             if (DevMode) DrawStopPointMarkers(_editorCam, mapAreaWidth);
 
-            bool mouseInMap = _services.Input.MouseX < mapAreaWidth;
-            if (mouseInMap)
+            bool cursorInMap = CursorX < mapAreaWidth;
+            if (cursorInMap)
             {
-                var (hx, hy) = EditorMath.ScreenToTile(_services.Input.MouseX, _services.Input.MouseY, _editorCam);
+                var (hx, hy) = EditorMath.ScreenToTile(CursorX, CursorY, _editorCam);
                 DrawCursor(hx, hy, _editorCam);
                 DrawHud(context, hx, hy, mapAreaWidth);
             }
@@ -418,15 +454,27 @@ namespace FrostyPlatformer.States
         /// <summary>Ingen städning krävs.</summary>
         public void Exit(GameContext context) { }
 
+        // ── Delad markör — mus eller gamepad ─────────────────────────────────────
+        // "Vänsterklick"/"högerklick" är musknapp ELLER gamepad A/X. Markörens
+        // tile-koordinat tas från den delade markörpositionen, inte musen direkt.
+
+        private int CursorX => (int)_cursorX;
+        private int CursorY => (int)_cursorY;
+
+        private bool PrimaryDown      => _services.Input.IsMouseLeftDown    || _services.Input.IsEditorPrimaryDown;
+        private bool SecondaryDown    => _services.Input.IsMouseRightDown   || _services.Input.IsEditorSecondaryDown;
+        private bool PrimaryPressed   => _services.Input.IsMouseLeftPressed  || _services.Input.IsEditorPrimaryPressed;
+        private bool SecondaryPressed => _services.Input.IsMouseRightPressed || _services.Input.IsEditorSecondaryPressed;
+
         // ── Kameranavigering ─────────────────────────────────────────────────────
 
         private void HandleCameraScroll(float deltaTime, int mapWidth, int mapHeight, int visX, int visY)
         {
             float d = ScrollSpeed * deltaTime;
-            if (_services.Input.IsRightDown) _camTargetX += d;
-            if (_services.Input.IsLeftDown)  _camTargetX -= d;
-            if (_services.Input.IsDownDown)  _camTargetY += d;
-            if (_services.Input.IsUpDown)    _camTargetY -= d;
+            if (_services.Input.IsEditorScrollRight) _camTargetX += d;
+            if (_services.Input.IsEditorScrollLeft)  _camTargetX -= d;
+            if (_services.Input.IsEditorScrollDown)  _camTargetY += d;
+            if (_services.Input.IsEditorScrollUp)    _camTargetY -= d;
 
             float maxX = Math.Max(0f, mapWidth  - visX);
             float maxY = Math.Max(0f, mapHeight - visY);
@@ -441,10 +489,10 @@ namespace FrostyPlatformer.States
         /// </summary>
         private void HandlePaletteClick(GameContext context, int mapAreaWidth)
         {
-            if (!_services.Input.IsMouseLeftPressed) return;
+            if (!PrimaryPressed) return;
 
-            int relX = _services.Input.MouseX - mapAreaWidth - PalettePadding;
-            int relY = _services.Input.MouseY - PalettePadding;
+            int relX = CursorX - mapAreaWidth - PalettePadding;
+            int relY = CursorY - PalettePadding;
             int col  = relX / GameConstants.TileSize;
             int row  = relY / GameConstants.TileSize;
 
@@ -462,8 +510,8 @@ namespace FrostyPlatformer.States
         {
             int ts = GameConstants.TileSize;
 
-            int relX      = _services.Input.MouseX - mapAreaWidth - PalettePadding;
-            int relY      = _services.Input.MouseY - PalettePadding;
+            int relX      = CursorX - mapAreaWidth - PalettePadding;
+            int relY      = CursorY - PalettePadding;
             int hoverCol  = relX >= 0 ? relX / ts : -1;
             int hoverRow  = relY >= 0 ? relY / ts : -1;
             bool hasHover = hoverCol >= 0 && hoverCol < GameConstants.TileSheetColumns
@@ -507,14 +555,13 @@ namespace FrostyPlatformer.States
         /// </summary>
         private void HandleTilePainting(CameraView cam)
         {
-            bool leftDown  = _services.Input.IsMouseLeftDown;
-            bool rightDown = _services.Input.IsMouseRightDown;
+            bool leftDown  = PrimaryDown;
+            bool rightDown = SecondaryDown;
             bool erase     = rightDown || (_undoMode && leftDown);
             bool place     = leftDown && !_undoMode;
             if (!place && !erase) return;
 
-            var (tx, ty) = EditorMath.ScreenToTile(
-                _services.Input.MouseX, _services.Input.MouseY, cam);
+            var (tx, ty) = EditorMath.ScreenToTile(CursorX, CursorY, cam);
 
             _mapAdapter!.SetTile(tx, ty, place ? _selectedTileId : 0);
             _isDirty = true;
@@ -525,14 +572,13 @@ namespace FrostyPlatformer.States
         /// </summary>
         private void HandleCollisionPainting(CameraView cam)
         {
-            bool leftDown    = _services.Input.IsMouseLeftDown;
-            bool rightDown   = _services.Input.IsMouseRightDown;
+            bool leftDown    = PrimaryDown;
+            bool rightDown   = SecondaryDown;
             bool removeSolid = rightDown || (_undoMode && leftDown);
             bool addSolid    = leftDown && !_undoMode;
             if (!addSolid && !removeSolid) return;
 
-            var (tx, ty) = EditorMath.ScreenToTile(
-                _services.Input.MouseX, _services.Input.MouseY, cam);
+            var (tx, ty) = EditorMath.ScreenToTile(CursorX, CursorY, cam);
 
             _mapAdapter!.SetSolid(tx, ty, addSolid);
             _isDirty = true;
@@ -620,9 +666,8 @@ namespace FrostyPlatformer.States
         /// </summary>
         private void HandleSpawnPlacement(CameraView cam)
         {
-            bool clearPressed = _services.Input.IsMouseRightPressed
-                             || (_undoMode && _services.Input.IsMouseLeftPressed);
-            bool placePressed = !_undoMode && _services.Input.IsMouseLeftPressed;
+            bool clearPressed = SecondaryPressed || (_undoMode && PrimaryPressed);
+            bool placePressed = !_undoMode && PrimaryPressed;
             if (!placePressed && !clearPressed) return;
 
             if (clearPressed)
@@ -632,8 +677,7 @@ namespace FrostyPlatformer.States
                 return;
             }
 
-            var (tx, ty) = EditorMath.ScreenToTile(
-                _services.Input.MouseX, _services.Input.MouseY, cam);
+            var (tx, ty) = EditorMath.ScreenToTile(CursorX, CursorY, cam);
 
             if (tx < 0 || tx >= _mapAdapter!.Width || ty < 0 || ty >= _mapAdapter!.Height) return;
 
@@ -649,9 +693,8 @@ namespace FrostyPlatformer.States
         /// </summary>
         private void HandleGoalPlacement(CameraView cam)
         {
-            bool clearPressed = _services.Input.IsMouseRightPressed
-                             || (_undoMode && _services.Input.IsMouseLeftPressed);
-            bool placePressed = !_undoMode && _services.Input.IsMouseLeftPressed;
+            bool clearPressed = SecondaryPressed || (_undoMode && PrimaryPressed);
+            bool placePressed = !_undoMode && PrimaryPressed;
             if (!placePressed && !clearPressed) return;
 
             if (clearPressed)
@@ -661,8 +704,7 @@ namespace FrostyPlatformer.States
                 return;
             }
 
-            var (tx, ty) = EditorMath.ScreenToTile(
-                _services.Input.MouseX, _services.Input.MouseY, cam);
+            var (tx, ty) = EditorMath.ScreenToTile(CursorX, CursorY, cam);
 
             if (tx < 0 || tx >= _mapAdapter!.Width || ty < 0 || ty >= _mapAdapter!.Height) return;
 
@@ -683,13 +725,11 @@ namespace FrostyPlatformer.States
         /// </summary>
         private void HandlePickupPlacement(CameraView cam)
         {
-            bool clearPressed = _services.Input.IsMouseRightPressed
-                             || (_undoMode && _services.Input.IsMouseLeftPressed);
-            bool placePressed = !_undoMode && _services.Input.IsMouseLeftPressed;
+            bool clearPressed = SecondaryPressed || (_undoMode && PrimaryPressed);
+            bool placePressed = !_undoMode && PrimaryPressed;
             if (!placePressed && !clearPressed) return;
 
-            var (tx, ty) = EditorMath.ScreenToTile(
-                _services.Input.MouseX, _services.Input.MouseY, cam);
+            var (tx, ty) = EditorMath.ScreenToTile(CursorX, CursorY, cam);
 
             if (tx < 0 || tx >= _mapAdapter!.Width || ty < 0 || ty >= _mapAdapter!.Height) return;
 
@@ -722,13 +762,11 @@ namespace FrostyPlatformer.States
         /// </summary>
         private void HandleEnemyPlacement(CameraView cam)
         {
-            bool clearPressed = _services.Input.IsMouseRightPressed
-                             || (_undoMode && _services.Input.IsMouseLeftPressed);
-            bool placePressed = !_undoMode && _services.Input.IsMouseLeftPressed;
+            bool clearPressed = SecondaryPressed || (_undoMode && PrimaryPressed);
+            bool placePressed = !_undoMode && PrimaryPressed;
             if (!placePressed && !clearPressed) return;
 
-            var (tx, ty) = EditorMath.ScreenToTile(
-                _services.Input.MouseX, _services.Input.MouseY, cam);
+            var (tx, ty) = EditorMath.ScreenToTile(CursorX, CursorY, cam);
 
             if (tx < 0 || tx >= _mapAdapter!.Width || ty < 0 || ty >= _mapAdapter!.Height) return;
 
@@ -762,13 +800,11 @@ namespace FrostyPlatformer.States
         /// </summary>
         private void HandleStopPointPlacement(CameraView cam)
         {
-            bool clearPressed = _services.Input.IsMouseRightPressed
-                             || (_undoMode && _services.Input.IsMouseLeftPressed);
-            bool placePressed = !_undoMode && _services.Input.IsMouseLeftPressed;
+            bool clearPressed = SecondaryPressed || (_undoMode && PrimaryPressed);
+            bool placePressed = !_undoMode && PrimaryPressed;
             if (!placePressed && !clearPressed) return;
 
-            var (tx, ty) = EditorMath.ScreenToTile(
-                _services.Input.MouseX, _services.Input.MouseY, cam);
+            var (tx, ty) = EditorMath.ScreenToTile(CursorX, CursorY, cam);
 
             if (tx < 0 || tx >= _mapAdapter!.Width || ty < 0 || ty >= _mapAdapter!.Height) return;
 

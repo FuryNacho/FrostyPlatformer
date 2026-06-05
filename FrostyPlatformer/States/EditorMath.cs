@@ -55,5 +55,46 @@ namespace FrostyPlatformer.States
             int screenY = (int)(y * cam.TileHeight - cam.TileOffsetY);
             return (screenX, screenY);
         }
+
+        /// <summary>
+        /// Beräknar editorns delade markörposition för nästa frame.
+        /// Mus och analogspak är alltid aktiva samtidigt — "senast rörda enhet vinner":
+        /// rör spelaren musen snäpper markören dit (absolut), annars flyttar
+        /// analogspaken markören inkrementellt från sin nuvarande position.
+        /// Resultatet klampas till skärmen.
+        /// </summary>
+        /// <param name="prevX">Markörens X föregående frame (skärmpixlar).</param>
+        /// <param name="prevY">Markörens Y föregående frame (skärmpixlar).</param>
+        /// <param name="mouseMoved">True om musen rördes/klickades denna frame.</param>
+        /// <param name="mouseX">Musens X (skärmpixlar).</param>
+        /// <param name="mouseY">Musens Y (skärmpixlar).</param>
+        /// <param name="stickX">Vänster analogspak X, dödzonad (−1..1).</param>
+        /// <param name="stickY">Vänster analogspak Y, dödzonad (−1..1, positiv = uppåt).</param>
+        /// <param name="speed">Markörfart i pixlar/sekund vid full spakutslag.</param>
+        /// <param name="dt">Tid sedan förra framen (sekunder).</param>
+        /// <param name="maxX">Största tillåtna X (skärmbredd − 1).</param>
+        /// <param name="maxY">Största tillåtna Y (skärmhöjd − 1).</param>
+        /// <returns>Markörens nya (x, y) i skärmpixlar.</returns>
+        public static (float x, float y) UpdateCursor(
+            float prevX, float prevY,
+            bool mouseMoved, int mouseX, int mouseY,
+            float stickX, float stickY, float speed, float dt,
+            int maxX, int maxY)
+        {
+            if (mouseMoved)
+                return (Clamp(mouseX, maxX), Clamp(mouseY, maxY));
+
+            if (stickX != 0f || stickY != 0f)
+            {
+                // Skärm-Y växer nedåt; spak-Y positiv = uppåt → subtrahera.
+                float nx = Clamp(prevX + stickX * speed * dt, maxX);
+                float ny = Clamp(prevY - stickY * speed * dt, maxY);
+                return (nx, ny);
+            }
+
+            return (prevX, prevY);
+        }
+
+        private static float Clamp(float v, int max) => v < 0f ? 0f : (v > max ? max : v);
     }
 }

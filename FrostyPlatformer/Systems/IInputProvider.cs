@@ -140,6 +140,46 @@ namespace FrostyPlatformer.Systems
         bool IsEditorPreviewPlay { get; }
 
         // ─────────────────────────────────────────────
+        // Editorns gamepad-styrning
+        // ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Vänster analogspaks X-led, dödzonad (−1..1). Driver editorns virtuella
+        /// markör (analogspaken fungerar som musen). 0 inom dödzonen.
+        /// </summary>
+        float LeftStickX { get; }
+
+        /// <summary>
+        /// Vänster analogspaks Y-led, dödzonad (−1..1, positiv = uppåt). Driver
+        /// editorns virtuella markör. 0 inom dödzonen.
+        /// </summary>
+        float LeftStickY { get; }
+
+        /// <summary>True medan kameran ska scrolla vänster (piltangent eller d-pad — ej analog).</summary>
+        bool IsEditorScrollLeft { get; }
+
+        /// <summary>True medan kameran ska scrolla höger (piltangent eller d-pad — ej analog).</summary>
+        bool IsEditorScrollRight { get; }
+
+        /// <summary>True medan kameran ska scrolla uppåt (piltangent eller d-pad — ej analog).</summary>
+        bool IsEditorScrollUp { get; }
+
+        /// <summary>True medan kameran ska scrolla nedåt (piltangent eller d-pad — ej analog).</summary>
+        bool IsEditorScrollDown { get; }
+
+        /// <summary>True medan gamepadens primärknapp (A) hålls ned — editorns "vänsterklick".</summary>
+        bool IsEditorPrimaryDown { get; }
+
+        /// <summary>True den frame gamepadens primärknapp (A) trycks ned — editorns "vänsterklick".</summary>
+        bool IsEditorPrimaryPressed { get; }
+
+        /// <summary>True medan gamepadens sekundärknapp (X) hålls ned — editorns "högerklick" (radera).</summary>
+        bool IsEditorSecondaryDown { get; }
+
+        /// <summary>True den frame gamepadens sekundärknapp (X) trycks ned — editorns "högerklick" (radera).</summary>
+        bool IsEditorSecondaryPressed { get; }
+
+        // ─────────────────────────────────────────────
         // Mus-input
         // ─────────────────────────────────────────────
 

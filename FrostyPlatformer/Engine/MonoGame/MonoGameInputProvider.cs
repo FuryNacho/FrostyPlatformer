@@ -225,6 +225,25 @@ namespace FrostyPlatformer.Engine.MonoGame
         public bool IsEditorUndoPressed     => KeyPressed(Keys.U);
         public bool IsEditorPreviewPlay     => KeyPressed(Keys.F5);
 
+        // ─── Editorns gamepad-styrning ────────────────────────────────────────
+        // Analogspaken driver markören (som musen); d-pad/piltangenter scrollar
+        // kameran. De hålls åtskilda här så editorn kan styra markör och kamera
+        // oberoende — till skillnad från IsLeftDown m.fl. som slår ihop alla källor.
+        public float LeftStickX => _pad.IsConnected ? DeadZone(_pad.ThumbSticks.Left.X) : 0f;
+        public float LeftStickY => _pad.IsConnected ? DeadZone(_pad.ThumbSticks.Left.Y) : 0f;
+
+        private static float DeadZone(float v) => Math.Abs(v) < AnalogDeadZone ? 0f : v;
+
+        public bool IsEditorScrollLeft  => KeyDown(Keys.Left)  || PadDown(Buttons.DPadLeft);
+        public bool IsEditorScrollRight => KeyDown(Keys.Right) || PadDown(Buttons.DPadRight);
+        public bool IsEditorScrollUp    => KeyDown(Keys.Up)    || PadDown(Buttons.DPadUp);
+        public bool IsEditorScrollDown  => KeyDown(Keys.Down)  || PadDown(Buttons.DPadDown);
+
+        public bool IsEditorPrimaryDown      => PadDown(Buttons.A);
+        public bool IsEditorPrimaryPressed   => PadPressed(Buttons.A);
+        public bool IsEditorSecondaryDown    => PadDown(Buttons.X);
+        public bool IsEditorSecondaryPressed => PadPressed(Buttons.X);
+
         // ─── Mus-input ────────────────────────────────────────────────────────
         // Mouse.GetState() returnerar fysiska skärmpixlar. Spellogiken arbetar i
         // logiska pixlar (fysisk / PixelWidth). Dela med scale-faktorn för att matcha.
