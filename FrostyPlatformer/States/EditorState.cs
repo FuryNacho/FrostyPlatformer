@@ -1587,26 +1587,29 @@ namespace FrostyPlatformer.States
                 _                     => spawnInfo   // Tiles + Collision
             };
 
-            // Lägesspecifik betydelse för primär/sekundär (A/vänsterklick = place,
-            // X/högerklick = erase). Gamepad-namnen visas — paletten och panelen är
-            // självförklarande för mus, och menyerna är redan gamepad-orienterade.
-            string actionCtrl = _mode switch
+            // Lägesspecifik betydelse för primär/sekundär. Etiketterna är input-agnostiska:
+            // A (gamepad) och LMB (mus) gör samma sak, X och RMB likaså. Det får inte plats
+            // på en rad (kartområdet rymmer ~21 tecken), så primär och sekundär står på var
+            // sin rad. Back (Esc/B) och scroll (Dpad/piltangenter) listas inte — de upptäcks
+            // via Back-knappen i panelen respektive bara genom att prova.
+            (string primary, string secondary) = _mode switch
             {
-                EditorMode.Collision  => "A=solid X=clear",
-                EditorMode.Spawn      => "A=set X=clear",
-                EditorMode.Goal       => "A=set X=clear",
-                EditorMode.Pickup     => "A=add X=del",
-                EditorMode.Enemy      => "A=add X=del",
-                EditorMode.StopPoint  => "A=add X=del",
-                _                     => "A=tile X=erase"
+                EditorMode.Collision  => ("solid", "clear"),
+                EditorMode.Spawn      => ("set",   "clear"),
+                EditorMode.Goal       => ("set",   "clear"),
+                EditorMode.Pickup     => ("add",   "del"),
+                EditorMode.Enemy      => ("add",   "del"),
+                EditorMode.StopPoint  => ("add",   "del"),
+                _                     => ("tile",  "erase")
             };
 
             bool   undoActive = _undoMode;
             string dirtyMark  = _isDirty ? "*" : "";
             string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height} b:{_selectedTileId}";
             string row2 = $"{tileInfo}  {modeInfo}";
-            string row3 = undoActive ? "A erases [UNDO]" : actionCtrl;
-            string row4 = "B=back  Dpad=scroll";
+            // I undo-läge raderar primär istället för att placera.
+            string row3 = undoActive ? $"A/LMB = {secondary} [UNDO]" : $"A/LMB = {primary}";
+            string row4 = $"X/RMB = {secondary}";
 
             const int hudHeight = 44;
             _rc.FillRect(0, 0, context.ScreenWidth, hudHeight, new RenderColor(0, 0, 0, 170));
