@@ -102,6 +102,19 @@ namespace FrostyPlatformer.States
 
         private static readonly string[] PickupSubTypes = { "Energy" };
         private static readonly string[] EnemySubTypes  = { "Penguin", "Walrus", "Frost" };
+
+        // ── Verktygspanel — lägesknappar ─────────────────────────────────────────
+        // Klickbara lägesval under tile-paletten. Korta etiketter (≤4 tecken) så de
+        // ryms i sidofältets två kolumner. StopPoint läggs till i DevMode.
+        private static readonly (EditorMode Mode, string Label)[] ModeButtons =
+        {
+            (EditorMode.Tiles,     "Tile"),
+            (EditorMode.Collision, "Coll"),
+            (EditorMode.Spawn,     "Spwn"),
+            (EditorMode.Goal,      "Goal"),
+            (EditorMode.Pickup,    "Item"),
+            (EditorMode.Enemy,     "Enmy"),
+        };
         // Tom sträng = korsning (ingen bana). Ordningen matchar den naturliga banlistan.
         private static readonly string[] StopPointSubTypes =
         {
@@ -245,15 +258,7 @@ namespace FrostyPlatformer.States
                     }
                     return;
                 }
-                if (_isDirty && !_escapePendingDirty)
-                {
-                    ShowMessage("Unsaved changes! Press Esc again to exit.");
-                    _escapePendingDirty = true;
-                    return;
-                }
-                _escapePendingDirty = false;
-                context.MenuNavigation = Enum.MenuState.StartMenu;
-                _services.StateManager.Transition(new MenuState(_services), context);
+                RequestExit(context);
                 return;
             }
 
@@ -381,9 +386,11 @@ namespace FrostyPlatformer.States
                 else if (_mode == EditorMode.StopPoint) HandleStopPointPlacement(_editorCam);
                 else                                    HandleEnemyPlacement(_editorCam);
             }
-            else if (_mode == EditorMode.Tiles)
+            else
             {
-                HandlePaletteClick(context, mapAreaWidth);
+                if (_mode == EditorMode.Tiles)
+                    HandlePaletteClick(context, mapAreaWidth);
+                HandleToolPanelClick(context, mapAreaWidth);
             }
         }
 
@@ -449,6 +456,7 @@ namespace FrostyPlatformer.States
             }
 
             DrawPalette(context, mapAreaWidth);
+            DrawToolPanel(context, mapAreaWidth);
         }
 
         /// <summary>Ingen städning krävs.</summary>
@@ -465,6 +473,174 @@ namespace FrostyPlatformer.States
         private bool SecondaryDown    => _services.Input.IsMouseRightDown   || _services.Input.IsEditorSecondaryDown;
         private bool PrimaryPressed   => _services.Input.IsMouseLeftPressed  || _services.Input.IsEditorPrimaryPressed;
         private bool SecondaryPressed => _services.Input.IsMouseRightPressed || _services.Input.IsEditorSecondaryPressed;
+
+        // ── Verktygspanel — klickbara kontroller i sidofältet ────────────────────
+        // En klickbar kontroll med skärmrektangel, etikett, aktiv-flagga och
+        // handling. Samma kodväg träffas av mus och stick-markör eftersom markören
+        // är delad. Byggs varje frame av BuildToolPanel och delas av rit + klick.
+
+        private readonly struct PanelButton
+        {
+            public readonly int X, Y, W, H;
+            public readonly string Label;
+            public readonly bool Active;
+            public readonly Action OnClick;
+
+            public PanelButton(int x, int y, int w, int h, string label, bool active, Action onClick)
+            {
+                X = x; Y = y; W = w; H = h; Label = label; Active = active; OnClick = onClick;
+            }
+
+            public bool Contains(int px, int py) => px >= X && px < X + W && py >= Y && py < Y + H;
+        }
+
+        /// <summary>Aktiva läget har en subtyp att cykla (fiendetyp, item, stoppunkt).</summary>
+        private bool ModeHasSubType =>
+               _mode == EditorMode.Enemy
+            || (_mode == EditorMode.Pickup && PickupSubTypes.Length > 1)
+            || _mode == EditorMode.StopPoint;
+
+        /// <summary>Etikett för aktiva lägets nuvarande subtyp (tom om läget saknar subtyp).</summary>
+        private string CurrentSubTypeLabel => _mode switch
+        {
+            EditorMode.Enemy     => EnemySubTypes[_selectedEnemySubType],
+            EditorMode.Pickup    => PickupSubTypes[_selectedPickupSubType],
+            EditorMode.StopPoint => StopPointSubTypes[_selectedStopPointSubType].Length > 0
+                                        ? StopPointSubTypes[_selectedStopPointSubType] : "junction",
+            _                    => ""
+        };
+
+        /// <summary>Byter redigeringsläge och nollställer subtyp vid byte (som tangentbordet).</summary>
+        private void SetMode(EditorMode mode)
+        {
+            if (_mode == mode) return;
+            _mode = mode;
+            if (mode == EditorMode.Enemy)     _selectedEnemySubType     = 0;
+            if (mode == EditorMode.StopPoint) _selectedStopPointSubType = 0;
+        }
+
+        /// <summary>Cyklar aktiva lägets subtyp i given riktning (+1/−1).</summary>
+        private void CycleSubType(int dir)
+        {
+            if (_mode == EditorMode.Enemy)
+                _selectedEnemySubType = (_selectedEnemySubType + dir + EnemySubTypes.Length) % EnemySubTypes.Length;
+            else if (_mode == EditorMode.Pickup && PickupSubTypes.Length > 1)
+                _selectedPickupSubType = (_selectedPickupSubType + dir + PickupSubTypes.Length) % PickupSubTypes.Length;
+            else if (_mode == EditorMode.StopPoint)
+                _selectedStopPointSubType = (_selectedStopPointSubType + dir + StopPointSubTypes.Length) % StopPointSubTypes.Length;
+        }
+
+        /// <summary>
+        /// Lämnar editorn till menyn — med samma osparade-ändringar-varning som Escape.
+        /// Delas av Escape/B-knappen och panelens Back-knapp.
+        /// </summary>
+        private void RequestExit(GameContext context)
+        {
+            // Osparade ändringar: första försöket varnar. Ett nytt försök *medan
+            // varningen fortfarande syns* bekräftar och lämnar. Hinner varningen
+            // försvinna får man frågan igen — så varje färskt försök (Esc/B/Back)
+            // är konsekvent, oavsett vilket man pressade sist.
+            if (_isDirty && !(_escapePendingDirty && _hudMessageTimer > 0f))
+            {
+                ShowMessage("Unsaved changes! Press again to exit.");
+                _escapePendingDirty = true;
+                return;
+            }
+            _escapePendingDirty = false;
+            context.MenuNavigation = Enum.MenuState.StartMenu;
+            _services.StateManager.Transition(new MenuState(_services), context);
+        }
+
+        /// <summary>
+        /// Bygger sidofältets verktygspanel: lägesknappar (2 kolumner), en subtyp-
+        /// knapp för lägen med subtyp, samt Save/Load/Play/Back. Geometrin delas av
+        /// både ritning och klick-hittest så de aldrig kan glida isär.
+        /// </summary>
+        private List<PanelButton> BuildToolPanel(GameContext context, int mapAreaWidth)
+        {
+            var list = new List<PanelButton>();
+
+            int innerX = mapAreaWidth + PalettePadding;
+            int innerW = PaletteWidth - PalettePadding * 2;
+            int colW   = innerW / 2;
+            int rowH   = 11;
+            int y      = PalettePadding + GameConstants.TileSheetRows * GameConstants.TileSize + 2;
+
+            var modes = DevMode
+                ? ModeButtons.Append((Mode: EditorMode.StopPoint, Label: "Stop")).ToArray()
+                : ModeButtons;
+
+            for (int i = 0; i < modes.Length; i++)
+            {
+                int col = i % 2, row = i / 2;
+                var m = modes[i];
+                list.Add(new PanelButton(
+                    innerX + col * colW, y + row * rowH, colW - 1, rowH - 1,
+                    m.Label, _mode == m.Mode, () => SetMode(m.Mode)));
+            }
+            y += ((modes.Length + 1) / 2) * rowH + 3;
+
+            if (ModeHasSubType)
+            {
+                list.Add(new PanelButton(
+                    innerX, y, innerW, rowH - 1,
+                    HudFit(CurrentSubTypeLabel, innerW / GameConstants.FontCharWidth),
+                    false, () => CycleSubType(1)));
+                y += rowH + 3;
+            }
+
+            var actions = new (string Label, Action OnClick)[]
+            {
+                ("Save", HandleSave),
+                ("Load", OpenMapPicker),
+                ("Play", () => HandlePreviewPlay(context)),
+                ("Back", () => RequestExit(context)),
+            };
+            for (int i = 0; i < actions.Length; i++)
+            {
+                int col = i % 2, row = i / 2;
+                list.Add(new PanelButton(
+                    innerX + col * colW, y + row * rowH, colW - 1, rowH - 1,
+                    actions[i].Label, false, actions[i].OnClick));
+            }
+
+            return list;
+        }
+
+        /// <summary>Hanterar primärklick på en verktygspanel-kontroll vid markörens position.</summary>
+        private void HandleToolPanelClick(GameContext context, int mapAreaWidth)
+        {
+            if (!PrimaryPressed) return;
+            foreach (var b in BuildToolPanel(context, mapAreaWidth))
+                if (b.Contains(CursorX, CursorY)) { b.OnClick(); return; }
+        }
+
+        /// <summary>Ritar verktygspanelen: aktivt läge fylls, markörhovrad kontroll får gul ram.</summary>
+        private void DrawToolPanel(GameContext context, int mapAreaWidth)
+        {
+            foreach (var b in BuildToolPanel(context, mapAreaWidth))
+            {
+                var fill = b.Active
+                    ? new RenderColor(70, 110, 170, 255)
+                    : new RenderColor(40, 40, 40, 255);
+                _rc.FillRect(b.X, b.Y, b.W, b.H, fill);
+
+                var border = b.Active ? RenderColor.White : new RenderColor(110, 110, 110, 255);
+                if (b.Contains(CursorX, CursorY))
+                    border = new RenderColor(255, 220, 0, 200);
+                DrawRectBorder(b.X, b.Y, b.W, b.H, border);
+
+                _rc.DrawText(b.Label, b.X + 2, b.Y + 2);
+            }
+        }
+
+        private void DrawRectBorder(int x, int y, int w, int h, RenderColor c)
+        {
+            _rc.DrawLine(x,         y,         x + w - 1, y,         c);
+            _rc.DrawLine(x,         y + h - 1, x + w - 1, y + h - 1, c);
+            _rc.DrawLine(x,         y,         x,         y + h - 1, c);
+            _rc.DrawLine(x + w - 1, y,         x + w - 1, y + h - 1, c);
+        }
 
         // ── Kameranavigering ─────────────────────────────────────────────────────
 
