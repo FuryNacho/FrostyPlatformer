@@ -38,10 +38,9 @@ namespace FrostyPlatformer.States
     internal sealed class EditorState : IGameState
     {
         // ── Developer-gate ───────────────────────────────────────────────────────
-        // Sätt till true för att aktivera världskarte-editering (StopPoint-läge +
-        // tilesheetwm). Dolt för vanliga spelare — editorn beter sig normalt när false.
-        // static readonly (inte const) förhindrar CS0162-varning för gatad kod.
-        private static readonly bool DevMode = false;
+        // Världskarte-editering (StopPoint-läge + tilesheetwm) gatas av den centrala
+        // dev-flaggan DevConfig.WorldMapEditor. Dolt för vanliga spelare när false.
+        private static bool DevMode => DevConfig.WorldMapEditor;
 
         // ── Kamerakonstanter ────────────────────────────────────────────────────
         private const float ScrollSpeed = 8.0f;

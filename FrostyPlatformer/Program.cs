@@ -158,6 +158,11 @@ namespace FrostyPlatformer
         // ── Entry point ───────────────────────────────────────────────────────
         static void Main()
         {
+            // ── Utvecklingsflaggor ──────────────────────────────────────────────
+            // Flippa här under utveckling. Båda ska vara false vid release.
+            DevConfig.WorldMapEditor  = false;  // världskarte-editering i level editorn
+            DevConfig.UnlockAllStages = false;  // alla banor öppna → gå direkt till slutbossen
+
             try
             {
                 using var game = new Program();

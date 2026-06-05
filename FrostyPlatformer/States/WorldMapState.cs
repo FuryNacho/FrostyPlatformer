@@ -65,7 +65,9 @@ namespace FrostyPlatformer.States
         {
             _services  = services;
             _rc        = services.RenderContext;
-            _unlockAll = unlockAll;
+            // Dev-genväg: DevConfig.UnlockAllStages låser upp allt utan att varje
+            // call-site behöver känna till flaggan (konami-koden skickar redan true).
+            _unlockAll = unlockAll || DevConfig.UnlockAllStages;
         }
 
         public void Enter(GameContext context)
