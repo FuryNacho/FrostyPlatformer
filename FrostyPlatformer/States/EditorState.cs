@@ -1141,7 +1141,7 @@ namespace FrostyPlatformer.States
             // Om en karta redan är öppen och osparad — varna en gång
             if (_isDirty && _mapAdapter != null && !_newMapPendingDirty)
             {
-                ShowMessage("Unsaved changes! Press Enter again to discard.");
+                ShowMessage("Unsaved changes! Press again to discard.");
                 _newMapPendingDirty = true;
                 return;
             }
@@ -1173,7 +1173,7 @@ namespace FrostyPlatformer.States
             _pendingNewSlotId   = null;
 
             RegisterTilesheet(level.TilesetSource);
-            ShowMessage($"New map '{mapId}' created — Ctrl+S to save.");
+            ShowMessage($"New map '{mapId}' created — save to keep it.");
         }
 
         private void DrawNewMapDialogOverlay(GameContext context)
@@ -1280,7 +1280,7 @@ namespace FrostyPlatformer.States
 
             if (_isDirty && !_pickerPendingDirty)
             {
-                ShowMessage("Unsaved changes! Press Enter again to discard.");
+                ShowMessage("Unsaved changes! Press again to discard.");
                 _pickerPendingDirty = true;
                 return;
             }
@@ -1533,9 +1533,11 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Treraders statusfält: läge/karta/brush — tile-info/lägesspecifik info — tangentbord.
-        /// Innehållet i rad 2 anpassas till aktivt läge. Alla rader klipps hårt vid
-        /// kartområdets kant (mapAreaWidth) för att inte hamna under palette-sidebaren.
+        /// Fyrraders statusfält: läge/karta/brush — tile-/lägesinfo — primär/sekundär-
+        /// betydelse (A/X) — global navigering (B/d-pad). Tangentbordscentrerade
+        /// instruktioner är borttagna; verktygspanelen visar alla åtgärder som
+        /// klickbara knappar. Alla rader klipps hårt vid kartområdets kant
+        /// (mapAreaWidth) för att inte hamna under palette-sidebaren.
         /// </summary>
         private void DrawHud(GameContext context, int hoverTileX, int hoverTileY, int mapAreaWidth)
         {
@@ -1585,25 +1587,26 @@ namespace FrostyPlatformer.States
                 _                     => spawnInfo   // Tiles + Collision
             };
 
-            string mouseCtrl = _mode switch
+            // Lägesspecifik betydelse för primär/sekundär (A/vänsterklick = place,
+            // X/högerklick = erase). Gamepad-namnen visas — paletten och panelen är
+            // självförklarande för mus, och menyerna är redan gamepad-orienterade.
+            string actionCtrl = _mode switch
             {
-                EditorMode.Collision  => "LMB=solid RMB=clr",
-                EditorMode.Spawn      => "LMB=set RMB=clr",
-                EditorMode.Goal       => "LMB=set RMB=clr",
-                EditorMode.Pickup     => "LMB=add RMB=del",
-                EditorMode.Enemy      => "LMB=add RMB=del",
-                EditorMode.StopPoint  => "LMB=add RMB=del  </> subtype",
-                _                     => "LMB=tile RMB=del"
+                EditorMode.Collision  => "A=solid X=clear",
+                EditorMode.Spawn      => "A=set X=clear",
+                EditorMode.Goal       => "A=set X=clear",
+                EditorMode.Pickup     => "A=add X=del",
+                EditorMode.Enemy      => "A=add X=del",
+                EditorMode.StopPoint  => "A=add X=del",
+                _                     => "A=tile X=erase"
             };
 
             bool   undoActive = _undoMode;
             string dirtyMark  = _isDirty ? "*" : "";
-            string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height}  b:{_selectedTileId}";
-            string row2 = $"{tileInfo}  {modeInfo}  {mouseCtrl}";
-            string row3 = DevMode
-                ? "C=col G=spawn T=goal I=item E=enemy W=stop U=undo"
-                : "C=col G=spawn T=goal I=item E=enemy U=undo";
-            string row4 = undoActive ? "[UNDO MODE - LMB erases]" : "L=maps  Ctrl+S=save  F5=preview";
+            string row1 = $"[{modeLabel}] {_mapId}{dirtyMark} {_mapAdapter.Width}x{_mapAdapter.Height} b:{_selectedTileId}";
+            string row2 = $"{tileInfo}  {modeInfo}";
+            string row3 = undoActive ? "A erases [UNDO]" : actionCtrl;
+            string row4 = "B=back  Dpad=scroll";
 
             const int hudHeight = 44;
             _rc.FillRect(0, 0, context.ScreenWidth, hudHeight, new RenderColor(0, 0, 0, 170));
