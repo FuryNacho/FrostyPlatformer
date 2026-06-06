@@ -161,7 +161,7 @@ namespace FrostyPlatformer
             // ── Utvecklingsflaggor ──────────────────────────────────────────────
             // Flippa här under utveckling. Båda ska vara false vid release.
             DevConfig.WorldMapEditor  = false;  // världskarte-editering i level editorn
-            DevConfig.UnlockAllStages = false;  // alla banor öppna → gå direkt till slutbossen
+            DevConfig.UnlockAllStages = true;  // alla banor öppna → gå direkt till slutbossen
 
             try
             {
