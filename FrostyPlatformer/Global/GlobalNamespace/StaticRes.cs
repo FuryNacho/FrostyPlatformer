@@ -78,6 +78,11 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public const string BGSoundEnd      = "theend.wav";
         public const string BGNearPerfectEnd = "finalend.wav";
         public const string BGPerfectEnd    = "Caveman.wav";
+
+        // Level editor-musik. Spelas bara i editorn, med lägre volym än spelmusiken,
+        // och sekvenseras av EditorMusicSequencer (main, main, middle, loop).
+        public const string EditorMusicMain   = "arctic_workshop.wav";
+        public const string EditorMusicMiddle = "arctic_workshop_middle_act.wav";
     }
 
     public static class MapName

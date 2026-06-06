@@ -23,8 +23,11 @@ namespace FrostyPlatformer.Systems
     /// </remarks>
     public interface ISettingsService
     {
-        /// <summary>Anger om ljudet är på. Ändring sparas inte automatiskt — anropa Save() efteråt.</summary>
+        /// <summary>Anger om spelljudet är på. Ändring sparas inte automatiskt — anropa Save() efteråt.</summary>
         bool AudioOn { get; set; }
+
+        /// <summary>Anger om level editor-musiken är på. Ändring sparas inte automatiskt — anropa Save() efteråt.</summary>
+        bool EditorAudioOn { get; set; }
 
         /// <summary>Den aktiva spelarens spardata (stage, spawn, flaggor m.m.).</summary>
         SaveSlot ActivePlayer { get; }

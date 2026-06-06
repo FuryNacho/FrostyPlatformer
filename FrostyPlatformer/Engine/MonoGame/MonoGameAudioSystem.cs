@@ -45,8 +45,16 @@ namespace FrostyPlatformer.Engine.MonoGame
     public class MonoGameAudioSystem : IAudioSystem
     {
         // SoundEffect-instansen måste hållas vid liv så länge SoundEffectInstance används.
-        private readonly Dictionary<string, SoundEffect>         _effects   = new();
-        private readonly Dictionary<string, SoundEffectInstance> _instances = new();
+        private readonly Dictionary<string, SoundEffect>         _effects     = new();
+        private readonly Dictionary<string, SoundEffectInstance> _instances   = new();
+        // Per-ljud bas-volym (0..1). Editor-musiken registreras lägre än spelmusiken.
+        private readonly Dictionary<string, float>               _baseVolume  = new();
+        // Ljud som ska vara oberoende av spelets Mute()/UnMute() (level editor-musik).
+        private readonly HashSet<string>                         _editorMusic = new();
+
+        // Spelljudet styrs av AudioOn via Mute()/UnMute(). Implementeras per-instans
+        // (inte via global MasterVolume) så att editor-musiken kan vara på/av oberoende.
+        private bool _gameMuted;
 
         /// <summary>
         /// Laddar ett WAV-ljud från disk och registrerar det under ett referensnamn.
@@ -54,15 +62,29 @@ namespace FrostyPlatformer.Engine.MonoGame
         /// <param name="soundRef">Referensnamn — samma string som SoundRef.*-konstanterna.</param>
         /// <param name="filePath">Absolut sökväg till WAV-filen.</param>
         /// <param name="isLooped">True för bakgrundsmusik som ska loopas automatiskt.</param>
-        public void RegisterSound(string soundRef, string filePath, bool isLooped = false)
+        /// <param name="volume">Bas-volym 0..1. Editor-musiken spelas dämpat (~hälften).</param>
+        /// <param name="isEditorMusic">
+        /// True för level editor-musik — undantas från spelets Mute() så att
+        /// "Game sound off" inte tystar editorn (och tvärtom).
+        /// </param>
+        public void RegisterSound(string soundRef, string filePath, bool isLooped = false,
+                                  float volume = 1f, bool isEditorMusic = false)
         {
             using var stream = File.OpenRead(filePath);
             var effect   = SoundEffect.FromStream(stream);
             var instance = effect.CreateInstance();
             instance.IsLooped = isLooped;
-            _effects[soundRef]   = effect;
-            _instances[soundRef] = instance;
+            instance.Volume   = volume;
+            _effects[soundRef]    = effect;
+            _instances[soundRef]  = instance;
+            _baseVolume[soundRef] = volume;
+            if (isEditorMusic) _editorMusic.Add(soundRef);
         }
+
+        // Effektiv volym givet nuvarande mute-läge: spelljud tystas av _gameMuted,
+        // editor-musik påverkas aldrig.
+        private float EffectiveVolume(string soundRef)
+            => _gameMuted && !_editorMusic.Contains(soundRef) ? 0f : _baseVolume[soundRef];
 
         /// <inheritdoc/>
         /// <remarks>
@@ -73,6 +95,7 @@ namespace FrostyPlatformer.Engine.MonoGame
         {
             if (!_instances.TryGetValue(soundRef, out var inst)) return;
             if (inst.State == SoundState.Playing) return;
+            inst.Volume = EffectiveVolume(soundRef);
             inst.Play();
         }
 
@@ -110,11 +133,27 @@ namespace FrostyPlatformer.Engine.MonoGame
                inst.State == SoundState.Playing;
 
         /// <inheritdoc/>
-        /// <remarks>Tystar via global MasterVolume — befintliga instanser pausas inte.</remarks>
-        public void Mute()   => SoundEffect.MasterVolume = 0f;
+        /// <remarks>
+        /// Tystar spelljudet per-instans (inte via global MasterVolume) så att
+        /// editor-musiken kan vara på/av oberoende av spelljudet. Editor-musik
+        /// undantas helt. Befintliga instanser pausas inte.
+        /// </remarks>
+        public void Mute()
+        {
+            _gameMuted = true;
+            foreach (var (soundRef, inst) in _instances)
+                if (!_editorMusic.Contains(soundRef))
+                    inst.Volume = 0f;
+        }
 
         /// <inheritdoc/>
-        public void UnMute() => SoundEffect.MasterVolume = 1f;
+        public void UnMute()
+        {
+            _gameMuted = false;
+            foreach (var (soundRef, inst) in _instances)
+                if (!_editorMusic.Contains(soundRef))
+                    inst.Volume = _baseVolume[soundRef];
+        }
 
         /// <inheritdoc/>
         public void CleanUp()

@@ -30,6 +30,13 @@ namespace FrostyPlatformer.Systems
         }
 
         /// <inheritdoc/>
+        public bool EditorAudioOn
+        {
+            get => Aggregate.Instance.Settings!.EditorAudioOn;
+            set => Aggregate.Instance.Settings!.EditorAudioOn = value;
+        }
+
+        /// <inheritdoc/>
         public SaveSlot ActivePlayer => Aggregate.Instance.Settings!.ActivePlayer;
 
         /// <inheritdoc/>

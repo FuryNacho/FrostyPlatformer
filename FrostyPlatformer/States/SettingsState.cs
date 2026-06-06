@@ -113,12 +113,13 @@ namespace FrostyPlatformer.States
             {
                 case Enum.MenuState.Audio:
                     header = "Audio";
-                    string soundIs = _services.Settings.AudioOn ? "on" : "off";
-                    bread  = "Sound is " + soundIs;
+                    bread  = "";
+                    string gameState   = _services.Settings.AudioOn       ? "on" : "off";
+                    string editorState = _services.Settings.EditorAudioOn ? "on" : "off";
                     return new List<OptionsObj>
                     {
-                        new OptionsObj { Display = "Turn Sound On" },
-                        new OptionsObj { Display = "Turn Sound Off" },
+                        new OptionsObj { Display = "Gamesound (" + gameState + ")" },
+                        new OptionsObj { Display = "Editor sound (" + editorState + ")" },
                         new OptionsObj { Display = "Back", OptionIsBack = true }
                     };
 
@@ -203,17 +204,18 @@ namespace FrostyPlatformer.States
             switch (context.MenuNavigation)
             {
                 case Enum.MenuState.Audio:
-                    if (sel.Display == "Turn Sound On")
+                    if (sel.Display.StartsWith("Gamesound"))
                     {
-                        _services.Settings.AudioOn = true;
-                        _services.Audio.UnMute();
+                        _services.Settings.AudioOn = !_services.Settings.AudioOn;
+                        if (_services.Settings.AudioOn) _services.Audio.UnMute();
+                        else                            _services.Audio.Mute();
+                        _services.Settings.Save();
                     }
-                    else if (sel.Display == "Turn Sound Off")
+                    else if (sel.Display.StartsWith("Editor sound"))
                     {
-                        _services.Settings.AudioOn = false;
-                        _services.Audio.Mute();
+                        _services.Settings.EditorAudioOn = !_services.Settings.EditorAudioOn;
+                        _services.Settings.Save();
                     }
-                    _services.Settings.Save();
                     break;
 
                 case Enum.MenuState.ClearHighScore:

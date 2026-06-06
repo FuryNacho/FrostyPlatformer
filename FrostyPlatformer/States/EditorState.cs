@@ -99,6 +99,15 @@ namespace FrostyPlatformer.States
         private int                 _prevMouseX;
         private int                 _prevMouseY;
 
+        // ── Editor-musik ─────────────────────────────────────────────────────────
+        // Sekvenseras av EditorMusicSequencer (main, main, middle, loop) och spelas
+        // bara medan en karta redigeras. Gates av Settings.EditorAudioOn och pausas
+        // under preview-spelning så banans egen musik hörs ostört.
+        private enum EditorMusicState { Stopped, Playing, Paused }
+        private readonly IEditorMusicSequencer _musicSequencer =
+            new EditorMusicSequencer(SoundRef.EditorMusicMain, SoundRef.EditorMusicMiddle);
+        private EditorMusicState _musicState = EditorMusicState.Stopped;
+
         private static readonly string[] PickupSubTypes = { "Energy" };
         private static readonly string[] EnemySubTypes  = { "Penguin", "Walrus", "Frost" };
 
@@ -301,6 +310,8 @@ namespace FrostyPlatformer.States
                 _camTargetX + visX / 2f, _camTargetY + visY / 2f,
                 _mapAdapter.Width, _mapAdapter.Height,
                 mapAreaWidth, context.ScreenHeight);
+
+            UpdateEditorMusic();
 
             // Flytta den delade markören (mus ELLER analogspak; senast rörda vinner).
             (_cursorX, _cursorY) = EditorMath.UpdateCursor(
@@ -546,8 +557,77 @@ namespace FrostyPlatformer.States
                 return;
             }
             _escapePendingDirty = false;
+            StopEditorMusic();
             context.MenuNavigation = Enum.MenuState.StartMenu;
             _services.StateManager.Transition(new MenuState(_services), context);
+        }
+
+        // ── Editor-musik ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Driver editor-musiken varje frame medan en karta redigeras. Startar
+        /// sekvensen, stegar fram när ett spår tagit slut, återupptar efter preview,
+        /// och stoppar när editor-ljudet är avslaget. Allt gates av EditorAudioOn.
+        /// </summary>
+        private void UpdateEditorMusic()
+        {
+            if (!_services.Settings.EditorAudioOn)
+            {
+                if (_musicState != EditorMusicState.Stopped)
+                {
+                    _services.Audio.Stop(_musicSequencer.Current);
+                    _musicState = EditorMusicState.Stopped;
+                }
+                return;
+            }
+
+            switch (_musicState)
+            {
+                case EditorMusicState.Stopped:
+                    _musicSequencer.Reset();
+                    _services.Audio.Play(_musicSequencer.Current);
+                    _musicState = EditorMusicState.Playing;
+                    break;
+
+                case EditorMusicState.Paused:
+                    // Play på en pausad instans återupptar från samma position.
+                    _services.Audio.Play(_musicSequencer.Current);
+                    _musicState = EditorMusicState.Playing;
+                    break;
+
+                case EditorMusicState.Playing:
+                    // Spåret har spelat klart → gå vidare i mönstret och spela nästa.
+                    if (!_services.Audio.IsPlaying(_musicSequencer.Current))
+                        _services.Audio.Play(_musicSequencer.Advance());
+                    break;
+            }
+        }
+
+        /// <summary>Pausar editor-musiken inför en preview så banans egen musik hörs ostört.</summary>
+        private void PauseEditorMusicForPreview()
+        {
+            if (_musicState == EditorMusicState.Playing)
+            {
+                _services.Audio.Pause(_musicSequencer.Current);
+                _musicState = EditorMusicState.Paused;
+            }
+        }
+
+        /// <summary>Stoppar editor-musiken helt (vid utgång ur editorn till menyn).</summary>
+        private void StopEditorMusic()
+        {
+            if (_musicState != EditorMusicState.Stopped)
+            {
+                _services.Audio.Stop(_musicSequencer.Current);
+                _musicState = EditorMusicState.Stopped;
+            }
+        }
+
+        /// <summary>Växlar editor-ljudet på/av och sparar. UpdateEditorMusic verkställer nästa frame.</summary>
+        private void ToggleEditorSound()
+        {
+            _services.Settings.EditorAudioOn = !_services.Settings.EditorAudioOn;
+            _services.Settings.Save();
         }
 
         /// <summary>
@@ -602,6 +682,17 @@ namespace FrostyPlatformer.States
                     innerX + col * colW, y + row * rowH, colW - 1, rowH - 1,
                     actions[i].Label, false, actions[i].OnClick));
             }
+            y += ((actions.Length + 1) / 2) * rowH;
+
+            // Ljud-toggle (editor-musik på/av) — placerad sist och avskild från de
+            // övriga knapparna med extra marginal. Active = på, så knappen fylls
+            // när musiken är igång.
+            const int SoundButtonGap = 10;
+            y += SoundButtonGap;
+            list.Add(new PanelButton(
+                innerX, y, innerW, rowH - 1,
+                _services.Settings.EditorAudioOn ? "Sound On" : "Sound Off",
+                _services.Settings.EditorAudioOn, ToggleEditorSound));
 
             return list;
         }
@@ -803,6 +894,10 @@ namespace FrostyPlatformer.States
 
             // Registrera tilesheet för GameplayState-renderingen
             RegisterTilesheet(_levelObj.TilesetSource);
+
+            // Pausa editor-musiken så banans egen musik hörs ostört. Återupptas när
+            // vi kommer tillbaka till editorn (Enter → UpdateEditorMusic).
+            PauseEditorMusicForPreview();
 
             _services.StateManager.Transition(new GameplayState(_services), context);
         }

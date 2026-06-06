@@ -414,10 +414,11 @@ namespace FrostyPlatformer
             var root     = Core.Aggregate.Instance.ReadWrite.GetRoot;
             var soundDir = System.IO.Path.Combine(root, "Resources", "Assets", "Sound");
 
-            void Reg(string soundRef, bool isLooped = false)
+            void Reg(string soundRef, bool isLooped = false, float volume = 1f,
+                     bool isEditorMusic = false)
                 => _audioSystem.RegisterSound(soundRef,
                        System.IO.Path.Combine(soundDir, soundRef),
-                       isLooped);
+                       isLooped, volume, isEditorMusic);
 
             Reg(SoundRef.Jump);
             Reg(SoundRef.Land);
@@ -430,6 +431,14 @@ namespace FrostyPlatformer
             Reg(SoundRef.BGSoundEnd,        isLooped: true);
             Reg(SoundRef.BGNearPerfectEnd,  isLooped: true);
             Reg(SoundRef.BGPerfectEnd,      isLooped: true);
+
+            // Level editor-musik: ej loopad per instans (EditorMusicSequencer
+            // sekvenserar main→main→middle), halv volym mot spelmusiken, och
+            // undantagen från spelets Mute() så de två ljud-inställningarna är oberoende.
+            Reg(SoundRef.EditorMusicMain,   isLooped: false,
+                volume: GameConstants.EditorMusicVolume, isEditorMusic: true);
+            Reg(SoundRef.EditorMusicMiddle, isLooped: false,
+                volume: GameConstants.EditorMusicVolume, isEditorMusic: true);
 
             if (Core.Aggregate.Instance.Settings?.AudioOn == true)
                 _audioSystem.UnMute();

@@ -84,6 +84,13 @@ namespace FrostyPlatformer.Global
 
 
         // ─────────────────────────────────────────────
+        // Ljud
+        // ─────────────────────────────────────────────
+        /// <summary>Bas-volym för level editor-musiken (lågmäld bakgrund mot spelmusikens 1.0).</summary>
+        public const float EditorMusicVolume = 0.05f;
+
+
+        // ─────────────────────────────────────────────
         // Spellogik och regler
         // ─────────────────────────────────────────────
         public const int  SplashScreenDuration = 60;     // Frames splash-skärmen visas

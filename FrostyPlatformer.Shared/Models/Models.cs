@@ -66,6 +66,8 @@ namespace FrostyPlatformer.Models
 
         public bool AudioOn { get; set; } = true;
 
+        public bool EditorAudioOn { get; set; } = true;
+
         public SaveSlotMainObj SaveSlotsObjs { get; set; } = new SaveSlotMainObj();
 
         public bool Log { get; set; } = false;

@@ -22,6 +22,12 @@ namespace UnitTest.Fakes
             set => _settings.AudioOn = value;
         }
 
+        public bool EditorAudioOn
+        {
+            get => _settings.EditorAudioOn;
+            set => _settings.EditorAudioOn = value;
+        }
+
         public SaveSlot ActivePlayer => _settings.ActivePlayer;
 
         public SaveSlotMainObj SaveSlots => _settings.SaveSlotsObjs;
