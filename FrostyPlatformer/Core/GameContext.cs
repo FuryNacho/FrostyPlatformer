@@ -54,6 +54,12 @@ namespace FrostyPlatformer.Core
         /// </summary>
         public List<DynamicGameObject> ActiveObjects { get; } = new List<DynamicGameObject>();
 
+        /// <summary>
+        /// Slutbossens fas-controller. Sätts av GameplayState.Enter när en boss-arena
+        /// laddas (annars null). Läses av HudRenderer (barerna) och GameplayState (Tick).
+        /// </summary>
+        public Systems.BossPhaseController? BossPhase { get; set; }
+
         // ─────────────────────────────────────────────
         // Spelarens rörelsefysik
         // ─────────────────────────────────────────────

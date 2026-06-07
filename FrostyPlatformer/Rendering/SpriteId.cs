@@ -47,6 +47,9 @@ namespace FrostyPlatformer.Rendering
         /// <summary>Vind-fiendens sprite-ark.</summary>
         EnemyWind,
 
+        /// <summary>Spegel-Scarlet (slutbossens akt 1) sprite-ark.</summary>
+        EnemyMirrorScarlet,
+
         /// <summary>Tile-arket för världskartan.</summary>
         WorldMapTileSheet,
 

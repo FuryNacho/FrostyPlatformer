@@ -5,7 +5,7 @@ using FrostyPlatformer.Rendering;
 namespace FrostyPlatformer.States
 {
     /// <summary>
-    /// Animerar och visar "Player Dead"-skärmen efter att hjälten dött.
+    /// Animerar och visar "Game Over"-skärmen efter att hjälten dött.
     /// </summary>
     /// <remarks>
     /// MÖNSTER: State Machine (konkret tillstånd)
@@ -101,9 +101,13 @@ namespace FrostyPlatformer.States
             }
             else
             {
-                _rc.DrawText("Player Dead", 8, 4);
-                const int BottomTextMargin = 7; // Pixlar från skärmens nederkant till textens överkant
-                _rc.DrawText("Press any button", 8, context.ScreenHeight - BottomTextMargin);
+                // Centrera texten horisontellt (8 px/tecken) kring skärmens mitt —
+                // där animationslinjerna ovan konvergerar.
+                void DrawCentered(string s, int y)
+                    => _rc.DrawText(s, (context.ScreenWidth - s.Length * 8) / 2, y);
+
+                DrawCentered("Game Over", hh - 12);
+                DrawCentered("Press any button", hh + 4);
             }
         }
 

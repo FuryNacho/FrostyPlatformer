@@ -2146,9 +2146,10 @@ namespace FrostyPlatformer.Models
 
             CreateFromChild();
 
-            // Look-test: håll false tills boss-koreografin byggs (annars körs
-            // boss-bana-logiken utan boss och kan avsluta banan direkt).
-            IsBossArena = false;
+            // Boss-arena: BossPhaseController driver stridslogiken (skapas i GameplayState).
+            // Legacy boss-bana-logiken (mapnine) no-oppar här eftersom inga Teleport- eller
+            // DynamicCreatureEnemyBoss-objekt finns — spegel-Scarlet är en egen typ.
+            IsBossArena = true;
         }
 
         public void CreateFromChild()
@@ -2158,8 +2159,10 @@ namespace FrostyPlatformer.Models
 
         public override bool PopulateDynamics(List<DynamicGameObject> listDynamicObjs)
         {
-            // Look-test: inga fiender ännu — bara vandra och inspektera arenan.
-            // Riktig akt-koreografi (spegel-Scarlet, svärm, jätte) byggs i bossfasen.
+            // Fas 2: spegel-Scarlet som närvaro (akt 1). Hon står still tills duell-AI:n
+            // byggs i fas 3. Svärm (akt 2) och jätte (akt 3) tillkommer i senare faser.
+            var scarlet = new DynamicCreatureMirrorScarlet { px = 24, py = 11 };
+            listDynamicObjs.Add(scarlet);
             return true;
         }
     }

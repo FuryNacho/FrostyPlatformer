@@ -75,6 +75,10 @@ namespace FrostyPlatformer.States
             _hasAccumulated = false;
             _currentNode    = null;
             _targetNode     = null;
+
+            // På världskartan pågår ingen boss-strid — rensa fas-controllern så att
+            // nästa boss-besök startar färskt (annars bär den med sig gammal värme/akt).
+            context.BossPhase = null;
         }
 
         public void Update(GameContext context, float elapsed)

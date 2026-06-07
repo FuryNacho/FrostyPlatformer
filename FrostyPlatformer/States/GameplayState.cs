@@ -95,6 +95,25 @@ namespace FrostyPlatformer.States
 
             context.Player!.vx = 0;
             _enemyJump = 0f;
+
+            // Slutboss-arena: skapa fas-controllern EN gång per fight. Vid pause→resume
+            // körs Enter om (ny GameplayState) — då finns controllern redan och får INTE
+            // återskapas (annars nollställs värmen = gratis-hack). Rensas på världskartan.
+            if (context.CurrentLevel?.IsBossArena == true)
+            {
+                if (context.BossPhase == null)
+                {
+                    context.BossPhase = new BossPhaseController();
+                    // Dräneringstakten sätts av insamlad energi (mer → långsammare; även 0 klarbart).
+                    context.BossPhase.WarmthDrainPerSecond = BossPhaseController.ComputeWarmthDrain(
+                        context.CollectedEnergiIds.Count, maxEnergy: 100,
+                        drainAtZeroEnergy: 1.2f, drainAtFullEnergy: 0.3f);
+                }
+            }
+            else
+            {
+                context.BossPhase = null;
+            }
         }
 
         public void Update(GameContext context, float elapsed)
@@ -139,6 +158,9 @@ namespace FrostyPlatformer.States
 
             if (context.Player!.Health < 1)
             {
+                // Striden är slut (även om värmen slocknade) — rensa fas-controllern
+                // så en ny boss-omgång alltid startar färskt.
+                context.BossPhase = null;
                 _services.Input.ButtonsHasGoneIdle = false;
                 if (context.IsPreviewMode)
                 {
@@ -215,6 +237,14 @@ namespace FrostyPlatformer.States
             // Energi-regn
             if (_energiRain.MakeItRain)
                 MakeItRainEnergi(context);
+
+            // Slutbossens fas-logik: dränera värme / vänd i akt 4 / avgör utfall.
+            context.BossPhase?.Tick(elapsed);
+
+            // Värmen slocknade → förlust. Behandlas som hjältens död (vanlig game over):
+            // nollställ hälsan så den befintliga död-hanteringen (överst i Update) tar vid.
+            if (context.BossPhase?.Outcome == BossOutcome.PlayerLost && context.Player != null)
+                context.Player.Health = 0;
 
             // Uppdatera mjuk kameraposition mot spelarens slutposition för denna tick.
             if (context.Player != null && context.CurrentLevel != null)

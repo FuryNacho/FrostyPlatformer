@@ -59,6 +59,9 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public const string EnemyBoss    = "enemyboss";
         public const string EnemyWind    = "enemywind";
 
+        // Slutboss-sprites (placeholder-art; byts mot riktig pixelart i samma rutnät).
+        public const string MirrorScarlet = "mirror_scarlet";
+
         // Slutscener
         public const string EndArt = "endart";
     }
