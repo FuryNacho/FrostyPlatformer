@@ -80,6 +80,7 @@ namespace FrostyPlatformer.Core
             Spr(SpriteRef.TileSheetSummer);
             Spr(SpriteRef.TileSheetFall);
             Spr(SpriteRef.TileSheetWinter);
+            Spr(SpriteRef.TileSheetBoss);
             Spr(SpriteRef.TileSheetCustom);
             Spr(SpriteRef.TileSheetWorldMap);
             Spr(SpriteRef.Font);
@@ -137,6 +138,9 @@ namespace FrostyPlatformer.Core
 
             var lvl9 = new MapNine(this, enemyFactory, itemFactory);
             MapMaps.Add(MapName.MapNine, lvl9);
+
+            var lvl10 = new MapTen(this, enemyFactory, itemFactory);
+            MapMaps.Add(MapName.MapTen, lvl10);
         }
 
         private void LoadItems()

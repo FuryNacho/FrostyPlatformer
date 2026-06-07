@@ -100,5 +100,11 @@ namespace FrostyPlatformer.Rendering
 
         /// <summary>Anpassad bana — mellanskikt med transparens.</summary>
         ParallaxMidCustom,
+
+        /// <summary>Slutboss — himmelslager (mörk natthimmel, kall stjärnglimt).</summary>
+        ParallaxSkyBoss,
+
+        /// <summary>Slutboss — mellanskikt (isspira-siluetter med cyan-kant, transparens).</summary>
+        ParallaxMidBoss,
     }
 }

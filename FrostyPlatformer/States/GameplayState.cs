@@ -81,7 +81,7 @@ namespace FrostyPlatformer.States
                 context.CollectedEnergiIds.Any(id => id == x.CoinId));
 
             _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundWorld);
-            if (context.CurrentLevel?.Name != "mapnine")
+            if (context.CurrentLevel?.IsBossArena != true)
             {
                 if (!_services.Audio.IsPlaying(Global.GlobalNamespace.SoundRef.BGSoundGame))
                     _services.Audio.Play(Global.GlobalNamespace.SoundRef.BGSoundGame);
@@ -177,15 +177,15 @@ namespace FrostyPlatformer.States
                 HandleInput(context, elapsed);
 
             // Fysik + kollision per objekt
-            bool bossAlive = context.CurrentLevel?.Name == MapName.MapNine &&
+            bool bossAlive = context.CurrentLevel?.IsBossArena == true &&
                              context.ActiveObjects.Any(x => x is DynamicCreatureEnemyBoss);
 
             foreach (var obj in context.ActiveObjects)
             {
                 obj.detHarBallatUr = false;
 
-                // Speciell boss-bana-logik (mapnine)
-                if (context.CurrentLevel?.Name == MapName.MapNine)
+                // Speciell boss-bana-logik (boss-arenor)
+                if (context.CurrentLevel?.IsBossArena == true)
                 {
                     if (!bossAlive)
                     {
@@ -420,7 +420,7 @@ namespace FrostyPlatformer.States
             _rememberJumpCollision = rjc;
 
             // Luftmotstånd
-            bool isIcy = map.Name == MapName.MapSeven || map.Name == MapName.MapEight || map.Name == MapName.MapNine;
+            bool isIcy = map.Name == MapName.MapSeven || map.Name == MapName.MapEight || map.Name == MapName.MapNine || map.Name == MapName.MapTen;
             bool anyDir = _services.Input.IsLeftDown || _services.Input.IsRightDown;
             PhysicsSystem.ApplyDrag(obj, _bPower, isIcy, anyDir, elapsed);
 

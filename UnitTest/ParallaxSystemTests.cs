@@ -60,6 +60,10 @@ namespace UnitTest
             => Assert.AreEqual(Season.Winter, SeasonHelper.FromMapName(MapName.MapNine));
 
         [TestMethod]
+        public void FromMapName_MapTen_ReturnsBoss()
+            => Assert.AreEqual(Season.Boss, SeasonHelper.FromMapName(MapName.MapTen));
+
+        [TestMethod]
         public void FromMapName_WorldMap_ReturnsNull()
             => Assert.IsNull(SeasonHelper.FromMapName(MapName.WorldMap),
                 "Världskartan ska returnera null — ingen parallax-bakgrund.");
@@ -124,6 +128,10 @@ namespace UnitTest
         [TestMethod]
         public void TileSheetForTileset_Custom_ReturnsCustomSheet()
             => Assert.AreEqual(SpriteRef.TileSheetCustom, SpriteRef.TileSheetForTileset("tilesheetcustom.tsx"));
+
+        [TestMethod]
+        public void TileSheetForTileset_Boss_ReturnsBossSheet()
+            => Assert.AreEqual(SpriteRef.TileSheetBoss, SpriteRef.TileSheetForTileset("tilesheetboss.tsx"));
 
         [TestMethod]
         public void TileSheetForTileset_WorldMap_ReturnsWorldMapSheet()
@@ -209,6 +217,22 @@ namespace UnitTest
                 "Vinter-bakgrund ska använda ParallaxSkyWinter.");
             CollectionAssert.Contains(sheets, SpriteId.ParallaxMidWinter,
                 "Vinter-bakgrund ska använda ParallaxMidWinter.");
+        }
+
+        [TestMethod]
+        public void Draw_Boss_UsesBossSpriteIds()
+        {
+            var rc  = new FakeRenderContext();
+            var sys = new ParallaxSystem();
+
+            sys.SetSeason(Season.Boss);
+            sys.Draw(rc, cameraOffsetX: 0f, ScreenW, ScreenH);
+
+            var sheets = rc.DrawnSprites.Select(s => s.Sheet).Distinct().ToList();
+            CollectionAssert.Contains(sheets, SpriteId.ParallaxSkyBoss,
+                "Boss-bakgrund ska använda ParallaxSkyBoss.");
+            CollectionAssert.Contains(sheets, SpriteId.ParallaxMidBoss,
+                "Boss-bakgrund ska använda ParallaxMidBoss.");
         }
 
         // ─────────────────────────────────────────────

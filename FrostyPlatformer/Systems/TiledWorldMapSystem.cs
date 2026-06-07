@@ -138,7 +138,7 @@ namespace FrostyPlatformer.Systems
             6 => (MapName.MapSix,   2f, 22f),
             7 => (MapName.MapSeven, 3f, 18f),
             8 => (MapName.MapEight, 4f, 41f),
-            9 => (MapName.MapNine,  2f,  5f),
+            9 => (MapName.MapTen,  18f, 12f),   // slutnoden -> boss-arenan mapten; spawn centrerat (bred arena)
             _ => null
         };
 

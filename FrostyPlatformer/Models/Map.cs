@@ -27,6 +27,16 @@ namespace FrostyPlatformer.Models
         /// vald tileset. Null för inbyggda banor — då härleds årstiden ur kartnamnet.
         /// </summary>
         public Season? MapSeason { get; set; }
+
+        /// <summary>
+        /// Sant om banan är en boss-arena. Ersätter spridda strängjämförelser mot
+        /// "mapnine" så att boss-beteende styrs av en egenskap, inte ett magiskt namn.
+        /// MÖNSTER: Tillståndsflagga (ersätter typ-/namn-switchande).
+        /// MOTIVERING: OCP/DIP — nya boss-banor kan flaggas utan att röra konsumerande kod.
+        /// ANVÄNDNING: Sätts i kartans konstruktor; läses i GameplayState m.fl.
+        /// </summary>
+        public bool IsBossArena { get; set; }
+
         /// <summary>
         /// Plural for index
         /// </summary>
@@ -1957,6 +1967,10 @@ namespace FrostyPlatformer.Models
             };
 
             CreateFromChild();
+
+            // mapnine är spelets nuvarande boss-arena — flaggan bevarar tidigare
+            // beteende nu när boss-logiken styrs av IsBossArena istället för kartnamnet.
+            IsBossArena = true;
         }
 
         public void CreateFromChild()
@@ -2105,6 +2119,48 @@ namespace FrostyPlatformer.Models
             }
 
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Slutboss-arenan ("Spegeln"). Bred vinterarena med stup i kanterna.
+    /// MÖNSTER: Konkret Map-subklass (samma mönster som MapOne..MapNine).
+    /// MOTIVERING: SRP — varje bana äger sin egen data/spawn-uppsättning.
+    /// ANVÄNDNING: Registreras i Aggregate; laddas via världskartans slutnod.
+    /// </summary>
+    public class MapTen : Map
+    {
+        public CreateObj CreateObj { get; set; }
+
+        public MapTen(IAssets assets, IEnemyFactory enemyFactory, IItemFactory itemFactory)
+        {
+            Assets = assets;
+            EnemyFactory = enemyFactory;
+            ItemFactory = itemFactory;
+            this.CreateObj = new CreateObj()
+            {
+                levelObj   = assets.GetMapData(MapName.MapTen),
+                spritePath = assets.GetSpritePath(SpriteRef.TileSheetBoss),
+                name       = MapName.MapTen,
+            };
+
+            CreateFromChild();
+
+            // Look-test: håll false tills boss-koreografin byggs (annars körs
+            // boss-bana-logiken utan boss och kan avsluta banan direkt).
+            IsBossArena = false;
+        }
+
+        public void CreateFromChild()
+        {
+            this.Create(CreateObj);
+        }
+
+        public override bool PopulateDynamics(List<DynamicGameObject> listDynamicObjs)
+        {
+            // Look-test: inga fiender ännu — bara vandra och inspektera arenan.
+            // Riktig akt-koreografi (spegel-Scarlet, svärm, jätte) byggs i bossfasen.
+            return true;
         }
     }
 

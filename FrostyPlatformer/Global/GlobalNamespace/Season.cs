@@ -33,6 +33,9 @@ namespace FrostyPlatformer.Global.GlobalNamespace
 
         /// <summary>Användarbyggda banor (slot1–slot7): mörk nattbakgrund med snöstämning.</summary>
         Custom,
+
+        /// <summary>Slutboss-arenan (mapten): mörk natthimmel med kalla isspira-siluetter.</summary>
+        Boss,
     }
 
     /// <summary>
@@ -52,6 +55,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
             MapName.MapThree or MapName.MapFour                             => Season.Summer,
             MapName.MapFive  or MapName.MapSix                              => Season.Fall,
             MapName.MapSeven or MapName.MapEight or MapName.MapNine         => Season.Winter,
+            MapName.MapTen                                                   => Season.Boss,
             _ when mapName != null && mapName.StartsWith("slot")            => Season.Custom,
             _                                                                => null,
         };

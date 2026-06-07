@@ -129,7 +129,7 @@ namespace FrostyPlatformer.States
             "",
             MapName.MapOne, MapName.MapTwo,   MapName.MapThree,
             MapName.MapFour, MapName.MapFive,  MapName.MapSix,
-            MapName.MapSeven, MapName.MapEight, MapName.MapNine
+            MapName.MapSeven, MapName.MapEight, MapName.MapNine, MapName.MapTen
         };
 
         // ── HUD-meddelanden ─────────────────────────────────────────────────────
@@ -1612,6 +1612,7 @@ namespace FrostyPlatformer.States
             MapName.MapSeven  => "7",
             MapName.MapEight  => "8",
             MapName.MapNine   => "9",
+            MapName.MapTen    => "10",
             _                 => "?"
         };
 

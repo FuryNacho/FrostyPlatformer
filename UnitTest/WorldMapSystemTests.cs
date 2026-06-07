@@ -287,6 +287,16 @@ public class WorldMapSystemTests
         Assert.AreEqual("mapnine", entry!.Value.MapName);
     }
 
+    // Produktionsklassen (TiledWorldMapSystem) pekar slutnoden till boss-arenan
+    // mapten — frikopplad från legacy-WorldMapSystem som ovan ännu ger mapnine.
+    [TestMethod]
+    public void TiledGetStageEntry_Stage9_ReturnsMapTen()
+    {
+        var entry = new TiledWorldMapSystem(new List<PlacedObject>()).GetStageEntry(9);
+        Assert.IsNotNull(entry);
+        Assert.AreEqual("mapten", entry!.Value.MapName);
+    }
+
     [TestMethod]
     public void GetStageEntry_Stage0_ReturnsNull()
         => Assert.IsNull(Make().GetStageEntry(0));

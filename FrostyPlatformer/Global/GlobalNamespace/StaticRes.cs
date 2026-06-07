@@ -22,6 +22,10 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public const string TileSheetWorldMap = "tilesheetwm";
         public const string TileSheetCustom   = "tilesheet_transparent_Custom";
 
+        // Boss-arenans tileset. Inte säsongsberoende och påverkas inte av
+        // UseTransparentTileSheets — slutboss-banan (mapten) har ett eget kallt ark.
+        public const string TileSheetBoss     = "tilesheet_boss";
+
         /// <summary>
         /// Mappar en kartas TilesetSource (.tsx-filnamn) till rätt transparenta
         /// tilesheet-sprite. Okänd eller saknad källa faller tillbaka på custom-tileseeten.
@@ -36,6 +40,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
                 "tilesheetfall"   => TileSheetFall,
                 "tilesheetwinter" => TileSheetWinter,
                 "tilesheetcustom" => TileSheetCustom,
+                "tilesheetboss"   => TileSheetBoss,
                 "tilesheetwm"     => TileSheetWorldMap,
                 _                 => TileSheetCustom,
             };
@@ -97,6 +102,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public const string MapSeven = "mapseven";
         public const string MapEight = "mapeight";
         public const string MapNine  = "mapnine";
+        public const string MapTen   = "mapten";
     }
 
     public static class SplashScreenRef
