@@ -2161,7 +2161,7 @@ namespace FrostyPlatformer.Models
         {
             // Fas 2: spegel-Scarlet som närvaro (akt 1). Hon står still tills duell-AI:n
             // byggs i fas 3. Svärm (akt 2) och jätte (akt 3) tillkommer i senare faser.
-            var scarlet = new DynamicCreatureMirrorScarlet { px = 24, py = 11 };
+            var scarlet = new DynamicCreatureMirrorScarlet { px = 24, py = 11, Arena = this };
             listDynamicObjs.Add(scarlet);
             return true;
         }

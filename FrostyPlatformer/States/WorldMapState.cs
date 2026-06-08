@@ -79,6 +79,10 @@ namespace FrostyPlatformer.States
             // På världskartan pågår ingen boss-strid — rensa fas-controllern så att
             // nästa boss-besök startar färskt (annars bär den med sig gammal värme/akt).
             context.BossPhase = null;
+
+            // Hjälten ska aldrig animera "idle" (vingflax) på världskartan — nollställ
+            // idle-flaggan som annars hänger kvar från gameplay.
+            if (context.Player != null) context.Player.IsIdle = false;
         }
 
         public void Update(GameContext context, float elapsed)

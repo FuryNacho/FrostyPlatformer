@@ -152,7 +152,7 @@ namespace FrostyPlatformer
             IsFixedTimeStep = false;
             Window.AllowUserResizing = true;
             Content.RootDirectory  = ".";
-            Window.Title           = "Frosty Platformer";
+            Window.Title           = "Penguin After All - Remastered Edition";
         }
 
         // ── Entry point ───────────────────────────────────────────────────────

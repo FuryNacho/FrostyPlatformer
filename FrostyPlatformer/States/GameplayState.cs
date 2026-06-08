@@ -246,6 +246,21 @@ namespace FrostyPlatformer.States
             if (context.BossPhase?.Outcome == BossOutcome.PlayerLost && context.Player != null)
                 context.Player.Health = 0;
 
+            // Akt 1: spegel-Scarlet är aktiv bara under Mirror-akten (svärm/jätte byggs i fas 4–5).
+            // Argt läge när akt-hälsan är låg → snabbare, tätare/slumpigare språng.
+            if (context.BossPhase != null)
+            {
+                bool mirrorAct = context.BossPhase.CurrentAct == BossAct.Mirror;
+                bool angry = context.BossPhase.BossMaxHealth > 0 &&
+                             context.BossPhase.BossHealth <= context.BossPhase.BossMaxHealth * 0.4f;
+                foreach (var o in context.ActiveObjects)
+                    if (o is DynamicCreatureMirrorScarlet ms)
+                    {
+                        ms.Active = mirrorAct;
+                        ms.Angry = angry;
+                    }
+            }
+
             // Uppdatera mjuk kameraposition mot spelarens slutposition för denna tick.
             if (context.Player != null && context.CurrentLevel != null)
                 _services.Camera.Advance(context.Player.px, context.Player.py, elapsed);
@@ -592,7 +607,7 @@ namespace FrostyPlatformer.States
                         if (!other.Friendly)
                         { if (context.Player!.px > other.px) DamageHero((Creature)obj, (Creature)other, "1"); }
                         else
-                        { if (!obj.IsHero) { context.Player!.vy = -5.5f; context.Player.Grounded = true; JumpDamage((Creature)context.Player, (Creature)obj); } }
+                        { if (!obj.IsHero) { context.Player!.vy = -5.5f; context.Player.Grounded = true; JumpDamage((Creature)context.Player, (Creature)obj, context); } }
                     }
                 }
                 else
@@ -605,7 +620,7 @@ namespace FrostyPlatformer.States
                             if (other is DynamicCreatureEnemyIcicle)
                                 DamageHero((Creature)other, (Creature)context.Player!, "1");
                             else
-                            { context.Player!.vy = -5.5f; context.Player.Grounded = true; JumpDamage((Creature)context.Player, (Creature)other); }
+                            { context.Player!.vy = -5.5f; context.Player.Grounded = true; JumpDamage((Creature)context.Player, (Creature)other, context); }
                         }
                         else
                             DamageHero((Creature)obj, (Creature)context.Player!, "1");
@@ -642,6 +657,10 @@ namespace FrostyPlatformer.States
 
             victim.Health -= assailant.DamageGiven;
 
+            // Energi-kaskad: mängden utkastad (uppsamlingsbar) energi är slump[DamageGiven/2,
+            // DamageGiven] men BEGRÄNSAD av nuvarande hälsa. Det är begränsningen som ger
+            // "mer insamlad energi → större kaskad" — har du mycket energi släpps hela spillet
+            // igenom, har du lite kapas det. (Originalmekaniken, återställd.)
             int n      = assailant.DamageGiven;
             int health = Math.Max(0, victim.Health);
             int min    = n / 2 >= health ? health : n / 2;
@@ -660,13 +679,30 @@ namespace FrostyPlatformer.States
 
             victim.KnockBack(tx / d, ty / d - 1f, 0.3f);
 
+            // Spegel-Scarlet drar sig ur efter att ha gett skada → bryter loop där spelaren
+            // annars fastnar i upprepade träffar (t.ex. under en platå).
+            if (victim.IsHero && assailant is DynamicCreatureMirrorScarlet dealer)
+                dealer.OnDealtDamage(victim.px);
+
             if (victim.IsHero) victim.SolidVsDynamic = true;
             else               victim.OnInteract(assailant);
         }
 
-        private void JumpDamage(Creature assailant, Creature victim)
+        // Skada bossen tar per lyckad stamp (mirrorHealth 30 / 6 ≈ 5 stamps per akt).
+        private const int MirrorStompDamage = 6;
+
+        private void JumpDamage(Creature assailant, Creature victim, GameContext context)
         {
             _services.Audio.Play(Global.GlobalNamespace.SoundRef.Damage);
+
+            // Spegel-Scarlet: stamp dränerar boss-baren (controllern), inte hennes egen Health.
+            if (victim is DynamicCreatureMirrorScarlet scarlet)
+            {
+                if (!scarlet.IsAttackable) return;
+                context.BossPhase?.TakeHit(MirrorStompDamage);
+                scarlet.OnStomped(assailant.px);
+                return;
+            }
 
             if (victim is DynamicCreatureEnemyBoss)
             {
