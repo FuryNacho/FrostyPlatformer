@@ -62,6 +62,11 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         // Slutboss-sprites (placeholder-art; byts mot riktig pixelart i samma rutnät).
         public const string MirrorScarlet = "mirror_scarlet";
         public const string SwarmCopy     = "swarm_copy";
+        // Slutbossens akt 3 (jätten) byggs av flera ark — ett per kroppsdel/roll, så att de
+        // senare kan bytas mot riktig pixelart oberoende av varandra.
+        public const string GiantHead      = "giant_head";       // huvudets uttrycks-frames
+        public const string GiantArm       = "giant_arm";        // arm/näve slam-frames
+        public const string GiantWeakPoint = "giant_weakpoint";  // svagpunktens 5 states
 
         // Slutscener
         public const string EndArt = "endart";

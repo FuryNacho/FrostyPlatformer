@@ -53,6 +53,15 @@ namespace FrostyPlatformer.Rendering
         /// <summary>Svärm-kopia (slutbossens akt 2) sprite-ark.</summary>
         EnemySwarmCopy,
 
+        /// <summary>Jätten (slutbossens akt 3) — huvudets uttrycks-frames (80×64 per frame).</summary>
+        GiantHead,
+
+        /// <summary>Jättens arm/näve — slam-frames (48×64 per frame).</summary>
+        GiantArm,
+
+        /// <summary>Jättens svagpunkt — 5 states (16×16 per state), den stampbara enheten.</summary>
+        GiantWeakPoint,
+
         /// <summary>Tile-arket för världskartan.</summary>
         WorldMapTileSheet,
 

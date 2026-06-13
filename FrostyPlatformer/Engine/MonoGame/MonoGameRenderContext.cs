@@ -132,6 +132,21 @@ namespace FrostyPlatformer.Engine.MonoGame
         }
 
         /// <inheritdoc />
+        public void DrawPartialSpriteFlippedX(SpriteId spriteSheet,
+                                              int screenX, int screenY,
+                                              int srcX,    int srcY,
+                                              int width,   int height)
+        {
+            var tex    = _textures[spriteSheet];
+            var source = new XnaRectangle(srcX, srcY, width, height);
+            var dest   = new XnaRectangle(
+                screenX * _scaleX, screenY * _scaleY,
+                width   * _scaleX, height  * _scaleY);
+            _batch.Draw(tex, dest, source, XnaColor.White, 0f, XnaVector2.Zero,
+                        SpriteEffects.FlipHorizontally, 0f);
+        }
+
+        /// <inheritdoc />
         public void FillRect(int x, int y, int width, int height, RenderColor color)
             => _batch.Draw(_pixel,
                            new XnaRectangle(

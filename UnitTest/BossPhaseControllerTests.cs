@@ -24,6 +24,39 @@ namespace UnitTest
             Assert.IsTrue(c.IsDamageAct);
         }
 
+        [TestMethod]
+        public void Start_InGiantAct_LoadsGiantBar()
+        {
+            var c = new BossPhaseController(
+                mirrorHealth: 10, swarmHealth: 8, giantHealth: 12, startAct: BossAct.Giant);
+            Assert.AreEqual(BossAct.Giant, c.CurrentAct);
+            Assert.AreEqual(12, c.BossHealth);
+            Assert.AreEqual(12, c.BossMaxHealth);
+            Assert.AreEqual(BossOutcome.Ongoing, c.Outcome);
+            Assert.IsTrue(c.IsDamageAct);
+        }
+
+        [TestMethod]
+        public void Start_InAcceptanceAct_HasNoDamageBar()
+        {
+            var c = new BossPhaseController(
+                mirrorHealth: 10, swarmHealth: 8, giantHealth: 12, startAct: BossAct.Acceptance);
+            Assert.AreEqual(BossAct.Acceptance, c.CurrentAct);
+            Assert.AreEqual(0, c.BossMaxHealth);
+            Assert.IsFalse(c.IsDamageAct);
+            Assert.AreEqual(BossOutcome.Ongoing, c.Outcome);
+        }
+
+        [TestMethod]
+        public void Start_InGiantAct_DepletingAdvancesToAcceptance()
+        {
+            var c = new BossPhaseController(
+                mirrorHealth: 10, swarmHealth: 8, giantHealth: 12, startAct: BossAct.Giant);
+            c.TakeHit(12);
+            Assert.AreEqual(BossAct.Acceptance, c.CurrentAct,
+                "Att tömma jätte-baren från en dev-start ska gå vidare som vanligt.");
+        }
+
         // ── Skada & akt-övergångar ─────────────────────────────────────────────────
         [TestMethod]
         public void TakeHit_ReducesBossHealth()

@@ -61,6 +61,11 @@ namespace UnitTest.Fakes
             => DrawnSprites.Add((spriteSheet, screenX, screenY, srcX, srcY, width, height));
 
         /// <inheritdoc />
+        public void DrawPartialSpriteFlippedX(SpriteId spriteSheet, int screenX, int screenY,
+                                              int srcX, int srcY, int width, int height)
+            => DrawnSprites.Add((spriteSheet, screenX, screenY, srcX, srcY, width, height));
+
+        /// <inheritdoc />
         public void FillRect(int x, int y, int width, int height, RenderColor color) { }
 
         /// <inheritdoc />

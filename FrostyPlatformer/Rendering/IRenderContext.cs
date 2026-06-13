@@ -59,6 +59,14 @@ namespace FrostyPlatformer.Rendering
                                int srcX, int srcY, int width, int height);
 
         /// <summary>
+        /// Som <see cref="DrawPartialSprite"/> men spegelvänd horisontellt (källregionen
+        /// ritas flippad i x-led på samma skärmposition). Används för symmetriska par som
+        /// vänster/höger arm där samma sprite ska peka åt motsatt håll.
+        /// </summary>
+        void DrawPartialSpriteFlippedX(SpriteId spriteSheet, int screenX, int screenY,
+                                       int srcX, int srcY, int width, int height);
+
+        /// <summary>
         /// Fyller en rektangel på skärmen med angiven färg.
         /// Används för HUD-bakgrunder och färgfält.
         /// </summary>

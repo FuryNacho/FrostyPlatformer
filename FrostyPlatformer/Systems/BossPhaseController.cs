@@ -98,13 +98,19 @@ namespace FrostyPlatformer.Systems
         /// <param name="maxWarmth">Värmemätarens maxvärde (även startvärde).</param>
         /// <param name="warmthDrainPerSecond">Initial dräneringstakt (sätts normalt via <see cref="ComputeWarmthDrain"/>).</param>
         /// <param name="warmthRegenPerSecond">Hur snabbt värmen återvänder i akt 4 (acceptans värmer).</param>
+        /// <param name="startAct">
+        /// Akten striden börjar i. Normalt <see cref="BossAct.Mirror"/> (hela striden); andra
+        /// värden låter dev-läget hoppa in mitt i (DevConfig.BossStartAct). Akt-baren laddas
+        /// med startaktens hälsa; skadefria akter (Acceptance/Resolved) börjar utan bar.
+        /// </param>
         public BossPhaseController(
             int mirrorHealth = 30,
             int swarmHealth = 24,
             int giantHealth = 40,
             float maxWarmth = 100f,
             float warmthDrainPerSecond = 2f,
-            float warmthRegenPerSecond = 6f)
+            float warmthRegenPerSecond = 6f,
+            BossAct startAct = BossAct.Mirror)
         {
             _mirrorHealth = mirrorHealth;
             _swarmHealth = swarmHealth;
@@ -113,11 +119,16 @@ namespace FrostyPlatformer.Systems
             WarmthDrainPerSecond = warmthDrainPerSecond;
             _warmthRegenPerSecond = warmthRegenPerSecond;
 
-            CurrentAct = BossAct.Mirror;
-            BossMaxHealth = _mirrorHealth;
-            BossHealth = _mirrorHealth;
+            CurrentAct = startAct;
+            (BossMaxHealth, BossHealth) = startAct switch
+            {
+                BossAct.Mirror => (_mirrorHealth, _mirrorHealth),
+                BossAct.Swarm  => (_swarmHealth, _swarmHealth),
+                BossAct.Giant  => (_giantHealth, _giantHealth),
+                _              => (0, 0),   // Acceptance/Resolved: ingen skade-bar
+            };
             Warmth = maxWarmth;
-            Outcome = BossOutcome.Ongoing;
+            Outcome = startAct == BossAct.Resolved ? BossOutcome.PlayerWon : BossOutcome.Ongoing;
         }
 
         /// <summary>Sant om aktuell akt är en skade-akt (stamp gör skada på bossen).</summary>

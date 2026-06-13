@@ -1,4 +1,6 @@
 #nullable enable
+using FrostyPlatformer.Systems;
+
 namespace FrostyPlatformer.Global.GlobalNamespace
 {
     /// <summary>
@@ -40,5 +42,13 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         /// innan man speltestar slutbossen. Sätts i Reset().
         /// </summary>
         public static bool FullEnergy = false;
+
+        /// <summary>
+        /// Vilken akt slutbossen ska STARTA i — så man kan speltesta en senare akt direkt
+        /// utan att först klara de tidigare. <see cref="BossAct.Mirror"/> (=normalt) kör hela
+        /// striden från början. Övriga värden hoppar in mitt i: Swarm (akt 2), Giant (akt 3),
+        /// Acceptance (akt 4). Läses när BossPhaseController skapas i GameplayState.Enter.
+        /// </summary>
+        public static BossAct BossStartAct = BossAct.Mirror;
     }
 }

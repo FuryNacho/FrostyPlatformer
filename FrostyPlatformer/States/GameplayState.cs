@@ -103,7 +103,8 @@ namespace FrostyPlatformer.States
             {
                 if (context.BossPhase == null)
                 {
-                    context.BossPhase = new BossPhaseController();
+                    // Dev: BossStartAct hoppar in i en senare akt direkt (default Mirror = hela striden).
+                    context.BossPhase = new BossPhaseController(startAct: DevConfig.BossStartAct);
                     // Dräneringstakten sätts av insamlad energi (mer → långsammare; även 0 klarbart).
                     context.BossPhase.WarmthDrainPerSecond = BossPhaseController.ComputeWarmthDrain(
                         context.CollectedEnergiIds.Count, maxEnergy: 100,
@@ -263,6 +264,9 @@ namespace FrostyPlatformer.States
 
             // Akt 2: håll svärmen vid liv (eller städa bort kvarvarande kopior efter akten).
             ManageSwarm(context);
+
+            // Akt 3: visa jätten + driv näv-slammen (eller städa bort efter akten).
+            ManageGiant(context, elapsed);
 
             // Uppdatera mjuk kameraposition mot spelarens slutposition för denna tick.
             if (context.Player != null && context.CurrentLevel != null)
@@ -701,6 +705,14 @@ namespace FrostyPlatformer.States
         private const int SwarmTargetAlive = 4;
         private int _swarmSpawnFlip;
 
+        // Akt 3 — jätten. Skada på jätte-baren per lyckad svagpunkts-stamp (giantHealth 40 / 8 = 5
+        // stamps). Slam-takten: en näve åt gången; ny efter SlamInterval när föregående är borta.
+        private const int   GiantStompDamage = 8;
+        private const float SlamFirstDelay   = 1.5f;
+        private const float SlamInterval     = 1.4f;
+        private float _giantSlamTimer;
+        private bool  _giantSlamLeftNext;   // växlar vilken arm som slår härnäst
+
         private void JumpDamage(Creature assailant, Creature victim, GameContext context)
         {
             _services.Audio.Play(Global.GlobalNamespace.SoundRef.Damage);
@@ -720,6 +732,16 @@ namespace FrostyPlatformer.States
                 if (!victim.IsAttackable) return;
                 context.BossPhase?.TakeHit(SwarmStompDamage);
                 victim.Health = 0; victim.Redundant = true; victim.RemoveCount = 1;
+                _enemyJump = GameConstants.EnemyStompWindowSeconds;
+                return;
+            }
+
+            // Jättens arm (akt 3): stamp räknas BARA när svagpunkten är exponerad (Stuck).
+            if (victim is DynamicCreatureGiantArm arm)
+            {
+                if (arm.Phase != GiantArmPhase.Stuck || !arm.IsAttackable) return;
+                context.BossPhase?.TakeHit(GiantStompDamage);
+                arm.OnStomped();
                 _enemyJump = GameConstants.EnemyStompWindowSeconds;
                 return;
             }
@@ -788,5 +810,75 @@ namespace FrostyPlatformer.States
             float x = left ? 2f : w - 3f;
             return new DynamicCreatureSwarmCopy { px = x, py = 2f };
         }
+
+        // ── Akt 3: jätte-hantering ─────────────────────────────────────────────────
+        // Jätten är 5 rutor bred (giant_boss-atlasen). Förankringspunkt (övre vänstra) centreras
+        // i arenan; py väljs så kroppen sitter i övre/mellersta delen av banan (justeras vid look-test).
+        private const int GiantWidthTiles = 5;
+        private const float GiantAnchorY  = 3f;   // tornar i övre delen av arenan (ansiktet är 4 rutor högt)
+
+        /// <summary>
+        /// Driver jättens närvaro (akt 3): visar EN jätte centrerad i arenan så länge
+        /// BossPhaseController är i Giant-akten, och städar bort den annars. Körs efter
+        /// objekt-loopen så listan kan muteras säkert. Ritas först (Insert(0)) så kroppen
+        /// hamnar bakom hjälten.
+        /// </summary>
+        private void ManageGiant(GameContext context, float elapsed)
+        {
+            if (context.BossPhase == null) return;
+
+            bool giantAct = context.BossPhase.CurrentAct == BossAct.Giant &&
+                            context.BossPhase.Outcome == BossOutcome.Ongoing;
+
+            if (!giantAct)
+            {
+                // Utanför akt 3 → städa bort jätten OCH armarna.
+                foreach (var o in context.ActiveObjects)
+                    if ((o is DynamicCreatureGiant || o is DynamicCreatureGiantArm) && !o.Redundant)
+                    { ((Creature)o).Health = 0; o.Redundant = true; o.RemoveCount = 1; }
+                return;
+            }
+
+            var giant = context.ActiveObjects.OfType<DynamicCreatureGiant>().FirstOrDefault(g => !g.Redundant);
+
+            // Spawna jätten (huvud) + två armar (en per axel) en gång.
+            if (giant == null)
+            {
+                var map = context.CurrentLevel!;
+                float gx = (map.Width - GiantWidthTiles) / 2f;   // huvudet centrerat i arenan
+                giant = new DynamicCreatureGiant { px = gx, py = GiantAnchorY };
+                context.ActiveObjects.Insert(0, giant);
+
+                float shoulderY = GiantAnchorY + 2.5f;           // axlarna vid huvudets nedre hörn
+                // Symmetriskt kring huvudets mitt: näven ritas 2 tiles bred (centrerad +0.5),
+                // så axlarna placeras på gx-0.5 / gx+4.5 → båda armarna sticker ut vid kanterna.
+                var left = new DynamicCreatureGiantArm();
+                left.Configure(gx - 0.5f, shoulderY, true, giant, map);
+                var right = new DynamicCreatureGiantArm();
+                right.Configure(gx + GiantWidthTiles - 0.5f, shoulderY, false, giant, map);
+                context.ActiveObjects.Insert(0, left);
+                context.ActiveObjects.Insert(0, right);
+
+                _giantSlamTimer = SlamFirstDelay;
+                return;
+            }
+
+            var arms = context.ActiveObjects.OfType<DynamicCreatureGiantArm>().Where(a => !a.Redundant).ToList();
+            if (arms.Count == 0) return;
+
+            // En arm slår åt gången; växla sida. Räkna ned bara när båda armarna vilar.
+            if (!arms.Any(a => a.IsSlamming))
+            {
+                _giantSlamTimer -= elapsed;
+                if (_giantSlamTimer <= 0f)
+                {
+                    var next = arms.FirstOrDefault(a => a.IsLeft == _giantSlamLeftNext) ?? arms[0];
+                    next.TriggerSlam();
+                    _giantSlamLeftNext = !_giantSlamLeftNext;
+                    _giantSlamTimer = SlamInterval;
+                }
+            }
+        }
+
     }
 }
