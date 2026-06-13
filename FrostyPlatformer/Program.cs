@@ -390,6 +390,7 @@ namespace FrostyPlatformer
             Reg(Rendering.SpriteId.GiantHead,          agg.GetSpritePath(SpriteRef.GiantHead));
             Reg(Rendering.SpriteId.GiantArm,           agg.GetSpritePath(SpriteRef.GiantArm));
             Reg(Rendering.SpriteId.GiantWeakPoint,     agg.GetSpritePath(SpriteRef.GiantWeakPoint));
+            Reg(Rendering.SpriteId.GiantHazard,        agg.GetSpritePath(SpriteRef.GiantHazard));
             Reg(Rendering.SpriteId.WorldMapTileSheet,  agg.GetSpritePath(SpriteRef.TileSheetWorldMap));
             Reg(Rendering.SpriteId.SplashStart,        agg.GetSpritePath(SplashScreenRef.Start));
             Reg(Rendering.SpriteId.SplashEnd,          agg.GetSpritePath(SplashScreenRef.End));

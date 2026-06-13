@@ -96,6 +96,7 @@ namespace FrostyPlatformer.Core
             Spr(SpriteRef.GiantHead);
             Spr(SpriteRef.GiantArm);
             Spr(SpriteRef.GiantWeakPoint);
+            Spr(SpriteRef.GiantHazard);
             Spr(SplashScreenRef.Start);
             Spr(SplashScreenRef.End);
             Spr(SpriteRef.EndArt);

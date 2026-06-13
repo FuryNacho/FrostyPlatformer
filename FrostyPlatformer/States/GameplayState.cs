@@ -268,6 +268,9 @@ namespace FrostyPlatformer.States
             // Akt 3: visa jätten + driv näv-slammen (eller städa bort efter akten).
             ManageGiant(context, elapsed);
 
+            // Akt 3: istappsregn (anti-camp-hazard).
+            ManageHazards(context, elapsed);
+
             // Uppdatera mjuk kameraposition mot spelarens slutposition för denna tick.
             if (context.Player != null && context.CurrentLevel != null)
                 _services.Camera.Advance(context.Player.px, context.Player.py, elapsed);
@@ -624,7 +627,7 @@ namespace FrostyPlatformer.States
                     {
                         if (!other.Friendly)
                         {
-                            if (other is DynamicCreatureEnemyIcicle)
+                            if (other is DynamicCreatureEnemyIcicle || other is DynamicCreatureBossIcicle)
                                 DamageHero((Creature)other, (Creature)context.Player!, "1");
                             else
                             { context.Player!.vy = -5.5f; context.Player.Grounded = true; JumpDamage((Creature)context.Player, (Creature)other, context); }
@@ -712,6 +715,10 @@ namespace FrostyPlatformer.States
         private const float SlamInterval     = 1.4f;
         private float _giantSlamTimer;
         private bool  _giantSlamLeftNext;   // växlar vilken arm som slår härnäst
+
+        // Akt 3 — istappsregn. Ett nytt regn-objekt per intervall, slumpad kolumn.
+        private const float IcicleInterval = 1.0f;
+        private float _icicleTimer;
 
         private void JumpDamage(Creature assailant, Creature victim, GameContext context)
         {
@@ -880,5 +887,46 @@ namespace FrostyPlatformer.States
             }
         }
 
+        // ── Akt 3: istappsregn ─────────────────────────────────────────────────────
+        /// <summary>
+        /// Släpper telegraferade istappar i slumpade kolumner under Giant-akten (anti-camp).
+        /// Städar bort kvarvarande istappar när akten är över. Körs efter objekt-loopen.
+        /// </summary>
+        private void ManageHazards(GameContext context, float elapsed)
+        {
+            if (context.BossPhase == null) return;
+
+            bool giantAct = context.BossPhase.CurrentAct == BossAct.Giant &&
+                            context.BossPhase.Outcome == BossOutcome.Ongoing;
+
+            if (!giantAct)
+            {
+                foreach (var o in context.ActiveObjects)
+                    if (o is DynamicCreatureBossIcicle ic && !ic.Redundant)
+                    { ic.Health = 0; ic.Redundant = true; ic.RemoveCount = 1; }
+                return;
+            }
+
+            _icicleTimer -= elapsed;
+            if (_icicleTimer <= 0f)
+            {
+                var map = context.CurrentLevel!;
+                int tx = _rng.Next(2, Math.Max(3, map.Width - 2));
+                float markerY = FloorTopForColumn(map, tx) - 1f;   // markören ovanpå golvet
+                var icicle = new DynamicCreatureBossIcicle();
+                icicle.Configure(tx, markerY);
+                context.ActiveObjects.Add(icicle);
+                _icicleTimer = IcicleInterval;
+            }
+        }
+
+        // Golvets ovansida i en kolumn (skannar nedifrån upp → huvudgolvet, ignorerar hyllor).
+        private static int FloorTopForColumn(IMapData map, int tx)
+        {
+            tx = Math.Clamp(tx, 0, map.Width - 1);
+            int y = map.Height - 1;
+            while (y >= 0 && map.GetSolid(tx, y)) y--;
+            return y + 1;
+        }
     }
 }

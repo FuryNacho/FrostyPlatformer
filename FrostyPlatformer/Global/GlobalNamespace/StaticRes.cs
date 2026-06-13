@@ -67,6 +67,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public const string GiantHead      = "giant_head";       // huvudets uttrycks-frames
         public const string GiantArm       = "giant_arm";        // arm/näve slam-frames
         public const string GiantWeakPoint = "giant_weakpoint";  // svagpunktens 5 states
+        public const string GiantHazard    = "giant_hazard";     // istapp/krasch/varningsmarkör
 
         // Slutscener
         public const string EndArt = "endart";

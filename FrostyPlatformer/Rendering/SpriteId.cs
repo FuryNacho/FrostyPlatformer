@@ -62,6 +62,9 @@ namespace FrostyPlatformer.Rendering
         /// <summary>Jättens svagpunkt — 5 states (16×16 per state), den stampbara enheten.</summary>
         GiantWeakPoint,
 
+        /// <summary>Jättens arena-hazards (akt 3) — istapp, krasch, varningsmarkör (16×16 per frame).</summary>
+        GiantHazard,
+
         /// <summary>Tile-arket för världskartan.</summary>
         WorldMapTileSheet,
 
