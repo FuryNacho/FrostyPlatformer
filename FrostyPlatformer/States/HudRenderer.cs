@@ -1,6 +1,7 @@
 #nullable enable
 using FrostyPlatformer.Core;
 using FrostyPlatformer.Rendering;
+using FrostyPlatformer.Systems;
 
 namespace FrostyPlatformer.States
 {
@@ -82,11 +83,16 @@ namespace FrostyPlatformer.States
         private static void DrawBossBars(IRenderContext rc, GameContext context)
         {
             var bp = context.BossPhase!;
+
+            // Akt 4 (Spegeln): inga barer — hotet läses i hennes glitch, inte i en mätare.
+            if (bp.CurrentAct == BossAct.Acceptance || bp.CurrentAct == BossAct.Resolved)
+                return;
+
             int x = 2;
             int w = context.ScreenWidth - 4;
             int h = 3;
 
-            // H1 — boss-hälsa (akt 4 har ingen hälsa → endast bakgrund visas).
+            // H1 — boss-hälsa (töms när du stampar).
             int y1 = 11;
             rc.FillRect(x, y1, w, h, RenderColor.DarkGrey);
             if (bp.BossMaxHealth > 0)

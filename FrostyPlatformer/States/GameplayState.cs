@@ -272,6 +272,9 @@ namespace FrostyPlatformer.States
             // Akt 3: istappsregn (anti-camp-hazard).
             ManageHazards(context, elapsed);
 
+            // Akt 4: acceptans — gå-mot-henne-vinsten.
+            ManageAcceptance(context, elapsed);
+
             // Uppdatera mjuk kameraposition mot spelarens slutposition för denna tick.
             if (context.Player != null && context.CurrentLevel != null)
                 _services.Camera.Advance(context.Player.px, context.Player.py, elapsed);
@@ -354,6 +357,8 @@ namespace FrostyPlatformer.States
             var hero = (DynamicCreatureHero)context.Player!;
 
             _bPower = _services.Input.IsRunDown || _services.Input.IsSelectDown;
+            // Akt 4 (Spegeln): b-power avstängd — lugnt, avsiktligt tempo.
+            if (context.BossPhase?.CurrentAct == BossAct.Acceptance) _bPower = false;
 
             hero.LookUp   = _services.Input.IsUpDown;
             hero.LookDown = _services.Input.IsDownDown;
@@ -647,6 +652,10 @@ namespace FrostyPlatformer.States
         private void HandleHeroPickup(DynamicGameObject hero, DynamicGameObject other,
             GameContext context, float dx)
         {
+            // Spegel-Scarlet är icke-solid i akt 4 men är ingen pickup — hennes interaktion
+            // (sammansmältning/stamp) sköts i ManageAcceptance.
+            if (other is DynamicCreatureMirrorScarlet) return;
+
             if (dx < (other.px + 1f) && (dx + 1f) > other.px &&
                 hero.py < (other.py + 1f) && (hero.py + 1f) > other.py)
             {
@@ -725,6 +734,11 @@ namespace FrostyPlatformer.States
         private const float CollapseFlashDur = 0.12f;
         private float _giantCollapseFlash;
 
+        // Akt 4 — Spegeln. Vinst = gå in i din spegelbild på marken; stamp straffar dig själv.
+        private const float WinMergeDur = 1.3f;    // sammansmältnings-beat (blixt) före EndState
+        private bool  _acceptanceStaged;
+        private float _winTimer = -1f;
+
         // Akt 3 — istappsregn. Ett nytt regn-objekt per intervall, slumpad kolumn.
         private const float IcicleInterval = 1.0f;
         private float _icicleTimer;
@@ -736,6 +750,7 @@ namespace FrostyPlatformer.States
             // Spegel-Scarlet: stamp dränerar boss-baren (controllern), inte hennes egen Health.
             if (victim is DynamicCreatureMirrorScarlet scarlet)
             {
+                // Akt 4: hon är icke-solid → JumpDamage nås inte (stamp hanteras i ManageAcceptance).
                 if (!scarlet.IsAttackable) return;
                 context.BossPhase?.TakeHit(MirrorStompDamage);
                 scarlet.OnStomped(assailant.px);
@@ -943,6 +958,83 @@ namespace FrostyPlatformer.States
             int y = map.Height - 1;
             while (y >= 0 && map.GetSolid(tx, y)) y--;
             return y + 1;
+        }
+
+        // ── Akt 4: acceptans ───────────────────────────────────────────────────────
+        /// <summary>
+        /// Den inverterade finalen: när jätten rasat sätter spegel-Scarlet ihop sig i mitten,
+        /// stilla. Att GÅ MOT henne (och hålla) fyller närmande-mätaren; stamp backar den (loopen
+        /// fortsätter). Full mätare → sammansmältning → EndState. Värmen vänder/regenererar i
+        /// controllern. Körs efter objekt-loopen.
+        /// </summary>
+        private void ManageAcceptance(GameContext context, float elapsed)
+        {
+            var bp = context.BossPhase;
+            if (bp == null) return;
+            if (bp.CurrentAct != BossAct.Acceptance && bp.CurrentAct != BossAct.Resolved)
+            { _acceptanceStaged = false; return; }
+
+            var scarlet = context.ActiveObjects.OfType<DynamicCreatureMirrorScarlet>().FirstOrDefault();
+            if (scarlet == null) return;
+
+            // Vänta tills jätten rasat klart, ställ sedan scenen: hon "sätter ihop sig" i mitten.
+            if (!_acceptanceStaged)
+            {
+                bool giantGone = !context.ActiveObjects.Any(o => o is DynamicCreatureGiant && !o.Redundant);
+                if (!giantGone) return;
+                StageMirror(context, scarlet);
+                _acceptanceStaged = true;
+            }
+
+            // Vunnet → kort sammansmältnings-beat (blixt), sen slutet.
+            if (bp.Outcome == BossOutcome.PlayerWon)
+            {
+                if (_winTimer < 0f) { _winTimer = WinMergeDur; _giantCollapseFlash = 0.15f; }
+                _winTimer -= elapsed;
+                if (_winTimer <= 0f)
+                {
+                    _services.Settings.ActivePlayer.ShowEnd = true;
+                    context.BossPhase = null;
+                    _services.StateManager.Transition(new EndState(_services), context);
+                }
+                return;
+            }
+
+            // Spegel-interaktion (Scarlet är icke-solid i akt 4 → hanteras manuellt här):
+            var hero = context.Player!;
+            bool overlap = Math.Abs(hero.px - scarlet.px) < 0.9f && Math.Abs(hero.py - scarlet.py) < 0.9f;
+            if (overlap)
+            {
+                if (hero.py < scarlet.py - 0.3f && hero.vy > 0f)
+                {
+                    // Stamp = fel väg → det är HJÄLTEN som tar skada (din spegel slår inte tillbaka).
+                    DamageHero(scarlet, (Creature)hero);
+                    hero.vy = -5.5f;
+                }
+                else if (hero.Grounded && scarlet.Grounded)
+                {
+                    // Båda på marken, gå in i varandra → sammansmältning (vinst).
+                    bp.ApproachToward(1f);
+                }
+            }
+        }
+
+        // Placerar spegel-Scarlet på den översta ytan (plattform om en finns) på MOTSATT sida
+        // från hjälten — aldrig ovanpå dig. Spegel-rörelsen tar sedan över.
+        private static void StageMirror(GameContext context, DynamicCreatureMirrorScarlet scarlet)
+        {
+            var map  = context.CurrentLevel!;
+            var hero = context.Player!;
+            int center = map.Width / 2;
+            int sx = hero.px < center ? center + 4 : center - 4;
+            sx = Math.Clamp(sx, 2, map.Width - 3);
+
+            int sy = 3;                                   // skanna uppifrån → första ytan (plattform/golv)
+            while (sy < map.Height && !map.GetSolid(sx, sy)) sy++;
+
+            scarlet.px = sx; scarlet.py = sy - 1;
+            scarlet.vx = 0;  scarlet.vy = 0;
+            scarlet.Accepting = true;
         }
     }
 }

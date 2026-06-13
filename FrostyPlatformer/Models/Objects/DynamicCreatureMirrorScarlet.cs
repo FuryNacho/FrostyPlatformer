@@ -39,6 +39,10 @@ namespace FrostyPlatformer.Models.Objects
                                                          // fysikens MaxVelocityYUp; mer kraschar (vy→0) → inget hopp
         private const float AscendAirSpeed     = 3.0f;   // horisontell fart i luften under ascend (når kanten i tid)
         private const int   AscendStandoff     = 2;      // hoppar mot plattformen från ≤ så här många tiles bort
+        private const float GlitchStartDist    = 2.5f;   // akt 4: börjar glitcha på detta avstånd (samma nivå)
+        private const float GlitchFullDist     = 1.0f;   // ...full glitch så här nära
+        private const float DodgeRange         = 3.5f;   // akt 4: rymmer om hjälten är ovanför inom detta avstånd
+        private const float DodgeSpeed         = 3.5f;   // akt 4: undanmanöver-fart (snabbare än gång)
 
         private readonly Random _rng = new Random();
 
@@ -49,6 +53,7 @@ namespace FrostyPlatformer.Models.Objects
         private float _rhythmTimer;
         private bool  _moving = true;
         private bool  _heroAbove;          // hjälten på högre nivå → aktiverar fear of heights
+        private float _glitch;             // akt 4: glitch-intensitet 0..1 (nära hjälten)
 
         /// <summary>Sant medan akt 1 (Mirror) pågår. Sätts av GameplayState.</summary>
         public bool Active { get; set; } = true;
@@ -58,6 +63,10 @@ namespace FrostyPlatformer.Models.Objects
 
         /// <summary>Arenan (sätts av GameplayState) — låter henne känna av plattformskanter att hoppa upp på.</summary>
         public IMapData? Arena { get; set; }
+
+        /// <summary>Akt 4: hon står stilla och passiv (slåss inte) men är stampbar — stampar du
+        /// fortsätter loopen i stället för att vinna. Sätts av GameplayState.</summary>
+        public bool Accepting { get; set; }
 
         public DynamicCreatureMirrorScarlet() : base("mirror_scarlet", SpriteId.EnemyMirrorScarlet)
         {
@@ -74,6 +83,45 @@ namespace FrostyPlatformer.Models.Objects
         {
             if (_invulnTimer > 0f) _invulnTimer -= fElapsedTime;
             if (_leapTimer > 0f)   _leapTimer   -= fElapsedTime;
+
+            // Akt 4 — Spegeln: hennes rörelse är din, SPEGELVÄND. Går du mot henne går hon mot dig;
+            // går du bort går hon bort; hoppar du hoppar hon. Ni möts i mittpunkten. Ingen
+            // kontakt-kollision (skada av/ingen block — akt 4 hanteras manuellt i GameplayState).
+            // Hon glitchar mer ju närmare du kommer.
+            if (Accepting)
+            {
+                SolidVsDynamic = false;
+                IsAttackable = false;
+                if (player != null)
+                {
+                    float dxAbs = Math.Abs(player.px - px);
+                    float dyAbs = Math.Abs(player.py - py);
+                    bool heroAbove = player.py < py - 1.2f;
+
+                    if (heroAbove && dxAbs < DodgeRange)
+                    {
+                        // Hjälten är ovanför (plattform/hopp) → hon RYMMER i sidled bort från att
+                        // vara under, så en stamp blir mycket svår. (Frångår spegeln medvetet här.)
+                        float away = px >= player.px ? 1f : -1f;
+                        vx = away * DodgeSpeed;
+                        _glitch = 0f;
+                    }
+                    else
+                    {
+                        vx = -player.vx;                                                   // spegelvänd sidled
+                        if (Grounded && player.vy < -0.1f) vy = GameConstants.JumpVelocity; // speglar hopp
+
+                        // Glitchar bara på SAMMA NIVÅ och nära — hoppar du eller är på annan nivå
+                        // upphör den. Trappas upp ju närmare (2 block → 1 block).
+                        bool sameLevel = dyAbs < 0.6f;
+                        _glitch = (sameLevel && dxAbs <= GlitchStartDist)
+                            ? Math.Clamp((GlitchStartDist - dxAbs) / (GlitchStartDist - GlitchFullDist), 0f, 1f)
+                            : 0f;
+                    }
+                }
+                else { vx = 0; _glitch = 0f; }
+                return;
+            }
 
             if (!Active || player == null)
             {
@@ -248,6 +296,31 @@ namespace FrostyPlatformer.Models.Objects
 
             int screenX = ToPixel(px, ox);
             int screenY = ToPixel(py, oy);
+
+            // Akt 4: pixel-glitch — sprite:n ritas i horisontella band där en del förskjuts i
+            // sidled (tear), plus främmande cyan/magenta-pixlar som "bryter sönder" henne. Allt
+            // trappas upp med _glitch (samma nivå + närhet). Tydligt att något är annorlunda.
+            if (_glitch > 0f)
+            {
+                for (int sy = 0; sy < 16; sy += 2)
+                {
+                    int off = 0;
+                    if (_rng.NextDouble() < _glitch * 0.7f)
+                        off = (int)((_rng.NextDouble() * 2 - 1) * (1f + _glitch * 4f));
+                    gfx.DrawPartialSprite(SpriteId, screenX + off, screenY + sy, 0, sy, 16, 2);
+                }
+
+                int shards = (int)(_glitch * 5f);
+                for (int i = 0; i < shards; i++)
+                {
+                    int bx = screenX + _rng.Next(0, 14);
+                    int by = screenY + _rng.Next(0, 14);
+                    var col = _rng.Next(2) == 0 ? new RenderColor(40, 230, 230) : new RenderColor(230, 40, 230);
+                    gfx.FillRect(bx, by, 2 + _rng.Next(0, 2), 2, col);
+                }
+                return;
+            }
+
             gfx.DrawPartialSprite(SpriteId, screenX, screenY, 0, 0, 16, 16);
         }
     }
