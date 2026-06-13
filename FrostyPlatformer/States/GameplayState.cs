@@ -266,6 +266,7 @@ namespace FrostyPlatformer.States
             ManageSwarm(context);
 
             // Akt 3: visa jätten + driv näv-slammen (eller städa bort efter akten).
+            if (_giantCollapseFlash > 0f) _giantCollapseFlash -= elapsed;
             ManageGiant(context, elapsed);
 
             // Akt 3: istappsregn (anti-camp-hazard).
@@ -301,6 +302,10 @@ namespace FrostyPlatformer.States
             }
 
             HudRenderer.Draw(_rc, context);
+
+            // Falsk seger-blixt när jätten rasar (bryggan till akt 4) — kort vit helskärm.
+            if (_giantCollapseFlash > 0f)
+                _rc.FillRect(0, 0, context.ScreenWidth, context.ScreenHeight, new RenderColor(255, 255, 255));
 
             if (_services.Dialog.IsActive)
                 _services.Dialog.Render(_rc);
@@ -716,6 +721,10 @@ namespace FrostyPlatformer.States
         private float _giantSlamTimer;
         private bool  _giantSlamLeftNext;   // växlar vilken arm som slår härnäst
 
+        // Bryggan akt 3→4: jätten rasar (kollaps) + en kort vit blixt (falsk seger).
+        private const float CollapseFlashDur = 0.12f;
+        private float _giantCollapseFlash;
+
         // Akt 3 — istappsregn. Ett nytt regn-objekt per intervall, slumpad kolumn.
         private const float IcicleInterval = 1.0f;
         private float _icicleTimer;
@@ -839,10 +848,17 @@ namespace FrostyPlatformer.States
 
             if (!giantAct)
             {
-                // Utanför akt 3 → städa bort jätten OCH armarna.
-                foreach (var o in context.ActiveObjects)
-                    if ((o is DynamicCreatureGiant || o is DynamicCreatureGiantArm) && !o.Redundant)
-                    { ((Creature)o).Health = 0; o.Redundant = true; o.RemoveCount = 1; }
+                // Bryggan till akt 4: jätten GÅS SÖNDER (kollaps + vit blixt) i stället för att
+                // bara försvinna. Armarna snäpps av i blixten; huvudet smulas och tas bort självt.
+                var g = context.ActiveObjects.OfType<DynamicCreatureGiant>().FirstOrDefault(x => !x.Redundant);
+                if (g != null && !g.IsCollapsing)
+                {
+                    g.BeginCollapse();
+                    _giantCollapseFlash = CollapseFlashDur;
+                    foreach (var o in context.ActiveObjects)
+                        if (o is DynamicCreatureGiantArm a && !a.Redundant)
+                        { a.Health = 0; a.Redundant = true; a.RemoveCount = 1; }
+                }
                 return;
             }
 
