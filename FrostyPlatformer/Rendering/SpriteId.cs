@@ -50,6 +50,9 @@ namespace FrostyPlatformer.Rendering
         /// <summary>Spegel-Scarlet (slutbossens akt 1) sprite-ark.</summary>
         EnemyMirrorScarlet,
 
+        /// <summary>Svärm-kopia (slutbossens akt 2) sprite-ark.</summary>
+        EnemySwarmCopy,
+
         /// <summary>Tile-arket för världskartan.</summary>
         WorldMapTileSheet,
 

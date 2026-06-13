@@ -61,6 +61,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
 
         // Slutboss-sprites (placeholder-art; byts mot riktig pixelart i samma rutnät).
         public const string MirrorScarlet = "mirror_scarlet";
+        public const string SwarmCopy     = "swarm_copy";
 
         // Slutscener
         public const string EndArt = "endart";

@@ -92,6 +92,7 @@ namespace FrostyPlatformer.Core
             Spr(SpriteRef.EnemyFrost);
             Spr(SpriteRef.EnemyBoss);
             Spr(SpriteRef.MirrorScarlet);
+            Spr(SpriteRef.SwarmCopy);
             Spr(SplashScreenRef.Start);
             Spr(SplashScreenRef.End);
             Spr(SpriteRef.EndArt);

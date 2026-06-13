@@ -33,5 +33,12 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         /// Spelaren kan röra sig fritt förbi annars låsta noder.
         /// </summary>
         public static bool UnlockAllStages = false;
+
+        /// <summary>
+        /// True gör att ett nytt spel startar med full hälsa (HeroEnergi = MaxHealth, visas
+        /// som "%" i HUD:en) istället för standardstartens 7. Sparar in att tanka upp hälsa
+        /// innan man speltestar slutbossen. Sätts i Reset().
+        /// </summary>
+        public static bool FullEnergy = false;
     }
 }

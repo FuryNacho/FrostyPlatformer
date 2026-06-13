@@ -163,6 +163,8 @@ namespace FrostyPlatformer
             DevConfig.WorldMapEditor  = false;  // världskarte-editering i level editorn
             DevConfig.UnlockAllStages = true;  // alla banor öppna → gå direkt till slutbossen
 
+            DevConfig.FullEnergy = true;
+
             try
             {
                 using var game = new Program();
@@ -383,6 +385,7 @@ namespace FrostyPlatformer
             Reg(Rendering.SpriteId.EnemyBoss,         agg.GetSpritePath(SpriteRef.EnemyBoss));
             Reg(Rendering.SpriteId.EnemyWind,         agg.GetSpritePath(SpriteRef.EnemyWind));
             Reg(Rendering.SpriteId.EnemyMirrorScarlet, agg.GetSpritePath(SpriteRef.MirrorScarlet));
+            Reg(Rendering.SpriteId.EnemySwarmCopy,     agg.GetSpritePath(SpriteRef.SwarmCopy));
             Reg(Rendering.SpriteId.WorldMapTileSheet,  agg.GetSpritePath(SpriteRef.TileSheetWorldMap));
             Reg(Rendering.SpriteId.SplashStart,        agg.GetSpritePath(SplashScreenRef.Start));
             Reg(Rendering.SpriteId.SplashEnd,          agg.GetSpritePath(SplashScreenRef.End));
@@ -460,6 +463,12 @@ namespace FrostyPlatformer
             RightToAccessPodium = true;
             Core.Aggregate.Instance.Settings.ActivePlayer.StageCompleted = 0;
             EnergiIdLista = new HashSet<int>();
+
+            // Dev-genväg: starta med full hälsa (HeroEnergi, visas som "%" i HUD:en) istället
+            // för standardstartens 7. Sparar in att tanka upp hälsa innan man speltestar
+            // slutbossen.
+            if (DevConfig.FullEnergy)
+                Hero.Health = Hero.MaxHealth;
         }
 
         public void ChangeMap(string MapName, float x, float y)

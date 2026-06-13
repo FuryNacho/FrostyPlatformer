@@ -261,6 +261,9 @@ namespace FrostyPlatformer.States
                     }
             }
 
+            // Akt 2: håll svärmen vid liv (eller städa bort kvarvarande kopior efter akten).
+            ManageSwarm(context);
+
             // Uppdatera mjuk kameraposition mot spelarens slutposition för denna tick.
             if (context.Player != null && context.CurrentLevel != null)
                 _services.Camera.Advance(context.Player.px, context.Player.py, elapsed);
@@ -691,6 +694,13 @@ namespace FrostyPlatformer.States
         // Skada bossen tar per lyckad stamp (mirrorHealth 30 / 6 ≈ 5 stamps per akt).
         private const int MirrorStompDamage = 6;
 
+        // Akt 2 — svärmen. Skada på svärm-baren per dödad kopia (swarmHealth 24 / 4 = 6 kopior
+        // att stampa). SwarmTargetAlive = hur många kopior som svärmar samtidigt; nya spawnar
+        // tills baren töms. Spawn-flaggan växlar sida så de kommer från båda håll.
+        private const int SwarmStompDamage = 4;
+        private const int SwarmTargetAlive = 4;
+        private int _swarmSpawnFlip;
+
         private void JumpDamage(Creature assailant, Creature victim, GameContext context)
         {
             _services.Audio.Play(Global.GlobalNamespace.SoundRef.Damage);
@@ -701,6 +711,16 @@ namespace FrostyPlatformer.States
                 if (!scarlet.IsAttackable) return;
                 context.BossPhase?.TakeHit(MirrorStompDamage);
                 scarlet.OnStomped(assailant.px);
+                return;
+            }
+
+            // Svärm-kopia (akt 2): ett tramp dödar kopian OCH dränerar svärm-baren.
+            if (victim is DynamicCreatureSwarmCopy)
+            {
+                if (!victim.IsAttackable) return;
+                context.BossPhase?.TakeHit(SwarmStompDamage);
+                victim.Health = 0; victim.Redundant = true; victim.RemoveCount = 1;
+                _enemyJump = GameConstants.EnemyStompWindowSeconds;
                 return;
             }
 
@@ -729,6 +749,44 @@ namespace FrostyPlatformer.States
             _energiRain.RemainingToSpawn -= toSpawn;
             if (_energiRain.RemainingToSpawn == 0)
                 _energiRain.MakeItRain = false;
+        }
+
+        // ── Akt 2: svärm-hantering ─────────────────────────────────────────────────
+        /// <summary>
+        /// Driver svärmen (akt 2): så länge BossPhaseController är i Swarm-akten hålls
+        /// <see cref="SwarmTargetAlive"/> kopior vid liv (nya spawnar in när någon stampats),
+        /// tills svärm-baren töms och controllern går vidare. Utanför akten städas eventuella
+        /// kvarvarande kopior bort. Körs efter objekt-loopen så listan kan muteras säkert.
+        /// </summary>
+        private void ManageSwarm(GameContext context)
+        {
+            if (context.BossPhase == null) return;
+
+            bool swarmAct = context.BossPhase.CurrentAct == BossAct.Swarm &&
+                            context.BossPhase.Outcome == BossOutcome.Ongoing;
+
+            if (!swarmAct)
+            {
+                // Utanför akt 2 → markera kvarvarande kopior för borttagning.
+                foreach (var o in context.ActiveObjects)
+                    if (o is DynamicCreatureSwarmCopy c && !c.Redundant)
+                    { c.Health = 0; c.Redundant = true; c.RemoveCount = 1; }
+                return;
+            }
+
+            int alive = context.ActiveObjects.Count(o => o is DynamicCreatureSwarmCopy c && c.Health > 0);
+            for (int i = alive; i < SwarmTargetAlive; i++)
+                context.ActiveObjects.Add(MakeSwarmCopy(context));
+        }
+
+        // Skapar en kopia vid en arenakant (växlar sida varje gång) nära taket, så att den
+        // faller in och jagar — "svärmar in" från båda håll snarare än att poppa upp på hjälten.
+        private DynamicCreatureSwarmCopy MakeSwarmCopy(GameContext context)
+        {
+            int w = context.CurrentLevel?.Width ?? 36;
+            bool left = (_swarmSpawnFlip++ & 1) == 0;
+            float x = left ? 2f : w - 3f;
+            return new DynamicCreatureSwarmCopy { px = x, py = 2f };
         }
     }
 }
