@@ -562,6 +562,8 @@ namespace FrostyPlatformer.Models.Objects
         {
             _retreatTimer = RetreatDuration;
             _retreatDir   = px >= victimX ? 1f : -1f;
+            vy = -4f;   // rekyl-studs UPP — separerar henne vertikalt från hjälten direkt (annars blir hon
+                        // stående ovanpå och re-skadar när i-frames går ut innan hon glider av i sidled)
         }
 
         public override void DrawSelf(IRenderContext gfx, float ox, float oy)

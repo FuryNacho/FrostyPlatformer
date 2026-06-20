@@ -292,6 +292,16 @@ namespace UnitTest
                 $"Bossen ska ta sig HELA vagen upp till den hoga platan via ett gap-hopp, men kom som hogst till py={best}.");
         }
 
+        // ── Regression: efter att ha GETT skada ska hon studsa UPP (separera från hjälten) ──
+        [TestMethod]
+        public void OnDealtDamage_PopsUpToSeparateFromHero()
+        {
+            var boss = new DynamicCreatureMirrorScarlet { px = 10f, py = 10f, vy = 5f };   // föll på hjälten (vy > 0)
+            boss.OnDealtDamage(victimX: 10f);
+            Assert.IsTrue(boss.vy < 0f,
+                $"Efter att ha gett skada ska bossen studsa UPP (vy < 0) så hon inte blir stående på hjälten, men vy={boss.vy}.");
+        }
+
         // ── Regression: väggträff ska INTE ge ett reflex-hopp (kängurustudsandet) ──────
         [TestMethod]
         public void WallHit_DoesNotReflexJump()
