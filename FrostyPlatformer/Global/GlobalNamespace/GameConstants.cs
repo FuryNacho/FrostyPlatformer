@@ -137,5 +137,11 @@ namespace FrostyPlatformer.Global
         // ─────────────────────────────────────────────
         public const float KnockbackMultiplierX = 3.0f;
         public const float KnockbackMultiplierY = 2.0f;
+
+        /// <summary>
+        /// Nämnare för "tur"-tärningen: chansen för ett lyckoutfall är 1 av detta tal
+        /// (t.ex. 1/13 nådchans att överleva en annars dödlig träff). Högre värde = mer sällsynt.
+        /// </summary>
+        public const int LuckyChanceDenominator = 13;
     }
 }

@@ -102,7 +102,7 @@ namespace FrostyPlatformer.Models.Objects
             MaxHealth = 2;
             SolidVsDynamic = true;
             SolidVsMap = true;
-            DamageGiven = 4;
+            DamageGiven = 2;
         }
 
         public override void Behaviour(float fElapsedTime, DynamicGameObject? player = null)
@@ -176,7 +176,7 @@ namespace FrostyPlatformer.Models.Objects
             MaxHealth = 2;
             SolidVsDynamic = true;
             SolidVsMap = true;
-            DamageGiven = 4;
+            DamageGiven = 6;
 
 
 
@@ -301,7 +301,7 @@ namespace FrostyPlatformer.Models.Objects
             MaxHealth = 2;
             SolidVsDynamic = true;
             SolidVsMap = true;
-            DamageGiven = 4;
+            DamageGiven = 2;
         }
 
         public Enum.LastStage State { get; set; }

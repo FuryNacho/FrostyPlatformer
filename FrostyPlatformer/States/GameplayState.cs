@@ -41,14 +41,14 @@ namespace FrostyPlatformer.States
         // _rememberJumpCollision, _jumpMemory, _fallCounter och _enemyJump är tidsbaserade
         // "grace"-fönster i sekunder (räknas ned/upp med elapsed), inte frame-räknare —
         // se GameConstants.*Seconds. Det gör spelkänslan frame-rate-oberoende.
-        private bool  _bPower;
+        private bool _bPower;
         private float _rememberJumpCollision;
         private float _jumpMemory;
         private float _fallCounter;
-        private bool  _allowCoyoteTime;
-        private int   _tempMemJumpCounter;
-        private int   _tempMemCoyoteCounter;
-        private bool  _detHarBallatUrLog;
+        private bool _allowCoyoteTime;
+        private int _tempMemJumpCounter;
+        private int _tempMemCoyoteCounter;
+        private bool _detHarBallatUrLog;
         private float _maxR, _maxL;
 
         // Fiende-AI
@@ -61,7 +61,7 @@ namespace FrostyPlatformer.States
         public GameplayState(GameServices services)
         {
             _services = services;
-            _rc       = services.RenderContext;
+            _rc = services.RenderContext;
             _parallax = services.Parallax;
         }
 
@@ -327,7 +327,7 @@ namespace FrostyPlatformer.States
             _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
 
             var returnState = context.PreviewReturnState!;
-            context.IsPreviewMode      = false;
+            context.IsPreviewMode = false;
             context.PreviewReturnState = null;
             _services.StateManager.Transition(returnState, context);
         }
@@ -360,7 +360,7 @@ namespace FrostyPlatformer.States
             // Akt 4 (Spegeln): b-power avstängd — lugnt, avsiktligt tempo.
             if (context.BossPhase?.CurrentAct == BossAct.Acceptance) _bPower = false;
 
-            hero.LookUp   = _services.Input.IsUpDown;
+            hero.LookUp = _services.Input.IsUpDown;
             hero.LookDown = _services.Input.IsDownDown;
 
             // Hopp
@@ -595,7 +595,7 @@ namespace FrostyPlatformer.States
                     if (other.Friendly != obj.Friendly)
                     {
                         if (other.IsHero) DamageHero((Creature)obj, (Creature)other, "3");
-                        else              DamageHero((Creature)other, (Creature)obj, "2");
+                        else DamageHero((Creature)other, (Creature)obj, "2");
                     }
                 }
                 else
@@ -604,14 +604,14 @@ namespace FrostyPlatformer.States
                     if (other.Friendly != obj.Friendly)
                     {
                         if (other.IsHero) DamageHero((Creature)obj, (Creature)other, "2");
-                        else              DamageHero((Creature)other, (Creature)obj, "2");
+                        else DamageHero((Creature)other, (Creature)obj, "2");
                     }
                 }
 
                 if ((obj is DynamicCreatureEnemyWalrus || obj is DynamicCreatureEnemyFrost) && !other.Friendly)
                 {
-                    if (obj.Patrol == Enum.Actions.Right) { obj.Patrol = Enum.Actions.Left;  obj.vx = -2; }
-                    else                                  { obj.Patrol = Enum.Actions.Right; obj.vx =  2; }
+                    if (obj.Patrol == Enum.Actions.Right) { obj.Patrol = Enum.Actions.Left; obj.vx = -2; }
+                    else { obj.Patrol = Enum.Actions.Right; obj.vx = 2; }
                 }
             }
 
@@ -679,26 +679,19 @@ namespace FrostyPlatformer.States
 
             if (victim == null || !victim.IsAttackable) return;
 
-            victim.Health -= assailant.DamageGiven;
 
-            // Energi-kaskad: mängden utkastad (uppsamlingsbar) energi är slump[DamageGiven/2,
-            // DamageGiven] men BEGRÄNSAD av nuvarande hälsa. Det är begränsningen som ger
-            // "mer insamlad energi → större kaskad" — har du mycket energi släpps hela spillet
-            // igenom, har du lite kapas det. (Originalmekaniken, återställd.)
-            int n      = assailant.DamageGiven;
-            int health = Math.Max(0, victim.Health);
-            int min    = n / 2 >= health ? health : n / 2;
-            int max    = n       >= health ? health : n;
-            int count  = min >= max ? min : _rng.Next(min, max);
+            int count = 0;
+            victim.Health = HealthRemainingAfterDamage(assailant.DamageGiven, victim.Health, out count);
+
 
             _energiRain.RemainingToSpawn += count;
-            _energiRain.StartPosX         = victim.px;
-            _energiRain.StartPosY         = victim.py;
-            _energiRain.MakeItRain        = true;
+            _energiRain.StartPosX = victim.px;
+            _energiRain.StartPosY = victim.py;
+            _energiRain.MakeItRain = true;
 
             float tx = victim.px - assailant.px;
             float ty = victim.py - assailant.py;
-            float d  = (float)Math.Sqrt(tx * tx + ty * ty);
+            float d = (float)Math.Sqrt(tx * tx + ty * ty);
             if (d < 1) d = 1f;
 
             victim.KnockBack(tx / d, ty / d - 1f, 0.3f);
@@ -709,7 +702,84 @@ namespace FrostyPlatformer.States
                 dealer.OnDealtDamage(victim.px);
 
             if (victim.IsHero) victim.SolidVsDynamic = true;
-            else               victim.OnInteract(assailant);
+            else victim.OnInteract(assailant);
+        }
+
+        private int HealthRemainingAfterDamage(int damageGivenValue, int healthBeforeDamage, out int numberOfEnergyToSpawn)
+        {
+            int calculatedDamage = CalculateDamage(damageGivenValue, healthBeforeDamage);
+            int healthRemaining = healthBeforeDamage - calculatedDamage;
+            numberOfEnergyToSpawn = RemainingEnergyToSpawn(calculatedDamage, healthRemaining);
+            return healthRemaining;
+        }
+
+        private int CalculateDamage(int damageGivenValue, int healthBeforeDamage)
+        {
+            int calculatedDamage = damageGivenValue;
+            if (damageGivenValue >= healthBeforeDamage)
+            {
+                // Låg hälsa. Kommer troligen dö.
+                // Om mer än 1 i hälsa så ska vi ge en liten chans till överlevnad, annars toast. 
+                if (healthBeforeDamage > 1)
+                {
+                    if (IsLucky())
+                    {
+                        // Låt undkomma med 1 i hälsa.
+                        calculatedDamage = (healthBeforeDamage - 1);
+                    }
+                }
+
+                return calculatedDamage;
+            }
+
+            if (healthBeforeDamage <= damageGivenValue * 2)
+            {
+                // Lite mer hälsa än fienden delar ut. Ge minimum skada PLUS eventuellt lite till. 
+                int min = damageGivenValue;
+                int max = damageGivenValue + (damageGivenValue / 2);
+                calculatedDamage = _rng.Next(min, max);
+            }
+            else
+            {
+                // Vanlig skada för relativt hög hälsa.
+                int min = damageGivenValue;
+                int max = damageGivenValue * 2;
+                calculatedDamage = _rng.Next(min, max);
+            }
+
+            return calculatedDamage;
+        }
+
+        private bool IsLucky()
+        {
+            // Dra ett tal i [0, LuckyChanceDenominator). Exakt ett utfall räknas som "tur"
+            // → 1 av LuckyChanceDenominator chans.
+            int luckyNumber = _rng.Next(GameConstants.LuckyChanceDenominator);
+            return luckyNumber == GameConstants.LuckyChanceDenominator - 1;
+        }
+        
+        /// <summary>
+        /// Avgör hur många (uppsamlingsbara) energi-klot som kastas ut när hjälten tar skada.
+        ///
+        /// Antalet slumpas i intervallet [skada/2, skada) och kapas sedan av hjältens
+        /// kvarvarande hälsa. Två egenskaper följer av detta:
+        ///
+        ///  • Antalet är ALLTID mindre än skadan som togs (när skada &gt; 0). Även om spelaren
+        ///    plockar upp varenda utkastad energi nettoförlorar hen minst 1 hälsa — en träff
+        ///    kan aldrig bli "gratis".
+        ///  • Nära döden (lågt healthRemaining) kapas kaskaden ned mot noll: lite hälsa kvar
+        ///    innebär lite energi att spilla.
+        /// </summary>
+        /// <param name="damageGiven">Faktiskt utdelad skada denna träff (ej fiendens rå-DamageGiven).</param>
+        /// <param name="healthRemaining">Hjältens hälsa efter att skadan dragits av.</param>
+        private int RemainingEnergyToSpawn(int damageGiven, int healthRemaining)
+        {
+            int n = damageGiven;
+            int health = Math.Max(0, healthRemaining);
+            int min = n / 2 >= health ? health : n / 2;
+            int max = n >= health ? health : n;
+            int count = min >= max ? min : _rng.Next(min, max);
+            return count;
         }
 
         // Skada bossen tar per lyckad stamp (mirrorHealth 30 / 6 ≈ 5 stamps per akt).
@@ -724,11 +794,11 @@ namespace FrostyPlatformer.States
 
         // Akt 3 — jätten. Skada på jätte-baren per lyckad svagpunkts-stamp (giantHealth 40 / 8 = 5
         // stamps). Slam-takten: en näve åt gången; ny efter SlamInterval när föregående är borta.
-        private const int   GiantStompDamage = 8;
-        private const float SlamFirstDelay   = 1.5f;
-        private const float SlamInterval     = 1.4f;
+        private const int GiantStompDamage = 8;
+        private const float SlamFirstDelay = 1.5f;
+        private const float SlamInterval = 1.4f;
         private float _giantSlamTimer;
-        private bool  _giantSlamLeftNext;   // växlar vilken arm som slår härnäst
+        private bool _giantSlamLeftNext;   // växlar vilken arm som slår härnäst
 
         // Bryggan akt 3→4: jätten rasar (kollaps) + en kort vit blixt (falsk seger).
         private const float CollapseFlashDur = 0.12f;
@@ -736,7 +806,7 @@ namespace FrostyPlatformer.States
 
         // Akt 4 — Spegeln. Vinst = gå in i din spegelbild på marken; stamp straffar dig själv.
         private const float WinMergeDur = 1.3f;    // sammansmältnings-beat (blixt) före EndState
-        private bool  _acceptanceStaged;
+        private bool _acceptanceStaged;
         private float _winTimer = -1f;
 
         // Akt 3 — istappsregn. Ett nytt regn-objekt per intervall, slumpad kolumn.
@@ -846,7 +916,7 @@ namespace FrostyPlatformer.States
         // Jätten är 5 rutor bred (giant_boss-atlasen). Förankringspunkt (övre vänstra) centreras
         // i arenan; py väljs så kroppen sitter i övre/mellersta delen av banan (justeras vid look-test).
         private const int GiantWidthTiles = 5;
-        private const float GiantAnchorY  = 3f;   // tornar i övre delen av arenan (ansiktet är 4 rutor högt)
+        private const float GiantAnchorY = 3f;   // tornar i övre delen av arenan (ansiktet är 4 rutor högt)
 
         /// <summary>
         /// Driver jättens närvaro (akt 3): visar EN jätte centrerad i arenan så länge
@@ -1023,7 +1093,7 @@ namespace FrostyPlatformer.States
         // från hjälten — aldrig ovanpå dig. Spegel-rörelsen tar sedan över.
         private static void StageMirror(GameContext context, DynamicCreatureMirrorScarlet scarlet)
         {
-            var map  = context.CurrentLevel!;
+            var map = context.CurrentLevel!;
             var hero = context.Player!;
             int center = map.Width / 2;
             int sx = hero.px < center ? center + 4 : center - 4;
@@ -1033,7 +1103,7 @@ namespace FrostyPlatformer.States
             while (sy < map.Height && !map.GetSolid(sx, sy)) sy++;
 
             scarlet.px = sx; scarlet.py = sy - 1;
-            scarlet.vx = 0;  scarlet.vy = 0;
+            scarlet.vx = 0; scarlet.vy = 0;
             scarlet.Accepting = true;
         }
     }
