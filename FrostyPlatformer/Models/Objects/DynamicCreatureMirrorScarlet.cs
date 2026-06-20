@@ -31,6 +31,7 @@ namespace FrostyPlatformer.Models.Objects
         private const float LeapIntervalNormal = 2.2f;   // tid mellan språng (deterministiskt)
         private const float LeapIntervalAngry  = 1.1f;   // argt läge: tätare språng
         private const float ChaseSpeed         = 2.0f;   // approach-tempo (långsammare än spelaren)
+        private const float TraverseSpeedMul   = 1.7f;   // fart-boost när hjälten är långt bort (ren transport → snabbare)
         private const float RetreatSpeed       = 2.6f;   // reträtt-tempo (tydlig disengage)
         private const float AngrySpeedMul      = 1.5f;
         private const float MoveBurst          = 1.3f;   // robotisk rytm: längd på en rörelse-skur
@@ -212,7 +213,9 @@ namespace FrostyPlatformer.Models.Objects
             float dx  = player.px - px;
             float dir = dx >= 0f ? 1f : -1f;
             bool  playerAbove = player.py < py - 1.5f;
-            float speed = Angry ? ChaseSpeed * AngrySpeedMul : ChaseSpeed;
+            bool  farFromHero = Math.Abs(dx) > ClimbReach;   // hjälten långt bort i sidled → ren transport
+            // Fart: argt läge snabbare; PLUS en boost när hon mest transporterar sig långt (knappar in avståndet).
+            float speed = ChaseSpeed * (Angry ? AngrySpeedMul : 1f) * (farFromHero ? TraverseSpeedMul : 1f);
 
             // Hjälten UNDER bossen (även bara strax under) → ta dig NER. Ingen dödzon: så fort hjälten
             // är lägre än bossen ska hon ner, aldrig hoppa upp (det var "studsar på platån ovanför").
@@ -243,7 +246,6 @@ namespace FrostyPlatformer.Models.Objects
             // HORISONTELLT mot henne först (kliver av platåer ner till golvet och traverserar);
             // klättring/descend lokalt sker bara när hon är inom räckhåll. Annars klättrade hon
             // närmaste platå och studsade upp/ner i stället för att närma sig hjälten.
-            bool farFromHero = Math.Abs(dx) > ClimbReach;
             if (farFromHero)
             {
                 moveDir = dir;   // jaga mot hjälten; fear of heights är av → hon faller av platåer naturligt
@@ -305,7 +307,8 @@ namespace FrostyPlatformer.Models.Objects
             // fullföljer ett avkliv åt det hållet i stället för att jakt-driva tillbaka upp på platån.
             if (Grounded && moveDir != 0f) _descendDir = moveDir;
 
-            vx = _moving ? moveDir * speed : 0f;
+            // Långt bort → rör sig kontinuerligt (ingen "tänka"-paus) så transporten går snabbt.
+            vx = (farFromHero || _moving) ? moveDir * speed : 0f;
 
             // Commit-drop: när hon precis klivit av en kant (hjälten under, i luften, inte i ett klätter-
             // hopp) fortsätter hon i FALL-riktningen i stället för att hjälte-jakten (vx mot hjälten) drar

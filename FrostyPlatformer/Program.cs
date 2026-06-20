@@ -83,6 +83,12 @@ namespace FrostyPlatformer
         private Core.GameContext _context = new Core.GameContext();
 
         // ── Tidsmätning ───────────────────────────────────────────────────────
+        // Tak för en enskild frames delta-tid. Efter ett fönster-fokus-tapp (alt-tab / annan skärm),
+        // GC-paus eller disk-IO kan EN frame annars rapportera ett enormt elapsed (hela pausen). Med
+        // elapsed-baserad fysik blir det ett gigantiskt position-hopp på en frame → objekt tunnlar
+        // genom varandra och kartan (ingen kollision, ingen skada) och kan fastna i trasigt läge. Att
+        // kapa elapsed gör att spelet saktar in en aning vid en spik i stället för att teleportera.
+        private const float MaxFrameElapsed = 1f / 20f;   // ~3 normal-frames @60 Hz; under 20 Hz saktar spelet in
         private float    _elapsed     = 0f;
         private TimeSpan _runningTime = TimeSpan.Zero;
 
@@ -281,6 +287,7 @@ namespace FrostyPlatformer
         protected override void Update(GameTime gameTime)
         {
             _elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_elapsed > MaxFrameElapsed) _elapsed = MaxFrameElapsed;   // se MaxFrameElapsed: skydd mot fokus-tapp-spik
             _runningTime += TimeSpan.FromSeconds(_elapsed);
             _context.GameTotalTime = _runningTime + _context.ActualTotalTime;
 
