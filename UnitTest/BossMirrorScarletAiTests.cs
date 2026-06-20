@@ -269,6 +269,29 @@ namespace UnitTest
                 $"Bossen ska fullfölja fallet, inte re-grundas vid platåkanten ({platformRelandings} gånger = vingel).");
         }
 
+        // ── Fysik-sim: GAP-HOPP — hjälten på en hög platå tvärs över ett gap från en mellanplatå ──
+        // Reproducerar stale-mate-loopen: bossen klättrar upp på mellanplatån, når inte den högre platån
+        // (gap i vägen), faller av mot hjälten, klättrar igen... Med ett gap-hopp ska hon ta sig över.
+        // (Förväntas FAILA tills gap-hoppet finns — testet definierar målet.)
+        private static GridMap GapJumpMap() => new GridMap((x, y) =>
+            (y >= 13 && y <= 14)                       // golv
+            || (y == 11 && x >= 5 && x <= 9)           // mellanplatå (1 niva upp)
+            || (y == 9  && x >= 13 && x <= 17));        // hog plata (2 nivaer upp), gap kol 10-12 emellan
+
+        [TestMethod]
+        public void Sim_HeroOnHighPlatformAcrossGap_BossGapJumpsToReach()
+        {
+            var map = GapJumpMap();
+            var boss = new DynamicCreatureMirrorScarlet { px = 7f, py = 12f, Arena = map, Active = true, Grounded = true };
+            var hero = new DynamicCreatureEnemyPenguin { px = 15f, py = 8f };   // pa hoga platan
+
+            float best = boss.py;
+            for (int i = 0; i < 900; i++) { Step(boss, hero, map, 1f / 60f); if (boss.py < best) best = boss.py; }
+
+            Assert.IsTrue(best <= 8.5f,
+                $"Bossen ska ta sig HELA vagen upp till den hoga platan via ett gap-hopp, men kom som hogst till py={best}.");
+        }
+
         // ── Regression: väggträff ska INTE ge ett reflex-hopp (kängurustudsandet) ──────
         [TestMethod]
         public void WallHit_DoesNotReflexJump()

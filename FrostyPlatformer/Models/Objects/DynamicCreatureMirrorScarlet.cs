@@ -41,6 +41,8 @@ namespace FrostyPlatformer.Models.Objects
                                                            // Högre hopp fås INTE av mer fart utan av mjukare stig-
                                                            // gravitation, se AscendGravityRelief nedan.
         private const float AscendAirSpeed       = 3.5f;   // horisontell fart när hon styr IN på plattformen (efter att ha klarat kanten)
+        private const float GapJumpAirSpeed      = 5.5f;   // ballistiskt gap-hopp: hög sidofart som BEHÅLLS i luften (bågar
+                                                           // över ett gap upp till en högre platå när rakt-upp inte når). < MaxVelocityX(10).
         private const float AscendLeapCooldown   = 0.8f;   // minsta tid mellan klätterhopp → planerade hopp, inte kängurustuds
         private const float AscendGravityRelief  = 4.0f;   // motverkar en del av gravitationen (20) under stigningen → effektiv ~16
                                                            // → topp ~3.1 tiles (klarar 2-tiles-platå med marginal). < gravitationen.
@@ -76,6 +78,8 @@ namespace FrostyPlatformer.Models.Objects
         private int   _climbUp2     = int.MinValue;   // vilken plattformsnivå latchen gäller (annars ogiltig)
         private bool  _ascending;          // mitt i ett klätterhopp: rakt upp tills kanten är klarad, sen styr in
         private int   _ascendTargetRow;    // plattformsraden (up2) hon klättrar mot — "kanten klarad" = py ≤ denna − 1
+        private bool  _gapJumping;         // mitt i ett ballistiskt gap-hopp: behåll sidofart hela bågen
+        private int   _gapDir = 1;         // riktning för gap-hoppet (mot den högre platån över gapet)
         private float _glitch;             // glitch-intensitet 0..1 (akt 1-exit + akt 4 nära hjälten)
         private float _exitTimer = -1f;    // akt 1→2: glitch-upplösning pågår när ≥ 0
         private bool  _hidden;             // efter exit: kroppen behålls för akt 4 men ritas inte
@@ -240,6 +244,7 @@ namespace FrostyPlatformer.Models.Objects
             // nästa nivå om → tvånivåers-klättring sker automatiskt.
             float moveDir = dir;
             bool  wantClimbJump = false;   // står vid en FRI startkolumn intill plattformen → hoppa upp
+            bool  wantGapJump = false;     // står vid plattformskanten mot en högre platå tvärs ett gap → båg-hopp
             float climbDir = dir;          // riktning IN mot plattformen (oftast mot hjälten)
 
             // MÅLET ÄR HJÄLTEN, inte närmaste platå. Är hon långt bort i sidled jagar bossen
@@ -271,14 +276,29 @@ namespace FrostyPlatformer.Models.Objects
                 if (_climbLaunch != int.MinValue)
                 {
                     climbDir = _climbLaunchDir;
-                    // Hoppa när hon (a) är VID startkolumnen och (b) hela kroppen [px, px+1) har fri
-                    // stigning (annars bonkar hennes ena halva plattformens undersida). Annars går dit.
-                    float gap = _climbLaunch - px;
-                    bool bodyClear = RiseClear(Arena, (int)px, up2) && RiseClear(Arena, (int)(px + 0.999f), up2);
-                    if (Math.Abs(gap) < 0.6f && bodyClear)
-                        { moveDir = 0f; wantClimbJump = true; }
+                    // Ligger startkolumnen TVÄRS ÖVER ett gap (inte på bossens nuvarande yta — saknar stöd
+                    // på hennes fot-rad)? Då kan hon inte gå dit. I stället ett GAP-HOPP: gå till sin EGEN
+                    // plattformskant mot målet och hoppa ballistiskt över gapet upp på den högre platån.
+                    if (!Arena.GetSolid(_climbLaunch, (int)py + 1))
+                    {
+                        int gapDir = _climbLaunchDir >= 0f ? 1 : -1;
+                        int footRow = (int)py + 1;
+                        if (!Arena.GetSolid((int)px + gapDir, footRow))   // nästa kolumn mot målet är ett stup → vid kanten
+                            { moveDir = 0f; wantGapJump = true; _gapDir = gapDir; }
+                        else
+                            moveDir = gapDir;                              // gå fram till kanten
+                    }
                     else
-                        moveDir = gap > 0f ? 1f : -1f;
+                    {
+                        // Rakt-upp-klättring (intilliggande platå): hoppa när hon (a) är VID startkolumnen och
+                        // (b) hela kroppen [px, px+1) har fri stigning (annars bonkar ena halvan undersidan).
+                        float gap = _climbLaunch - px;
+                        bool bodyClear = RiseClear(Arena, (int)px, up2) && RiseClear(Arena, (int)(px + 0.999f), up2);
+                        if (Math.Abs(gap) < 0.6f && bodyClear)
+                            { moveDir = 0f; wantClimbJump = true; }
+                        else
+                            moveDir = gap > 0f ? 1f : -1f;
+                    }
                 }
                 else
                     moveDir = dir;   // ingen väg upp MOT hjälten i sikte → närma dig henne på nuvarande nivå
@@ -314,19 +334,29 @@ namespace FrostyPlatformer.Models.Objects
             // hopp) fortsätter hon i FALL-riktningen i stället för att hjälte-jakten (vx mot hjälten) drar
             // tillbaka henne in över platån. Annars re-grundas hon på platåns kant och VINGLAR där ett par
             // sekunder innan hon kommer loss (grundningen räcker så länge ena kroppshalvan är över kanten).
-            if (playerBelow && !Grounded && !_ascending)
+            if (playerBelow && !Grounded && !_ascending && !_gapJumping)
                 vx = _descendDir * speed;
 
             // Avsiktliga hopp, cooldown-gatade (planerade — aldrig varje frame):
-            //  • Klätterhopp: när hon står intill kanten. RAKT upp (vx=0); insteget sker i ascend-styrningen.
+            //  • Gap-hopp: vid kanten mot en högre platå tvärs ett gap → ballistisk båge (sidofart behålls).
+            //  • Klätterhopp: vid en intilliggande platå → RAKT upp (vx=0), insteg i ascend-styrningen.
             //  • Attack-hopp: mot en hjälte i nivå.
-            if (Grounded && _leapTimer <= 0f && (wantClimbJump || canStomp))
+            if (Grounded && _leapTimer <= 0f && (wantGapJump || wantClimbJump || canStomp))
             {
-                if (wantClimbJump)
+                if (wantGapJump)
+                {
+                    vy = BPowerJumpVelocity;
+                    vx = _gapDir * GapJumpAirSpeed;       // ballistiskt: hög sidofart över gapet, behålls i luften
+                    _gapJumping = true;
+                    _ascending = false;
+                    _leapTimer = AscendLeapCooldown;
+                }
+                else if (wantClimbJump)
                 {
                     vy = BPowerJumpVelocity;
                     vx = 0f;                              // rakt upp först — ingen sidledsfart in i plattformens sida
                     _ascending = true;
+                    _gapJumping = false;
                     _ascendTargetRow = (int)py + 1 - 2;   // plattformsraden hon siktar på
                     _ascendDir = climbDir;
                     _leapTimer = AscendLeapCooldown;
@@ -336,15 +366,34 @@ namespace FrostyPlatformer.Models.Objects
                     vy = GameConstants.JumpVelocity;
                     vx = dir * speed;
                     _ascending = false;
+                    _gapJumping = false;
                     float baseInterval = Angry ? LeapIntervalAngry : LeapIntervalNormal;
                     _leapTimer = Angry ? baseInterval * (0.6f + (float)_rng.NextDouble() * 0.8f) : baseInterval;
                 }
             }
 
+            // Gap-hopps-styrning: ballistisk båge — behåll hög sidofart HELA vägen (till skillnad från
+            // rakt-upp-klättringen) så hon bågar över gapet och dalar ner på den högre platån. Mjukare
+            // stig-gravitation för höjden, men släpps om ett tak sitter strax ovanför huvudet.
+            if (_gapJumping)
+            {
+                if (Grounded && vy >= 0f)
+                    _gapJumping = false;                                   // landat
+                else
+                {
+                    vx = _gapDir * GapJumpAirSpeed;
+                    int gHeadRow = (int)py;
+                    bool gCeilingClose = Arena != null && gHeadRow - 2 >= 0 &&
+                        (Arena.GetSolid((int)px, gHeadRow - 1) || Arena.GetSolid((int)(px + 0.9f), gHeadRow - 1) ||
+                         Arena.GetSolid((int)px, gHeadRow - 2) || Arena.GetSolid((int)(px + 0.9f), gHeadRow - 2));
+                    if (vy < 0f && !gCeilingClose)
+                        vy -= AscendGravityRelief * fElapsedTime;
+                }
+            }
             // Ascend-styrning: "hoppa rakt upp, styr in sen". Medan hon stiger och ännu inte klarat
             // plattformskanten håller hon sig i sin kolumn (vx=0) så hon inte kör in i sidan. När fötterna
             // är en bit ovanför plattformens ovansida styr hon in i sidled och DALAR ner på plattformen.
-            if (_ascending)
+            else if (_ascending)
             {
                 if (Grounded && vy >= 0f)
                     _ascending = false;                                   // landat (på plattformen eller marken)
