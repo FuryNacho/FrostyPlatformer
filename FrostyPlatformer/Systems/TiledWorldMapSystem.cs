@@ -138,7 +138,9 @@ namespace FrostyPlatformer.Systems
             6 => (MapName.MapSix,   2f, 22f),
             7 => (MapName.MapSeven, 3f, 18f),
             8 => (MapName.MapEight, 4f, 41f),
-            9 => (MapName.MapTen,  18f, 12f),   // slutnoden -> boss-arenan mapten; spawn centrerat (bred arena)
+            9 => (MapName.MapTen,  13f, 10f),   // slutnoden -> boss-arenan mapten; hjälten på vänstra svävande
+                                               // plattformen (rad 11, kol 12–15) — symmetrisk duell mot bossen till höger
+
             _ => null
         };
 

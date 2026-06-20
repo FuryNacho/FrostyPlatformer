@@ -2159,9 +2159,11 @@ namespace FrostyPlatformer.Models
 
         public override bool PopulateDynamics(List<DynamicGameObject> listDynamicObjs)
         {
-            // Fas 2: spegel-Scarlet som närvaro (akt 1). Hon står still tills duell-AI:n
-            // byggs i fas 3. Svärm (akt 2) och jätte (akt 3) tillkommer i senare faser.
-            var scarlet = new DynamicCreatureMirrorScarlet { px = 24, py = 11, Arena = this };
+            // Akt 1: spegel-Scarlet startar på den högra svävande plattformen (rad 11, kol 21–24),
+            // spegelvänt mot hjälten på den vänstra — en symmetrisk duell-uppställning. Hon ligger
+            // idle tills hjälten tar initiativet (GameplayState väcker henne). Svärm (akt 2) och
+            // jätte (akt 3) hanteras av GameplayState när BossPhaseController byter akt.
+            var scarlet = new DynamicCreatureMirrorScarlet { px = 22, py = 10, Arena = this };
             listDynamicObjs.Add(scarlet);
             return true;
         }

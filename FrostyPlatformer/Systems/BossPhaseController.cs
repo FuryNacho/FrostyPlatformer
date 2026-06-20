@@ -25,28 +25,29 @@ namespace FrostyPlatformer.Systems
         Ongoing,
         /// <summary>Spelaren fullbordade akt 4 — acceptansen.</summary>
         PlayerWon,
-        /// <summary>Scarlets värme slocknade innan striden var klar.</summary>
-        PlayerLost,
     }
 
     /// <summary>
-    /// Driver slutbossens akt-progression, boss-hälsa per akt, fake-out-övergångar
-    /// och Scarlets värmemätare (den energi-länkade dräneringen).
+    /// Driver slutbossens akt-progression, boss-hälsa per akt och fake-out-övergångar.
     /// </summary>
     /// <remarks>
     /// MÖNSTER: Tillståndsmaskin (ren domänlogik, motor-agnostisk).
     ///
     /// MOTIVERING:
     /// FINAL_BOSS_PLAN kräver att fas-logiken går att testa utan hårdvara (likt EditorMath).
-    /// Striden är "koreografi ovanpå motorn", så akt-ordning, fake-outs och dränering hör
-    /// hemma i en fristående, deterministisk klass — inte i den motorbundna Creature-koden
-    /// (SRP/DIP). Rendering, input och spawn läser tillståndet härifrån men matar bara in
-    /// råa händelser (träff, tick, gå-mot-henne).
+    /// Striden är "koreografi ovanpå motorn", så akt-ordning och fake-outs hör hemma i en
+    /// fristående, deterministisk klass — inte i den motorbundna Creature-koden (SRP/DIP).
+    /// Rendering, input och spawn läser tillståndet härifrån men matar bara in råa händelser
+    /// (träff, gå-mot-henne).
+    ///
+    /// Värmemätaren (en tids-press kopplad till hjältens energi) togs bort 2026-06-20: under
+    /// speltest visade den sig inte tillföra något till bossupplevelsen — svårighetsgraden
+    /// bärs av striden själv, inte av en klocka. Förlust sker numera bara via hjältens hälsa.
     ///
     /// ANVÄNDNING:
-    /// Skapas när boss-arenan (mapten) laddas. GameplayState anropar Tick() varje frame,
-    /// TakeHit() när bossen stampas, och ApproachToward() i akt 4. HUD läser BossHealth/
-    /// Warmth för barerna och ConsumeFakeOut() för "baren reser sig igen"-beatet.
+    /// Skapas när boss-arenan (mapten) laddas. GameplayState anropar TakeHit() när bossen
+    /// stampas och ApproachToward() i akt 4. HUD läser BossHealth för baren och
+    /// ConsumeFakeOut() för "baren reser sig igen"-beatet.
     /// </remarks>
     public sealed class BossPhaseController
     {
@@ -55,9 +56,8 @@ namespace FrostyPlatformer.Systems
         private readonly int _swarmHealth;
         private readonly int _giantHealth;
 
-        // Akt 4: hur långt spelaren gått mot henne (0..1) och regenereringstakt.
+        // Akt 4: hur långt spelaren gått mot henne (0..1).
         private float _approach;
-        private readonly float _warmthRegenPerSecond;
 
         /// <summary>Aktuell akt. Börjar i <see cref="BossAct.Mirror"/>.</summary>
         public BossAct CurrentAct { get; private set; }
@@ -68,22 +68,10 @@ namespace FrostyPlatformer.Systems
         /// <summary>Bossens maxhälsa i aktuell skade-akt — för HUD-barens skala.</summary>
         public int BossMaxHealth { get; private set; }
 
-        /// <summary>Scarlets värme/laddning (0..<see cref="MaxWarmth"/>). Når den 0 förlorar spelaren.</summary>
-        public float Warmth { get; private set; }
-
-        /// <summary>Maxvärde för värmemätaren.</summary>
-        public float MaxWarmth { get; }
-
-        /// <summary>
-        /// Värmedränering per sekund under skade-akterna. Sätts av spelaren utifrån
-        /// insamlad energi via <see cref="ComputeWarmthDrain"/> (mer energi → långsammare).
-        /// </summary>
-        public float WarmthDrainPerSecond { get; set; }
-
         /// <summary>Spelarens framsteg mot henne i akt 4 (0..1). Endast meningsfullt i akt 4.</summary>
         public float ApproachProgress => _approach;
 
-        /// <summary>Stridens utfall. Tick/TakeHit/ApproachToward blir no-ops när den inte är Ongoing.</summary>
+        /// <summary>Stridens utfall. TakeHit/ApproachToward blir no-ops när den inte är Ongoing.</summary>
         public BossOutcome Outcome { get; private set; }
 
         /// <summary>Sant när en fake-out-övergång precis skett ("baren reser sig igen").</summary>
@@ -95,9 +83,6 @@ namespace FrostyPlatformer.Systems
         /// <param name="mirrorHealth">Boss-HP i akt 1.</param>
         /// <param name="swarmHealth">Boss-HP i akt 2.</param>
         /// <param name="giantHealth">Boss-HP i akt 3.</param>
-        /// <param name="maxWarmth">Värmemätarens maxvärde (även startvärde).</param>
-        /// <param name="warmthDrainPerSecond">Initial dräneringstakt (sätts normalt via <see cref="ComputeWarmthDrain"/>).</param>
-        /// <param name="warmthRegenPerSecond">Hur snabbt värmen återvänder i akt 4 (acceptans värmer).</param>
         /// <param name="startAct">
         /// Akten striden börjar i. Normalt <see cref="BossAct.Mirror"/> (hela striden); andra
         /// värden låter dev-läget hoppa in mitt i (DevConfig.BossStartAct). Akt-baren laddas
@@ -107,17 +92,11 @@ namespace FrostyPlatformer.Systems
             int mirrorHealth = 30,
             int swarmHealth = 24,
             int giantHealth = 40,
-            float maxWarmth = 100f,
-            float warmthDrainPerSecond = 2f,
-            float warmthRegenPerSecond = 6f,
             BossAct startAct = BossAct.Mirror)
         {
             _mirrorHealth = mirrorHealth;
             _swarmHealth = swarmHealth;
             _giantHealth = giantHealth;
-            MaxWarmth = maxWarmth;
-            WarmthDrainPerSecond = warmthDrainPerSecond;
-            _warmthRegenPerSecond = warmthRegenPerSecond;
 
             CurrentAct = startAct;
             (BossMaxHealth, BossHealth) = startAct switch
@@ -127,7 +106,6 @@ namespace FrostyPlatformer.Systems
                 BossAct.Giant  => (_giantHealth, _giantHealth),
                 _              => (0, 0),   // Acceptance/Resolved: ingen skade-bar
             };
-            Warmth = maxWarmth;
             Outcome = startAct == BossAct.Resolved ? BossOutcome.PlayerWon : BossOutcome.Ongoing;
         }
 
@@ -151,34 +129,6 @@ namespace FrostyPlatformer.Systems
 
             BossHealth = 0;
             AdvanceFromDamageAct();
-        }
-
-        /// <summary>
-        /// Stegar tiden framåt: dränerar värmen i skade-akterna, eller återför den i akt 4.
-        /// Om värmen når 0 under en skade-akt förlorar spelaren.
-        /// </summary>
-        /// <param name="elapsedSeconds">Förfluten tid sedan föregående tick.</param>
-        public void Tick(float elapsedSeconds)
-        {
-            if (Outcome != BossOutcome.Ongoing || elapsedSeconds <= 0f)
-                return;
-
-            if (CurrentAct == BossAct.Acceptance)
-            {
-                // Acceptans värmer — dräneringen vänder.
-                Warmth = Math.Min(MaxWarmth, Warmth + _warmthRegenPerSecond * elapsedSeconds);
-                return;
-            }
-
-            if (!IsDamageAct)
-                return;
-
-            Warmth -= WarmthDrainPerSecond * elapsedSeconds;
-            if (Warmth <= 0f)
-            {
-                Warmth = 0f;
-                Outcome = BossOutcome.PlayerLost;
-            }
         }
 
         /// <summary>
@@ -209,27 +159,6 @@ namespace FrostyPlatformer.Systems
                 return false;
             FakeOutPending = false;
             return true;
-        }
-
-        /// <summary>
-        /// Beräknar värmedränering per sekund utifrån insamlad energi. Mer energi →
-        /// långsammare dränering. Helig regel (FINAL_BOSS_PLAN §4): även 0 energi ska gå
-        /// att klara — insamling köper marginal, aldrig en mur. Därför är dränering vid 0
-        /// energi taket och vid full energi golvet.
-        /// </summary>
-        /// <param name="collectedEnergy">Hur mycket energi spelaren samlat (0..maxEnergy).</param>
-        /// <param name="maxEnergy">Maximal energi i spelet (>0).</param>
-        /// <param name="drainAtZeroEnergy">Dränering vid 0 energi (den tuffaste, men klarbara).</param>
-        /// <param name="drainAtFullEnergy">Dränering vid full energi (den bekvämaste).</param>
-        public static float ComputeWarmthDrain(
-            int collectedEnergy, int maxEnergy,
-            float drainAtZeroEnergy, float drainAtFullEnergy)
-        {
-            if (maxEnergy <= 0)
-                return drainAtZeroEnergy;
-
-            float t = Math.Clamp(collectedEnergy / (float)maxEnergy, 0f, 1f);
-            return drainAtZeroEnergy + (drainAtFullEnergy - drainAtZeroEnergy) * t;
         }
 
         // Går vidare från en avklarad skade-akt till nästa akt och utlöser fake-out-beatet.

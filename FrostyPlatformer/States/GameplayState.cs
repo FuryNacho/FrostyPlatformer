@@ -96,19 +96,36 @@ namespace FrostyPlatformer.States
             context.Player!.vx = 0;
             _enemyJump = 0f;
 
+            // Input-nollställning vid banstart: samma knapp (A/confirm) som startar banan från
+            // världskartan hoppar inne i banan (jump triggas på IsConfirmPressed). Utan detta
+            // ligger hoppknappen kvar nedtryckt vid spawn och tolkas som ett färskt hopp direkt.
+            // Genom att tvinga latchen till "inte släppt sedan ett tryck" kräver vi att knappen
+            // släpps och trycks på nytt innan ett hopp registreras. Nollställ även hopp-buffert/
+            // coyote så ingen köad input fyrar av vid spawn.
+            _services.Input.JumpButtonDownRelease     = false;
+            _services.Input.JumpButtonDownReleaseOnce = false;
+            _services.Input.JumpButtonState           = 0;
+            _services.Input.ButtonsHasGoneIdle        = false;
+            _jumpMemory = 0f;
+            _allowCoyoteTime = false;
+            _tempMemCoyoteCounter = 0;
+
             // Slutboss-arena: skapa fas-controllern EN gång per fight. Vid pause→resume
             // körs Enter om (ny GameplayState) — då finns controllern redan och får INTE
-            // återskapas (annars nollställs värmen = gratis-hack). Rensas på världskartan.
+            // återskapas. Rensas på världskartan.
             if (context.CurrentLevel?.IsBossArena == true)
             {
                 if (context.BossPhase == null)
                 {
                     // Dev: BossStartAct hoppar in i en senare akt direkt (default Mirror = hela striden).
                     context.BossPhase = new BossPhaseController(startAct: DevConfig.BossStartAct);
-                    // Dräneringstakten sätts av insamlad energi (mer → långsammare; även 0 klarbart).
-                    context.BossPhase.WarmthDrainPerSecond = BossPhaseController.ComputeWarmthDrain(
-                        context.CollectedEnergiIds.Count, maxEnergy: 100,
-                        drainAtZeroEnergy: 1.2f, drainAtFullEnergy: 0.3f);
+
+                    // Akt 1: bossen ligger idle tills hjälten tar initiativet. Spara spawn-läget
+                    // så vi kan upptäcka första rörelsen; dev-hopp förbi akt 1 vaknar direkt.
+                    _bossAwake = DevConfig.BossStartAct != BossAct.Mirror;
+                    _bossIdleTimer = 0f;
+                    _heroSpawnPx = context.Player!.px;
+                    _heroSpawnPy = context.Player!.py;
                 }
             }
             else
@@ -239,26 +256,35 @@ namespace FrostyPlatformer.States
             if (_energiRain.MakeItRain)
                 MakeItRainEnergi(context);
 
-            // Slutbossens fas-logik: dränera värme / vänd i akt 4 / avgör utfall.
-            context.BossPhase?.Tick(elapsed);
-
-            // Värmen slocknade → förlust. Behandlas som hjältens död (vanlig game over):
-            // nollställ hälsan så den befintliga död-hanteringen (överst i Update) tar vid.
-            if (context.BossPhase?.Outcome == BossOutcome.PlayerLost && context.Player != null)
-                context.Player.Health = 0;
-
             // Akt 1: spegel-Scarlet är aktiv bara under Mirror-akten (svärm/jätte byggs i fas 4–5).
-            // Argt läge när akt-hälsan är låg → snabbare, tätare/slumpigare språng.
+            // Argt läge när akt-hälsan är låg → snabbare, tätare/slumpigare språng. När Mirror-akten
+            // är slut glitchar hon ut ur arenan (BeginExit, idempotent) — kroppen behålls dold för
+            // akt 4 men syns inte under svärmen/jätten.
             if (context.BossPhase != null)
             {
                 bool mirrorAct = context.BossPhase.CurrentAct == BossAct.Mirror;
                 bool angry = context.BossPhase.BossMaxHealth > 0 &&
                              context.BossPhase.BossHealth <= context.BossPhase.BossMaxHealth * 0.4f;
+
+                // Akt 1: bossen vaknar först när hjälten tar initiativet — hon ligger idle tills
+                // hjälten rört sig från sin spawn, eller efter en idle-frist (BossWakeIdleSeconds)
+                // så att en helt passiv spelare ändå får igång striden.
+                if (mirrorAct && !_bossAwake && context.Player != null)
+                {
+                    _bossIdleTimer += elapsed;
+                    bool heroMoved = Math.Abs(context.Player.px - _heroSpawnPx) > 0.05f ||
+                                     Math.Abs(context.Player.py - _heroSpawnPy) > 0.05f;
+                    if (heroMoved || _bossIdleTimer >= BossWakeIdleSeconds)
+                        _bossAwake = true;
+                }
+
                 foreach (var o in context.ActiveObjects)
                     if (o is DynamicCreatureMirrorScarlet ms)
                     {
-                        ms.Active = mirrorAct;
+                        ms.Active = mirrorAct && _bossAwake;
                         ms.Angry = angry;
+                        if (context.BossPhase.CurrentAct == BossAct.Swarm)
+                            ms.BeginExit();
                     }
             }
 
@@ -785,6 +811,14 @@ namespace FrostyPlatformer.States
         // Skada bossen tar per lyckad stamp (mirrorHealth 30 / 6 ≈ 5 stamps per akt).
         private const int MirrorStompDamage = 6;
 
+        // Akt 1: bossen ligger idle vid spawn och vaknar på hjältens första rörelse — eller efter
+        // denna frist om spelaren står helt stilla (så striden ändå kommer igång).
+        private const float BossWakeIdleSeconds = 13f;
+        private bool _bossAwake;
+        private float _bossIdleTimer;
+        private float _heroSpawnPx;
+        private float _heroSpawnPy;
+
         // Akt 2 — svärmen. Skada på svärm-baren per dödad kopia (swarmHealth 24 / 4 = 6 kopior
         // att stampa). SwarmTargetAlive = hur många kopior som svärmar samtidigt; nya spawnar
         // tills baren töms. Spawn-flaggan växlar sida så de kommer från båda håll.
@@ -896,6 +930,11 @@ namespace FrostyPlatformer.States
                     { c.Health = 0; c.Redundant = true; c.RemoveCount = 1; }
                 return;
             }
+
+            // Vänta in akt 1-bossens glitch-exit innan svärmen droppar in: en kort beat med
+            // tom arena ger tydlig separation mellan akterna (annars överlappar de visuellt).
+            if (context.ActiveObjects.Any(o => o is DynamicCreatureMirrorScarlet ms && ms.ExitInProgress))
+                return;
 
             int alive = context.ActiveObjects.Count(o => o is DynamicCreatureSwarmCopy c && c.Health > 0);
             for (int i = alive; i < SwarmTargetAlive; i++)

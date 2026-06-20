@@ -43,6 +43,10 @@ namespace FrostyPlatformer.Models.Objects
         private const float GlitchFullDist     = 1.0f;   // ...full glitch så här nära
         private const float DodgeRange         = 3.5f;   // akt 4: rymmer om hjälten är ovanför inom detta avstånd
         private const float DodgeSpeed         = 3.5f;   // akt 4: undanmanöver-fart (snabbare än gång)
+        private const float ExitDuration       = 0.8f;   // akt 1→2: glitch-upplösningens längd innan hon göms
+        private const float DustFallDuration   = 1.4f;   // akt 1→2: hur länge dammet faller efter upplösningen (dramatisk paus)
+        private const int   DustCount          = 14;     // antal damm-flagor som lossnar när hon löses upp
+        private const float DustGravity        = 4.0f;   // damm-fall: acceleration nedåt (tiles/s²)
 
         private readonly Random _rng = new Random();
 
@@ -53,7 +57,14 @@ namespace FrostyPlatformer.Models.Objects
         private float _rhythmTimer;
         private bool  _moving = true;
         private bool  _heroAbove;          // hjälten på högre nivå → aktiverar fear of heights
-        private float _glitch;             // akt 4: glitch-intensitet 0..1 (nära hjälten)
+        private float _glitch;             // glitch-intensitet 0..1 (akt 1-exit + akt 4 nära hjälten)
+        private float _exitTimer = -1f;    // akt 1→2: glitch-upplösning pågår när ≥ 0
+        private bool  _hidden;             // efter exit: kroppen behålls för akt 4 men ritas inte
+        private float _dustTimer;          // akt 1→2: damm faller medan > 0 (efter upplösningen)
+        private readonly float[] _dustX  = new float[DustCount];
+        private readonly float[] _dustY  = new float[DustCount];
+        private readonly float[] _dustVx = new float[DustCount];
+        private readonly float[] _dustVy = new float[DustCount];
 
         /// <summary>Sant medan akt 1 (Mirror) pågår. Sätts av GameplayState.</summary>
         public bool Active { get; set; } = true;
@@ -67,6 +78,21 @@ namespace FrostyPlatformer.Models.Objects
         /// <summary>Akt 4: hon står stilla och passiv (slåss inte) men är stampbar — stampar du
         /// fortsätter loopen i stället för att vinna. Sätts av GameplayState.</summary>
         public bool Accepting { get; set; }
+
+        /// <summary>Sant medan akt 1→2-exiten pågår: glitch-upplösningen OCH dammets fall efteråt.
+        /// Svärmen väntar in hela förloppet (tom arena → dammet lägger sig) innan den droppar in.</summary>
+        public bool ExitInProgress => _exitTimer >= 0f || _dustTimer > 0f;
+
+        /// <summary>
+        /// Startar akt 1→2-exiten: hon glitchar ur arenan där hon står och göms sedan. Kroppen
+        /// behålls (osynlig) eftersom akt 4 återanvänder samma objekt (<see cref="Accepting"/>).
+        /// Idempotent — en pågående eller redan avslutad exit rörs inte.
+        /// </summary>
+        public void BeginExit()
+        {
+            if (_hidden || _exitTimer >= 0f) return;
+            _exitTimer = ExitDuration;
+        }
 
         public DynamicCreatureMirrorScarlet() : base("mirror_scarlet", SpriteId.EnemyMirrorScarlet)
         {
@@ -84,12 +110,35 @@ namespace FrostyPlatformer.Models.Objects
             if (_invulnTimer > 0f) _invulnTimer -= fElapsedTime;
             if (_leapTimer > 0f)   _leapTimer   -= fElapsedTime;
 
+            // Dammet faller (efter upplösningen) — körs varje frame oavsett övrigt tillstånd, så
+            // det fortsätter falla även när kroppen är dold och inaktiv.
+            if (_dustTimer > 0f)
+            {
+                _dustTimer -= fElapsedTime;
+                UpdateDust(fElapsedTime);
+            }
+
+            // Akt 1→2: glitch-upplösning. När akt 1 är vunnen sönderfaller hon DÄR hon står och
+            // försvinner ur arenan — glitch-intensiteten trappas upp mot slutet, sen göms kroppen
+            // (behålls för akt 4) och dammet lossnar. Svärmen väntar in hela förloppet via ExitInProgress.
+            if (_exitTimer >= 0f)
+            {
+                _exitTimer -= fElapsedTime;
+                vx = 0f; vy = 0f;
+                IsAttackable = false;
+                SolidVsDynamic = false;
+                _glitch = Math.Clamp(1f - _exitTimer / ExitDuration, 0f, 1f);
+                if (_exitTimer <= 0f) { _hidden = true; _exitTimer = -1f; _glitch = 0f; SpawnDust(); }
+                return;
+            }
+
             // Akt 4 — Spegeln: hennes rörelse är din, SPEGELVÄND. Går du mot henne går hon mot dig;
             // går du bort går hon bort; hoppar du hoppar hon. Ni möts i mittpunkten. Ingen
             // kontakt-kollision (skada av/ingen block — akt 4 hanteras manuellt i GameplayState).
             // Hon glitchar mer ju närmare du kommer.
             if (Accepting)
             {
+                _hidden = false;   // akt 4 återanvänder kroppen (StageMirror flyttar hit henne) → syns igen
                 SolidVsDynamic = false;
                 IsAttackable = false;
                 if (player != null)
@@ -241,6 +290,42 @@ namespace FrostyPlatformer.Models.Objects
             return 0f;
         }
 
+        // ── Damm-effekt (akt 1→2-upplösning) ───────────────────────────────────────
+        // När hon löst upp sig lossnar en handfull grå flagor som faller och bleknar — den
+        // "dramatiska pausen" innan svärmen kommer. Allt i tile-koordinater (px/py-rymd);
+        // hastigheter i tiles/sekund. Rent visuellt, ingen kollision.
+        private void SpawnDust()
+        {
+            for (int i = 0; i < DustCount; i++)
+            {
+                _dustX[i]  = px + (float)_rng.NextDouble();              // sprid över kroppsbredden [px, px+1)
+                _dustY[i]  = py + (float)_rng.NextDouble();
+                _dustVx[i] = (float)(_rng.NextDouble() * 2 - 1) * 0.5f;  // liten sidodrift
+                _dustVy[i] = (float)_rng.NextDouble() * 0.6f;           // börjar falla nedåt
+            }
+            _dustTimer = DustFallDuration;
+        }
+
+        private void UpdateDust(float dt)
+        {
+            for (int i = 0; i < DustCount; i++)
+            {
+                _dustVy[i] += DustGravity * dt;   // gravitation → dammet accelererar nedåt
+                _dustX[i]  += _dustVx[i] * dt;
+                _dustY[i]  += _dustVy[i] * dt;
+            }
+        }
+
+        private void DrawDust(IRenderContext gfx, float ox, float oy)
+        {
+            if (_dustTimer <= 0f) return;
+            float fade = Math.Clamp(_dustTimer / DustFallDuration, 0f, 1f);   // bleknar mot slutet
+            byte g = (byte)((int)(150 * fade) + 40);
+            var col = new RenderColor(g, g, g);
+            for (int i = 0; i < DustCount; i++)
+                gfx.FillRect(ToPixel(_dustX[i], ox), ToPixel(_dustY[i], oy), 1, 1, col);
+        }
+
         // Anropas varje frame under horisontell rörelse (turnPatrol=true endast vid riktig
         // väggträff). Vägg → byt svep-riktning + klättra-hopp. Annars: villkorad fear of heights.
         public override void OnWallCollision(ref float newX, bool turnPatrol, bool movingLeft, IMapData map, float fBorder)
@@ -290,6 +375,12 @@ namespace FrostyPlatformer.Models.Objects
 
         public override void DrawSelf(IRenderContext gfx, float ox, float oy)
         {
+            // Dammet ritas även när kroppen är dold (det faller kvar efter att hon försvunnit).
+            DrawDust(gfx, ox, oy);
+
+            // Dold efter akt 1→2-exiten: kroppen lever kvar för akt 4 men ritas inte under tiden.
+            if (_hidden) return;
+
             // Blinka under healing-time som träff-feedback (hoppa över ritning varannan "tick").
             if (_invulnTimer > 0f && ((int)(_invulnTimer * 20f) & 1) == 0)
                 return;

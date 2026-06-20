@@ -168,7 +168,7 @@ namespace FrostyPlatformer
             DevConfig.UnlockAllStages = true;  // alla banor öppna → gå direkt till slutbossen
             DevConfig.FullEnergy = true;
             // Hoppa direkt in i en boss-akt för speltest (BossAct.Mirror = hela striden från start).
-            DevConfig.BossStartAct = BossAct.Acceptance;
+            DevConfig.BossStartAct = BossAct.Mirror;
 
             try
             {

@@ -7,19 +7,16 @@ namespace UnitTest
     public class BossPhaseControllerTests
     {
         private static BossPhaseController Make()
-            => new BossPhaseController(
-                mirrorHealth: 10, swarmHealth: 8, giantHealth: 12,
-                maxWarmth: 100f, warmthDrainPerSecond: 2f, warmthRegenPerSecond: 5f);
+            => new BossPhaseController(mirrorHealth: 10, swarmHealth: 8, giantHealth: 12);
 
         // ── Startläge ─────────────────────────────────────────────────────────────
         [TestMethod]
-        public void Start_InMirrorAct_FullHealthAndWarmth()
+        public void Start_InMirrorAct_FullHealth()
         {
             var c = Make();
             Assert.AreEqual(BossAct.Mirror, c.CurrentAct);
             Assert.AreEqual(10, c.BossHealth);
             Assert.AreEqual(10, c.BossMaxHealth);
-            Assert.AreEqual(100f, c.Warmth);
             Assert.AreEqual(BossOutcome.Ongoing, c.Outcome);
             Assert.IsTrue(c.IsDamageAct);
         }
@@ -126,33 +123,6 @@ namespace UnitTest
             Assert.IsFalse(c.ConsumeFakeOut());
         }
 
-        // ── Värmedränering ─────────────────────────────────────────────────────────
-        [TestMethod]
-        public void Tick_DrainsWarmthInDamageActs()
-        {
-            var c = Make();
-            c.Tick(2f);                          // 2 s * 2/s = 4
-            Assert.AreEqual(96f, c.Warmth, 0.001f);
-        }
-
-        [TestMethod]
-        public void Tick_WarmthHittingZero_PlayerLoses()
-        {
-            var c = Make();
-            c.Tick(60f);                         // mer än nog för att tömma
-            Assert.AreEqual(0f, c.Warmth);
-            Assert.AreEqual(BossOutcome.PlayerLost, c.Outcome);
-        }
-
-        [TestMethod]
-        public void Tick_NoOpAfterLoss()
-        {
-            var c = Make();
-            c.Tick(60f);                         // förlust
-            c.TakeHit(5);
-            Assert.AreEqual(10, c.BossHealth, "TakeHit ska vara no-op efter förlust.");
-        }
-
         // ── Akt 4: acceptans ───────────────────────────────────────────────────────
         [TestMethod]
         public void Acceptance_TakeHitDoesNothing()
@@ -162,27 +132,6 @@ namespace UnitTest
             c.TakeHit(5);
             Assert.AreEqual(BossAct.Acceptance, c.CurrentAct);
             Assert.AreEqual(BossOutcome.Ongoing, c.Outcome);
-        }
-
-        [TestMethod]
-        public void Acceptance_TickReversesDrain_WarmthRegenerates()
-        {
-            var c = Make();
-            c.TakeHit(10); c.TakeHit(8);                  // -> Giant (skade-akt)
-            c.Tick(10f);                                  // dränera: 10s * 2/s = 20 -> 80
-            Assert.AreEqual(80f, c.Warmth, 0.001f);
-            c.TakeHit(12);                                // -> Acceptance
-            c.Tick(2f);                                   // regen: 2s * 5/s = 10 -> 90
-            Assert.AreEqual(90f, c.Warmth, 0.001f);
-        }
-
-        [TestMethod]
-        public void Acceptance_RegenCapsAtMax()
-        {
-            var c = Make();
-            c.TakeHit(10); c.TakeHit(8); c.TakeHit(12);   // -> Acceptance (värme full)
-            c.Tick(100f);
-            Assert.AreEqual(c.MaxWarmth, c.Warmth, 0.001f);
         }
 
         [TestMethod]
@@ -206,26 +155,5 @@ namespace UnitTest
             Assert.AreEqual(0f, c.ApproachProgress);
             Assert.AreEqual(BossAct.Mirror, c.CurrentAct);
         }
-
-        // ── Energi-länkad dränering (helig regel) ──────────────────────────────────
-        [TestMethod]
-        public void ComputeWarmthDrain_ZeroEnergy_ReturnsHarshestDrain()
-            => Assert.AreEqual(5f, BossPhaseController.ComputeWarmthDrain(0, 100, 5f, 1f), 0.001f);
-
-        [TestMethod]
-        public void ComputeWarmthDrain_FullEnergy_ReturnsGentlestDrain()
-            => Assert.AreEqual(1f, BossPhaseController.ComputeWarmthDrain(100, 100, 5f, 1f), 0.001f);
-
-        [TestMethod]
-        public void ComputeWarmthDrain_HalfEnergy_Interpolates()
-            => Assert.AreEqual(3f, BossPhaseController.ComputeWarmthDrain(50, 100, 5f, 1f), 0.001f);
-
-        [TestMethod]
-        public void ComputeWarmthDrain_ClampsAboveMax()
-            => Assert.AreEqual(1f, BossPhaseController.ComputeWarmthDrain(200, 100, 5f, 1f), 0.001f);
-
-        [TestMethod]
-        public void ComputeWarmthDrain_ZeroMaxEnergy_FallsBackToHarshest()
-            => Assert.AreEqual(5f, BossPhaseController.ComputeWarmthDrain(0, 0, 5f, 1f), 0.001f);
     }
 }

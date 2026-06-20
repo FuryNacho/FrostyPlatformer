@@ -60,10 +60,10 @@ namespace FrostyPlatformer.States
             rc.DrawLine(3 + 1, 3 + 1, 3 + bar, 3 + 1, color);
             rc.DrawLine(3 + 1, 3 + 2, 3 + bar, 3 + 2, color);
 
-            // Slutboss: dubbla barer (boss-hälsa vs Scarlets värme) under HUD-baren.
-            // Ritas bara i en boss-arena — annars hänger barerna kvar på världskarta/meny.
+            // Slutboss: boss-hälsobar under HUD-baren. Ritas bara i en boss-arena —
+            // annars hänger baren kvar på världskarta/meny.
             if (context.BossPhase != null && context.CurrentLevel?.IsBossArena == true)
-                DrawBossBars(rc, context);
+                DrawBossBar(rc, context);
 
             if (mode == "pause")
             {
@@ -73,18 +73,15 @@ namespace FrostyPlatformer.States
             }
         }
 
-        // Den varma orange tonen för Scarlets värme-/laddningsbar (H2).
-        private static readonly RenderColor WarmthColor = new RenderColor(255, 160, 40);
-
         /// <summary>
-        /// Ritar slutbossens dubbla barer: H1 = bossens hälsa (rött, töms när du stampar),
-        /// H2 = Scarlets värme (orange, kapplöper nedåt). Placeholder-stil: två färgfält.
+        /// Ritar slutbossens hälsobar: rött fält som töms när du stampar bossen (placeholder-stil).
+        /// Akt 4 (Spegeln) visar ingen bar — hotet läses i hennes glitch, inte i en mätare.
         /// </summary>
-        private static void DrawBossBars(IRenderContext rc, GameContext context)
+        private static void DrawBossBar(IRenderContext rc, GameContext context)
         {
             var bp = context.BossPhase!;
 
-            // Akt 4 (Spegeln): inga barer — hotet läses i hennes glitch, inte i en mätare.
+            // Akt 4 (Spegeln): ingen bar — hotet läses i hennes glitch, inte i en mätare.
             if (bp.CurrentAct == BossAct.Acceptance || bp.CurrentAct == BossAct.Resolved)
                 return;
 
@@ -92,22 +89,13 @@ namespace FrostyPlatformer.States
             int w = context.ScreenWidth - 4;
             int h = 3;
 
-            // H1 — boss-hälsa (töms när du stampar).
+            // Boss-hälsa (töms när du stampar).
             int y1 = 11;
             rc.FillRect(x, y1, w, h, RenderColor.DarkGrey);
             if (bp.BossMaxHealth > 0)
             {
                 int fill = (int)(w * (bp.BossHealth / (float)bp.BossMaxHealth));
                 if (fill > 0) rc.FillRect(x, y1, fill, h, RenderColor.Red);
-            }
-
-            // H2 — Scarlets värme.
-            int y2 = y1 + h + 1;
-            rc.FillRect(x, y2, w, h, RenderColor.DarkGrey);
-            if (bp.MaxWarmth > 0f)
-            {
-                int wfill = (int)(w * (bp.Warmth / bp.MaxWarmth));
-                if (wfill > 0) rc.FillRect(x, y2, wfill, h, WarmthColor);
             }
         }
 
