@@ -59,6 +59,7 @@ namespace FrostyPlatformer
     {
         // ── MonoGame-infrastruktur ────────────────────────────────────────────
         private readonly GraphicsDeviceManager _graphics;
+        private readonly Engine.MonoGame.WindowManager _windowManager;
         private SpriteBatch                    _spriteBatch   = null!;
         private Microsoft.Xna.Framework.Input.KeyboardState _prevKeyboard;
 
@@ -142,6 +143,9 @@ namespace FrostyPlatformer
         public Program()
         {
             _graphics = new GraphicsDeviceManager(this);
+            _windowManager = new Engine.MonoGame.WindowManager(_graphics);
+            // Initial fönsterstorlek (windowed). Det riktiga läget appliceras i LoadContent
+            // när sparade inställningar lästs in.
             _graphics.PreferredBackBufferWidth  = ScreenW * PixW;
             _graphics.PreferredBackBufferHeight = ScreenH * PixH;
             // Variabelt tidssteg + VSync: loopen synkroniseras med skärmens faktiska Hz
@@ -255,13 +259,19 @@ namespace FrostyPlatformer
                 (mapName, x, y) => ChangeMap(mapName, x, y),
                 Reset,
                 () => Exit(),
+                SetScreenMode,
                 () => { bool v = Core.Aggregate.Instance.HasSwitchedState; Core.Aggregate.Instance.HasSwitchedState = false; return v; },
                 () => Core.Aggregate.Instance.HasSwitchedState = false,
                 () => Core.Aggregate.Instance.CheckSwitchX(),
                 id  => Core.Aggregate.Instance.GetMyX(id)
             );
             _stateManager.SetInitial(new States.SplashState(_services), _context);
-            UpdateScreenDimensions();
+
+            // Applicera sparat fönsterläge (eller standardläget om inget val gjorts).
+            // SetScreenMode materialiserar valet i settings i minnet — sparas inte förrän
+            // spelaren väljer aktivt (F11 eller menyn).
+            ScreenMode startMode = _services.Settings.ScreenMode ?? Engine.MonoGame.WindowManager.DefaultScreenMode;
+            SetScreenMode(startMode);
         }
 
         /// <summary>
@@ -277,7 +287,10 @@ namespace FrostyPlatformer
             var kb = Microsoft.Xna.Framework.Input.Keyboard.GetState();
             if (kb.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.F11) &&
                 _prevKeyboard.IsKeyUp(Microsoft.Xna.Framework.Input.Keys.F11))
-                _graphics.ToggleFullScreen();
+            {
+                SetScreenMode(_windowManager.NextToggleMode());
+                _services.Settings.Save();   // F11 är ett aktivt val → persistera, precis som menyn
+            }
             _prevKeyboard = kb;
 
             _updateWatch.Restart();
@@ -338,20 +351,44 @@ namespace FrostyPlatformer
 
         // ── Fönsterhantering ──────────────────────────────────────────────────
 
+        // Återinträdes-spärr: ApplyChanges() triggar ClientSizeChanged synkront, vars
+        // handler i sin tur anropar ApplyChanges() → oändlig rekursion (stack overflow).
+        // Flaggan gör att vi bara hanterar ett storleksbyte i taget.
+        private bool _handlingResize;
+
         /// <summary>
-        /// Anropas av MonoGame när fönstrets klientyta ändrar storlek.
-        /// Uppdaterar backbuffern och <see cref="Core.GameContext.ScreenWidth/Height"/>
-        /// så att alla states alltid arbetar med faktiska skärmdimensioner.
+        /// Byter fönsterläge via WindowManager och re-synkar de logiska skärmdimensionerna.
+        /// Anropas vid uppstart, av F11-toggeln och av settings-menyn (via GameServices-callback).
+        /// </summary>
+        private void SetScreenMode(ScreenMode mode)
+        {
+            _handlingResize = true;
+            _windowManager.Apply(mode);   // kör ApplyChanges() → ClientSizeChanged ignoreras nedan
+            _handlingResize = false;
+            // Håll det sparade valet i synk med faktiskt läge så att F11 och settings-menyn
+            // alltid visar samma sak. Persisteras inte här — det gör F11-handlern och menyn.
+            _services.Settings.ScreenMode = mode;
+            UpdateScreenDimensions();
+        }
+
+        /// <summary>
+        /// Anropas av MonoGame när fönstrets klientyta ändrar storlek (t.ex. när spelaren
+        /// drar i kanten). Uppdaterar backbuffern och de logiska skärmdimensionerna.
+        /// Hoppar över event som vår egen lägesändring råkar trigga (se <see cref="_handlingResize"/>).
         /// </summary>
         private void OnClientSizeChanged(object? sender, EventArgs e)
         {
+            if (_handlingResize) return;
+
             int w = Window.ClientBounds.Width;
             int h = Window.ClientBounds.Height;
             if (w <= 0 || h <= 0) return; // ignorera minimering
 
+            _handlingResize = true;
             _graphics.PreferredBackBufferWidth  = w;
             _graphics.PreferredBackBufferHeight = h;
-            _graphics.ApplyChanges();
+            _graphics.ApplyChanges();     // egen ClientSizeChanged ignoreras pga flaggan
+            _handlingResize = false;
             UpdateScreenDimensions();
         }
 

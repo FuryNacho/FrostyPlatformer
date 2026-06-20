@@ -29,6 +29,9 @@ namespace FrostyPlatformer.Systems
         /// <summary>Anger om level editor-musiken är på. Ändring sparas inte automatiskt — anropa Save() efteråt.</summary>
         bool EditorAudioOn { get; set; }
 
+        /// <summary>Valt fönsterläge (null = inget val gjort). Ändring sparas inte automatiskt — anropa Save() efteråt.</summary>
+        ScreenMode? ScreenMode { get; set; }
+
         /// <summary>Den aktiva spelarens spardata (stage, spawn, flaggor m.m.).</summary>
         SaveSlot ActivePlayer { get; }
 

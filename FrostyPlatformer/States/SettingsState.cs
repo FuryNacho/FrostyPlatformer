@@ -123,6 +123,18 @@ namespace FrostyPlatformer.States
                         new OptionsObj { Display = "Back", OptionIsBack = true }
                     };
 
+                case Enum.MenuState.Screen:
+                    header = "Screen";
+                    bread  = "";
+                    ScreenMode mode = _services.Settings.ScreenMode ?? ScreenMode.Windowed;
+                    string modeName = mode == ScreenMode.BorderlessFullscreen
+                        ? "Borderless Fullscreen" : "Windowed";
+                    return new List<OptionsObj>
+                    {
+                        new OptionsObj { Display = "Mode (" + modeName + ")" },
+                        new OptionsObj { Display = "Back", OptionIsBack = true }
+                    };
+
                 case Enum.MenuState.ClearHighScore:
                     header = "Clear High Score";
                     bread  = "Clear The High Score List?";
@@ -214,6 +226,17 @@ namespace FrostyPlatformer.States
                     else if (sel.Display.StartsWith("Editor sound"))
                     {
                         _services.Settings.EditorAudioOn = !_services.Settings.EditorAudioOn;
+                        _services.Settings.Save();
+                    }
+                    break;
+
+                case Enum.MenuState.Screen:
+                    if (sel.Display.StartsWith("Mode"))
+                    {
+                        ScreenMode current = _services.Settings.ScreenMode ?? ScreenMode.Windowed;
+                        ScreenMode next = current == ScreenMode.BorderlessFullscreen
+                            ? ScreenMode.Windowed : ScreenMode.BorderlessFullscreen;
+                        _services.SetScreenMode(next);   // synkar Settings.ScreenMode med faktiskt läge
                         _services.Settings.Save();
                     }
                     break;

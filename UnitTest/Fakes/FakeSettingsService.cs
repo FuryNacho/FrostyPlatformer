@@ -28,6 +28,12 @@ namespace UnitTest.Fakes
             set => _settings.EditorAudioOn = value;
         }
 
+        public ScreenMode? ScreenMode
+        {
+            get => _settings.ScreenMode;
+            set => _settings.ScreenMode = value;
+        }
+
         public SaveSlot ActivePlayer => _settings.ActivePlayer;
 
         public SaveSlotMainObj SaveSlots => _settings.SaveSlotsObjs;

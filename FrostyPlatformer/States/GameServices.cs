@@ -97,6 +97,9 @@ namespace FrostyPlatformer.States
         /// <summary>Avslutar spelloopen. Kallar Program.Finish() via Aggregate.</summary>
         public Action ExitGame { get; }
 
+        /// <summary>Applicerar ett fönsterläge (Windowed/BorderlessFullscreen). Kallar Program.SetScreenMode().</summary>
+        public Action<FrostyPlatformer.Models.ScreenMode> SetScreenMode { get; }
+
         /// <summary>
         /// Kontrollerar om ett skript triggat en kartwitch denna frame och nollställer flaggan.
         /// Returnerar true om en switch är väntande (GameplayState ska rensa aktiva objekt).
@@ -141,6 +144,7 @@ namespace FrostyPlatformer.States
             Action<string, float, float> changeMap,
             Action reset,
             Action exitGame,
+            Action<FrostyPlatformer.Models.ScreenMode> setScreenMode,
             Func<bool> checkAndClearSwitchedState,
             Action clearSwitchedState,
             Action triggerBossCheck,
@@ -168,6 +172,7 @@ namespace FrostyPlatformer.States
             ChangeMap                = changeMap;
             Reset                    = reset;
             ExitGame                 = exitGame;
+            SetScreenMode            = setScreenMode;
             CheckAndClearSwitchedState = checkAndClearSwitchedState;
             ClearSwitchedState       = clearSwitchedState;
             TriggerBossCheck         = triggerBossCheck;

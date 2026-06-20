@@ -41,6 +41,7 @@ namespace FrostyPlatformer
             StartMenu,
             SettingsMenu,
             Audio,
+            Screen,
             ClearHighScore,
             ClearSavedGame,
             ClearMyMaps,

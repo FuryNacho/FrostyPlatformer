@@ -37,6 +37,13 @@ namespace FrostyPlatformer.Systems
         }
 
         /// <inheritdoc/>
+        public ScreenMode? ScreenMode
+        {
+            get => Aggregate.Instance.Settings!.ScreenMode;
+            set => Aggregate.Instance.Settings!.ScreenMode = value;
+        }
+
+        /// <inheritdoc/>
         public SaveSlot ActivePlayer => Aggregate.Instance.Settings!.ActivePlayer;
 
         /// <inheritdoc/>

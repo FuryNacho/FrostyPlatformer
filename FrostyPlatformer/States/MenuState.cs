@@ -130,7 +130,7 @@ namespace FrostyPlatformer.States
                     header = "Menu - Settings";
                     return new List<string>
                     {
-                        "Audio", "Clear High Score", "Clear Saved Game", "Clear My Maps", "Back"
+                        "Audio", "Screen", "Clear High Score", "Clear Saved Game", "Clear My Maps", "Back"
                     };
 
                 case Enum.MenuState.CreditsMenu:
@@ -201,6 +201,12 @@ namespace FrostyPlatformer.States
                 case "Audio":
                     _services.Input.ButtonsHasGoneIdle = false;
                     context.MenuNavigation = Enum.MenuState.Audio;
+                    _services.StateManager.Transition(new SettingsState(_services), context);
+                    break;
+
+                case "Screen":
+                    _services.Input.ButtonsHasGoneIdle = false;
+                    context.MenuNavigation = Enum.MenuState.Screen;
                     _services.StateManager.Transition(new SettingsState(_services), context);
                     break;
 

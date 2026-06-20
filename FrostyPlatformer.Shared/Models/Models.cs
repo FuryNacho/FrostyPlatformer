@@ -72,6 +72,12 @@ namespace FrostyPlatformer.Models
 
         public bool Log { get; set; } = false;
         public bool Mute { get; set; } = false;
+
+        /// <summary>
+        /// Valt fönsterläge. Null = inget val gjort → spelet faller tillbaka på
+        /// WindowManager.DefaultScreenMode vid uppstart.
+        /// </summary>
+        public ScreenMode? ScreenMode { get; set; } = null;
     }
 
     public class SaveSlotMainObj
