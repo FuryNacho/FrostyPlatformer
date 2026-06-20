@@ -35,10 +35,22 @@ namespace FrostyPlatformer.Models.Objects
         private const float AngrySpeedMul      = 1.5f;
         private const float MoveBurst          = 1.3f;   // robotisk rytm: längd på en rörelse-skur
         private const float PauseDur           = 0.5f;   // robotisk rytm: längd på mekanisk "tänka"-paus
-        private const float BPowerJumpVelocity = -10.0f; // "b-power"-språng (~2.5 tiles) — max tillåtet av
-                                                         // fysikens MaxVelocityYUp; mer kraschar (vy→0) → inget hopp
-        private const float AscendAirSpeed     = 3.0f;   // horisontell fart i luften under ascend (når kanten i tid)
-        private const int   AscendStandoff     = 2;      // hoppar mot plattformen från ≤ så här många tiles bort
+        private const float BPowerJumpVelocity   = -10.0f; // ascend-språngets utgångsfart — TAKET enligt fysikens
+                                                           // MaxVelocityYUp (−11 = crashgräns → vy nollställs).
+                                                           // Högre hopp fås INTE av mer fart utan av mjukare stig-
+                                                           // gravitation, se AscendGravityRelief nedan.
+        private const float AscendAirSpeed       = 3.5f;   // horisontell fart när hon styr IN på plattformen (efter att ha klarat kanten)
+        private const float AscendLeapCooldown   = 0.8f;   // minsta tid mellan klätterhopp → planerade hopp, inte kängurustuds
+        private const float AscendGravityRelief  = 4.0f;   // motverkar en del av gravitationen (20) under stigningen → effektiv ~16
+                                                           // → topp ~3.1 tiles (klarar 2-tiles-platå med marginal). < gravitationen.
+        private const int   AscendJumpRange      = 2;      // hoppar upp mot plattformen när kanten är så här nära. 2, inte 1: kroppen är
+                                                           // 1 tile BRED, så vid bara 1 tiles avstånd hamnar hennes högra/vänstra halva
+                                                           // UNDER mål-platåns kant → bonkar undersidan och fastnar. Vid 2 är hela kroppen
+                                                           // fri. Modellen: hoppa RAKT upp förbi kanten, styr in FÖRST när kanten är klarad.
+        private const int   ClimbScanRange       = 12;     // hur långt mot hjälten hon letar en klättringsbar plattform
+        private const float ClimbReach           = 8f;     // är hjälten LÄNGRE bort än så här (i sidled) jagar hon horisontellt mot henne
+                                                           // (ner till golvet, traversera) i stället för att klättra lokalt — målet är
+                                                           // hjälten, inte närmaste platå. Inom räckhåll → klättra upp mot henne.
         private const float GlitchStartDist    = 2.5f;   // akt 4: börjar glitcha på detta avstånd (samma nivå)
         private const float GlitchFullDist     = 1.0f;   // ...full glitch så här nära
         private const float DodgeRange         = 3.5f;   // akt 4: rymmer om hjälten är ovanför inom detta avstånd
@@ -56,7 +68,13 @@ namespace FrostyPlatformer.Models.Objects
         private float _leapTimer;
         private float _rhythmTimer;
         private bool  _moving = true;
-        private bool  _heroAbove;          // hjälten på högre nivå → aktiverar fear of heights
+        private float _ascendDir = 1f;     // riktning hon styr IN på plattformen (kan vara BORT från hjälten)
+        private float _descendDir = 1f;    // riktning hon kliver av en kant — behålls i luften så hon fullföljer fallet
+        private int   _climbLaunch  = int.MinValue;   // latchad startkolumn (MinValue = ingen)
+        private float _climbLaunchDir = 1f;           // hopp-riktning för latchad start
+        private int   _climbUp2     = int.MinValue;   // vilken plattformsnivå latchen gäller (annars ogiltig)
+        private bool  _ascending;          // mitt i ett klätterhopp: rakt upp tills kanten är klarad, sen styr in
+        private int   _ascendTargetRow;    // plattformsraden (up2) hon klättrar mot — "kanten klarad" = py ≤ denna − 1
         private float _glitch;             // glitch-intensitet 0..1 (akt 1-exit + akt 4 nära hjälten)
         private float _exitTimer = -1f;    // akt 1→2: glitch-upplösning pågår när ≥ 0
         private bool  _hidden;             // efter exit: kroppen behålls för akt 4 men ritas inte
@@ -194,8 +212,15 @@ namespace FrostyPlatformer.Models.Objects
             float dx  = player.px - px;
             float dir = dx >= 0f ? 1f : -1f;
             bool  playerAbove = player.py < py - 1.5f;
-            _heroAbove = playerAbove;   // styr fear of heights i OnWallCollision
             float speed = Angry ? ChaseSpeed * AngrySpeedMul : ChaseSpeed;
+
+            // Hjälten UNDER bossen (även bara strax under) → ta dig NER. Ingen dödzon: så fort hjälten
+            // är lägre än bossen ska hon ner, aldrig hoppa upp (det var "studsar på platån ovanför").
+            bool playerBelow = player.py > py + 0.6f;
+
+            // Hjälten inom direkt stamp-räckvidd (nära i sidled, AT eller över bossens nivå). Då
+            // prioriteras attack framför klättring — men aldrig när hjälten är under (då gäller descend).
+            bool canStomp = Math.Abs(dx) < 3f && player.py > py - 2f && !playerBelow;
 
             // Robotisk rytm: längre rörelse-skurar med "tänka"-pauser (ej vibrerande).
             _rhythmTimer -= fElapsedTime;
@@ -205,73 +230,136 @@ namespace FrostyPlatformer.Models.Objects
                 _rhythmTimer = _moving ? MoveBurst : PauseDur;
             }
 
-            // Jaga hjältens NIVÅ. Ovanför → gå MOT hjälten; står hon rakt under en plattform
-            // (bonkar undersidan om hon hoppar) sveper hon i committade skurar ut till en kant.
-            // I exakt det ögonblick en plattformskant är ett steg framför henne (mot hjälten)
-            // tvingar hon fram ett b-power-hopp UPP på plattformen. Samma/lägre → jaga på marken.
+            // ── Vertikal avsikt: klättra (hjälten ovanför), descend (under) eller jaga (i nivå) ──
+            // Klättermodell: "hoppa RAKT upp förbi kanten, styr in FÖRST när kanten är klarad". Då kör
+            // hon aldrig in i plattformens sida och behöver aldrig backa för startsträcka (det var det
+            // sköra som gav både kängurustuds och fastnandet). Hon tar en nivå i taget; väl uppe räknas
+            // nästa nivå om → tvånivåers-klättring sker automatiskt.
             float moveDir = dir;
-            bool  leapUp = false;     // får b-power-hoppa mot hjälten (bågen landar på plattformen i vägen)
-            bool  forceNow = false;   // vid en plattformskant → hoppa direkt (utan att vänta på cooldown)
-            if (playerAbove && Arena != null)
-            {
-                int up2 = (int)py + 1 - 2;   // plattformsnivå 2 tiles upp
-                // Kroppen är en hel tile bred [px, px+1) — kolla BÅDA kolumnerna. Räcker det att
-                // en pixel är kvar under plattformen så bonkar hon vid hopp → räknas som blockerad.
-                int cL = (int)px;
-                int cR = (int)(px + 0.9f);
-                bool blockedAbove = up2 >= 0 && (Arena.GetSolid(cL, up2) || Arena.GetSolid(cR, up2));
-                if (blockedAbove)
-                {
-                    // Rakt under en plattform → hoppa INTE (bonk); gå till närmaste kant ut.
-                    float edge = NearestEdgeDir(Arena, up2);
-                    moveDir = edge != 0f ? edge : -dir;
-                }
-                else if (up2 >= 0)
-                {
-                    leapUp = true;
-                    // Avstånd (i tiles, mot hjälten) till plattformskanten hon vill upp på.
-                    int dist = 99;
-                    for (int d = 1; d <= 5; d++)
-                        if (Arena.GetSolid((int)px + (int)dir * d, up2)) { dist = d; break; }
+            bool  wantClimbJump = false;   // står vid en FRI startkolumn intill plattformen → hoppa upp
+            float climbDir = dir;          // riktning IN mot plattformen (oftast mot hjälten)
 
-                    if (dist <= AscendStandoff)
-                    {
-                        // 1-2 tiles från kanten → bra startsträcka: håll & hoppa upp (snyggt + når fram).
-                        moveDir = 0f;
-                        forceNow = true;
-                    }
-                    else
-                        moveDir = dir;   // ingen plattform i hoppavstånd → närma dig hjälten
-                }
+            // MÅLET ÄR HJÄLTEN, inte närmaste platå. Är hon långt bort i sidled jagar bossen
+            // HORISONTELLT mot henne först (kliver av platåer ner till golvet och traverserar);
+            // klättring/descend lokalt sker bara när hon är inom räckhåll. Annars klättrade hon
+            // närmaste platå och studsade upp/ner i stället för att närma sig hjälten.
+            bool farFromHero = Math.Abs(dx) > ClimbReach;
+            if (farFromHero)
+            {
+                moveDir = dir;   // jaga mot hjälten; fear of heights är av → hon faller av platåer naturligt
+                ClearClimbLatch();
             }
+            else if (playerAbove && !canStomp && Arena != null)
+            {
+                int up2 = (int)py + 1 - 2;   // plattformsraden 2 tiles upp
+                // Latcha en startkolumn för den här nivån: räkna om bara när nivån ändras eller den
+                // latchade kolumnen inte längre har fri stigning. Då fullföljer hon en omväg (t.ex.
+                // förbi hjälten till en fri sida) utan att flippa fram och tillbaka när hjälte-riktningen
+                // växlar. En ny start accepteras BARA om den för henne mot hjälten (annars klättrade hon
+                // närmaste platå åt fel håll i stället för att närma sig hjälten).
+                if (_climbUp2 != up2 || _climbLaunch == int.MinValue || !RiseClear(Arena, _climbLaunch, up2))
+                {
+                    var (ok, launchCol, cdir) = FindClimbLaunch(Arena, up2, dir);
+                    if (ok && LaunchTowardHero(launchCol, cdir, dx))
+                    { _climbLaunch = launchCol; _climbLaunchDir = cdir; _climbUp2 = up2; }
+                    else
+                        ClearClimbLatch();
+                }
+
+                if (_climbLaunch != int.MinValue)
+                {
+                    climbDir = _climbLaunchDir;
+                    // Hoppa när hon (a) är VID startkolumnen och (b) hela kroppen [px, px+1) har fri
+                    // stigning (annars bonkar hennes ena halva plattformens undersida). Annars går dit.
+                    float gap = _climbLaunch - px;
+                    bool bodyClear = RiseClear(Arena, (int)px, up2) && RiseClear(Arena, (int)(px + 0.999f), up2);
+                    if (Math.Abs(gap) < 0.6f && bodyClear)
+                        { moveDir = 0f; wantClimbJump = true; }
+                    else
+                        moveDir = gap > 0f ? 1f : -1f;
+                }
+                else
+                    moveDir = dir;   // ingen väg upp MOT hjälten i sikte → närma dig henne på nuvarande nivå
+            }
+            else if (playerBelow && Grounded && Arena != null)
+            {
+                ClearClimbLatch();
+                // DESCEND: hjälten är under → kliv av plattformen och fall ner. Gå till NÄRMASTE kant
+                // och commit:a dit — INTE mot hjältens exakta kolumn. (Tidigare följde hon hjälte-
+                // riktningen, men när hjälten var rakt under flippade den varje frame hon korsade
+                // hjältens kolumn → hon vägde fram och tillbaka på stället och kom aldrig ner.)
+                // Fear of heights är av när hjälten inte är ovanför, så hon faller när hon når kanten.
+                // Heltäckande golv (ingen kant) → jaga mot hjälten i stället.
+                int footRow = (int)py + 1;
+                int dl = SupportEdgeDist(Arena, footRow, -1);
+                int dr = SupportEdgeDist(Arena, footRow, 1);
+                if (dl == 0 && dr == 0) moveDir = dir;       // ingen kant → jaga
+                else if (dl == 0)       moveDir = 1f;        // bara kant åt höger
+                else if (dr == 0)       moveDir = -1f;       // bara kant åt vänster
+                else                    moveDir = (dl <= dr) ? -1f : 1f;   // närmaste kanten, commit
+            }
+            else
+                ClearClimbLatch();   // samma nivå (jaga + stamp) → ingen latch
+
+            // Kom ihåg markriktningen hon rör sig åt — den behålls i luften (commit-drop) så hon
+            // fullföljer ett avkliv åt det hållet i stället för att jakt-driva tillbaka upp på platån.
+            if (Grounded && moveDir != 0f) _descendDir = moveDir;
 
             vx = _moving ? moveDir * speed : 0f;
 
-            // Avsiktliga språng (aldrig random): b-power mot hjälten ovanför (för att nå en plattform),
-            // eller vanligt hopp för att landa på en närliggande hjälte i nivå.
-            bool canStomp = Math.Abs(dx) < 3f && player.py > py - 2f;
-            if (Grounded && (forceNow || (_leapTimer <= 0f && (leapUp || canStomp))))
+            // Commit-drop: när hon precis klivit av en kant (hjälten under, i luften, inte i ett klätter-
+            // hopp) fortsätter hon i FALL-riktningen i stället för att hjälte-jakten (vx mot hjälten) drar
+            // tillbaka henne in över platån. Annars re-grundas hon på platåns kant och VINGLAR där ett par
+            // sekunder innan hon kommer loss (grundningen räcker så länge ena kroppshalvan är över kanten).
+            if (playerBelow && !Grounded && !_ascending)
+                vx = _descendDir * speed;
+
+            // Avsiktliga hopp, cooldown-gatade (planerade — aldrig varje frame):
+            //  • Klätterhopp: när hon står intill kanten. RAKT upp (vx=0); insteget sker i ascend-styrningen.
+            //  • Attack-hopp: mot en hjälte i nivå.
+            if (Grounded && _leapTimer <= 0f && (wantClimbJump || canStomp))
             {
-                if (leapUp || forceNow)
+                if (wantClimbJump)
                 {
                     vy = BPowerJumpVelocity;
-                    vx = dir * AscendAirSpeed;   // mot hjälten/plattformen (snabb nog att nå kanten i tid)
+                    vx = 0f;                              // rakt upp först — ingen sidledsfart in i plattformens sida
+                    _ascending = true;
+                    _ascendTargetRow = (int)py + 1 - 2;   // plattformsraden hon siktar på
+                    _ascendDir = climbDir;
+                    _leapTimer = AscendLeapCooldown;
                 }
                 else
                 {
                     vy = GameConstants.JumpVelocity;
                     vx = dir * speed;
+                    _ascending = false;
+                    float baseInterval = Angry ? LeapIntervalAngry : LeapIntervalNormal;
+                    _leapTimer = Angry ? baseInterval * (0.6f + (float)_rng.NextDouble() * 0.8f) : baseInterval;
                 }
-                float baseInterval = Angry ? LeapIntervalAngry : LeapIntervalNormal;
-                // Argt läge: jitter på timingen (mer oförutsägbart); normalt: fast rytm.
-                _leapTimer = Angry ? baseInterval * (0.6f + (float)_rng.NextDouble() * 0.8f) : baseInterval;
             }
 
-            // Luftstyrning mot hjälten under ascend-språnget: utan detta äter luftmotståndet upp
-            // horisontalfarten → hon kommer bara rakt upp och landar kort. Sustained fart bär henne
-            // i sidled fram till och upp på plattformen medan hon är hög nog.
-            if (playerAbove && !Grounded)
-                vx = dir * AscendAirSpeed;
+            // Ascend-styrning: "hoppa rakt upp, styr in sen". Medan hon stiger och ännu inte klarat
+            // plattformskanten håller hon sig i sin kolumn (vx=0) så hon inte kör in i sidan. När fötterna
+            // är en bit ovanför plattformens ovansida styr hon in i sidled och DALAR ner på plattformen.
+            if (_ascending)
+            {
+                if (Grounded && vy >= 0f)
+                    _ascending = false;                                   // landat (på plattformen eller marken)
+                else
+                {
+                    bool clearedEdge = py <= _ascendTargetRow - 1.2f;     // fötterna ~0.2 tile ovanför plattformsytan
+                    vx = clearedEdge ? _ascendDir * AscendAirSpeed : 0f;
+
+                    // Mjukare stig-gravitation → högre, säker båge (utgångsfarten kan ej höjas; clampen
+                    // kraschar allt snabbare än −11 till 0). Släpps om ett tak sitter strax ovanför huvudet.
+                    int headRow = (int)py;
+                    bool ceilingClose = Arena != null && headRow - 2 >= 0 &&
+                        (Arena.GetSolid((int)px, headRow - 1) || Arena.GetSolid((int)(px + 0.9f), headRow - 1) ||
+                         Arena.GetSolid((int)px, headRow - 2) || Arena.GetSolid((int)(px + 0.9f), headRow - 2));
+                    if (vy < 0f && !ceilingClose)
+                        vy -= AscendGravityRelief * fElapsedTime;
+                }
+            }
         }
 
         /// <summary>
@@ -279,15 +367,82 @@ namespace FrostyPlatformer.Models.Objects
         /// dvs. plattformens kant — så hon kan ta sig ut från under en plattform och hoppa upp.
         /// 0 om ingen kant inom räckhåll.
         /// </summary>
-        private float NearestEdgeDir(IMapData map, int up2)
+        /// <summary>
+        /// Hittar en FRI startkolumn att hoppa upp på en plattform (rad <paramref name="up2"/>) ifrån.
+        /// "Fri" = hela stigningen ovanför kolumnen (mål-raden + de två raderna ovanför) är tom, så hon
+        /// inte bonkar en ÖVERLIGGANDE plattform. Eftersom nivåerna ligger kant-i-kant kan en plattforms
+        /// närmaste kant ligga under nästa nivås platå — då provas plattformens ANDRA kant (den fria
+        /// sidan). FÖRTUR åt <paramref name="prefer"/> (hjälte-riktningen).
+        /// Returnerar (hittad, startkolumn, hopp-riktning mot plattformen) eller (false, 0, 0).
+        /// </summary>
+        private (bool ok, int launchCol, float climbDir) FindClimbLaunch(IMapData map, int up2, float prefer)
+        {
+            if (up2 < 0) return (false, 0, 0f);
+            int hx = (int)px;
+            int p = prefer >= 0f ? 1 : -1;
+            // En giltig startkolumn C har FRI stigning (RiseClear) OCH en plattform att styra in på
+            // inom 2 tiles. Skanna utåt, föredragen (hjälte-)riktning först per avstånd — så hon väljer
+            // ett startläge mot hjälten men hittar det konsekvent oavsett vilken sida om henne hon står
+            // (annars flippade sökriktningen och hon oscillerade). farFromHero-gaten ovan ser till att
+            // hon inte klättrar lokalt alls när hjälten är långt bort.
+            for (int d = 0; d <= ClimbScanRange; d++)
+            {
+                for (int k = 0; k < 2; k++)
+                {
+                    if (d == 0 && k == 1) continue;
+                    int c = hx + (k == 0 ? p : -p) * d;
+                    if (c < 0 || c >= map.Width) continue;
+                    if (!RiseClear(map, c, up2)) continue;
+                    for (int j = 1; j <= 2; j++)
+                    {
+                        if (map.GetSolid(c + j, up2)) return (true, c, 1f);
+                        if (map.GetSolid(c - j, up2)) return (true, c, -1f);
+                    }
+                }
+            }
+            return (false, 0, 0f);
+        }
+
+        /// <summary>Sant om en straight-up-stigning från kolumn <paramref name="col"/> är fri hela vägen
+        /// förbi mål-plattformen (raderna up2, up2−1, up2−2) — ingen överliggande platå i vägen.</summary>
+        private static bool RiseClear(IMapData map, int col, int up2)
+            => !map.GetSolid(col, up2)
+            && !map.GetSolid(col, up2 - 1)
+            && (up2 - 2 < 0 || !map.GetSolid(col, up2 - 2));
+
+        /// <summary>
+        /// Sant om det är vettigt att klättra på den här starten med tanke på hjälten: den för henne MOT
+        /// hjälten. Antingen genom att hon går mot hjälten för att nå startkolumnen, eller — om hon redan
+        /// står där — att plattformen hon hoppar mot ligger åt hjälte-hållet. (Hjälten ~rakt ovanför →
+        /// alltid ok att klättra upp.) Det hindrar att hon klättrar närmaste platå åt FEL håll.
+        /// </summary>
+        private bool LaunchTowardHero(int launchCol, float climbDir, float dx)
+        {
+            if (Math.Abs(dx) < 1.5f) return true;
+            float toLaunch = launchCol - px;
+            if (Math.Abs(toLaunch) > 0.6f)
+                return Math.Sign(toLaunch) == Math.Sign(dx);
+            return Math.Sign(climbDir) == Math.Sign(dx);
+        }
+
+        /// <summary>Nollställer den latchade klätter-starten (när hon inte längre klättrar mot en plattform).</summary>
+        private void ClearClimbLatch()
+        {
+            _climbLaunch = int.MinValue;
+            _climbUp2 = int.MinValue;
+        }
+
+        /// <summary>
+        /// Avstånd i tiles åt riktning <paramref name="d"/> (±1) till kanten på plattformen hon STÅR på
+        /// (första kolumn där raden <paramref name="footRow"/> slutar vara solid) — för descend. 0 om
+        /// ingen kant inom räckhåll åt det hållet (heltäckande golv).
+        /// </summary>
+        private int SupportEdgeDist(IMapData map, int footRow, int d)
         {
             int hx = (int)px;
-            for (int d = 1; d <= 8; d++)
-            {
-                if (!map.GetSolid(hx - d, up2)) return -1f;
-                if (!map.GetSolid(hx + d, up2)) return 1f;
-            }
-            return 0f;
+            for (int i = 1; i <= ClimbScanRange; i++)
+                if (!map.GetSolid(hx + d * i, footRow)) return i;
+            return 0;
         }
 
         // ── Damm-effekt (akt 1→2-upplösning) ───────────────────────────────────────
@@ -327,33 +482,17 @@ namespace FrostyPlatformer.Models.Objects
         }
 
         // Anropas varje frame under horisontell rörelse (turnPatrol=true endast vid riktig
-        // väggträff). Vägg → byt svep-riktning + klättra-hopp. Annars: villkorad fear of heights.
+        // Avsiktligt en no-op. Här fanns tidigare TVÅ mekanismer som båda visade sig kontraproduktiva:
+        //  (a) "klättra-hopp" vid varje väggträff → kängurustudsandet (reflex-hopp som körde över
+        //      Behaviours planerade klättring), och
+        //  (b) "fear of heights" som nålade fast henne vid en plattformskant när hjälten var ovanför →
+        //      hon FRÖS på en mellanplattform i stället för att kliva av och positionera om mot nästa
+        //      nivå (det var "tappar konceptet med tre nivåer / slutar jaga").
+        // All vertikal navigering — klättra rakt upp, descenda till närmaste kant, traversera mellan
+        // plattformar genom att kliva av och om-klättra — sköts nu i Behaviour. En väggträff stoppar
+        // henne bara (vx nollas redan av kollisionssystemet) så Behaviour kan ompositionera nästa frame.
         public override void OnWallCollision(ref float newX, bool turnPatrol, bool movingLeft, IMapData map, float fBorder)
         {
-            if (!Active || _retreatTimer > 0f) return;
-
-            if (turnPatrol)   // faktisk vägg → klättra-hopp
-            {
-                if (Grounded && _leapTimer <= 0f)
-                {
-                    vy = GameConstants.JumpVelocity;
-                    _leapTimer = Angry ? LeapIntervalAngry : LeapIntervalNormal;
-                }
-                return;
-            }
-
-            // Fear of heights — endast när hjälten är OVANFÖR: kliv inte av en plattformskant
-            // (då tappar hon höjden hon klättrat till). Hjälten på samma/lägre nivå → ok att falla.
-            if (_heroAbove && Grounded)
-            {
-                int footRow = (int)py + 1;
-                float aheadX = movingLeft ? newX : newX + (1f - fBorder);
-                if (!map.GetSolid((int)aheadX, footRow))
-                {
-                    newX = px;   // stanna kvar på plattformen (språnget tar henne vidare uppåt)
-                    vx = 0;
-                }
-            }
         }
 
         /// <summary>Lyckad stamp: healing-time (osårbar) + reträtt bort från hjälten.</summary>
