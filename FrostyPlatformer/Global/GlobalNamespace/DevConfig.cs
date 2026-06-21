@@ -55,6 +55,6 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         /// True DÖLJER jättens gula mark-markör som telegrafierar var näven landar (akt 3) — för att
         /// speltesta hur striden känns utan den explicita varningen. Default false = markören visas.
         /// </summary>
-        public static bool HideSlamMarker = false;
+        public static bool HideSlamMarker = true;
     }
 }
