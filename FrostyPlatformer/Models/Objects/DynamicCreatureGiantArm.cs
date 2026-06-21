@@ -54,12 +54,27 @@ namespace FrostyPlatformer.Models.Objects
 
         public GiantArmPhase Phase { get; private set; } = GiantArmPhase.Rest;
 
+        /// <summary>Kolumnen näven slår ner i (det låsta målet) — så GameplayState kan släppa extra is där.</summary>
+        public float ImpactX => _targetX;
+
+        /// <summary>
+        /// Läser och NOLLSTÄLLER "näven slog precis i marken"-signalen (Dropping→Stuck). GameplayState
+        /// anropar denna för att trigga en extra is-skur per nedslag — exakt en gång per slag.
+        /// </summary>
+        public bool ConsumeSlamLanded()
+        {
+            if (!_landedSignal) return false;
+            _landedSignal = false;
+            return true;
+        }
+
         private float _timer;
         private float _anim;
         private float _t;              // 0 = vid axeln, 1 = vid målet
         private float _targetX, _targetY;
         private int   _surfaceY;       // ytan näven planterar på (för markören)
         private bool  _locked;
+        private bool  _landedSignal;   // engångsflagga: näven slog precis i marken (konsumeras av GameplayState)
 
         public DynamicCreatureGiantArm() : base("giant_arm", SpriteId.GiantArm)
         {
@@ -120,6 +135,7 @@ namespace FrostyPlatformer.Models.Objects
                         _t = 1f;
                         Phase = GiantArmPhase.Stuck;
                         _timer = StuckDur;
+                        _landedSignal = true;   // näven slog i marken → trigga extra is-skur (konsumeras en gång)
                         if (Giant != null) Giant.Pose = GiantPose.Roar;
                     }
                     break;

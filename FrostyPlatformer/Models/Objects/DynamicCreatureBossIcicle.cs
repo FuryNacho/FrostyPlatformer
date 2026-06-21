@@ -84,12 +84,7 @@ namespace FrostyPlatformer.Models.Objects
                     vx = 0; vy = FallSpeed;
                     // Krossas mot första ytan (Grounded) — eller huvudgolvet som fallback.
                     if (Grounded || py >= GroundMarkerY)
-                    {
-                        Phase = BossIciclePhase.Shatter;
-                        _timer = ShatterDur;
-                        SolidVsDynamic = false;
-                        vx = 0; vy = 0;
-                    }
+                        Shatter();
                     break;
 
                 case BossIciclePhase.Shatter:
@@ -98,6 +93,20 @@ namespace FrostyPlatformer.Models.Objects
                     if (_timer <= 0f) { Redundant = true; RemoveCount = 1; }  // sätts EN gång
                     break;
             }
+        }
+
+        /// <summary>
+        /// Krossar istappen direkt → skärv-fasen med samma smul-effekt som vid nedslag mot marken.
+        /// Anropas både av markträffen (Fall) och när istappen kolliderar med hjälten. Idempotent —
+        /// en istapp som redan krossas eller tagits bort rörs inte.
+        /// </summary>
+        public void Shatter()
+        {
+            if (Phase == BossIciclePhase.Shatter || Redundant) return;
+            Phase = BossIciclePhase.Shatter;
+            _timer = ShatterDur;
+            SolidVsDynamic = false;   // ofarlig medan skärvorna skingras
+            vx = 0; vy = 0;
         }
 
         public override void DrawSelf(IRenderContext gfx, float ox, float oy)

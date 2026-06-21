@@ -169,4 +169,29 @@ namespace UnitTest
         public void CurrentSwarmTarget_DoublesTowardTheEnd(int bossHealth, int expected)
             => Assert.AreEqual(expected, GameplayState.CurrentSwarmTarget(bossHealth));
     }
+
+    /// <summary>
+    /// Tester för akt 3:s istapps-skur per näv-nedslag: antalet (intervall) ökar med skadan som getts
+    /// jätten. Ren funktion av hälsa/maxhälsa → deterministiskt.
+    /// </summary>
+    [TestClass]
+    public class SlamBurstRangeTests
+    {
+        // giantHealth = 40. dealt = 1 - health/max. Trösklar: ≥1/3 → 2–3, ≥2/3 → 2–4, annars 1–2.
+        [TestMethod]
+        [DataRow(40, 1, 2)]   // 0 skada given
+        [DataRow(32, 1, 2)]   // 20% given
+        [DataRow(27, 1, 2)]   // strax under 1/3 given (dealt 0.325)
+        [DataRow(26, 2, 3)]   // ≥1/3 given (dealt 0.35)
+        [DataRow(16, 2, 3)]   // 60% given
+        [DataRow(14, 2, 3)]   // strax under 2/3 given (dealt 0.65)
+        [DataRow(13, 2, 4)]   // ≥2/3 given (dealt 0.675)
+        [DataRow(8,  2, 4)]   // sista stompen
+        public void SlamBurstRange_GrowsWithDamageDealt(int bossHealth, int expectedLo, int expectedHi)
+        {
+            var (lo, hi) = GameplayState.SlamBurstRange(bossHealth, bossMaxHealth: 40);
+            Assert.AreEqual(expectedLo, lo, "min-antal");
+            Assert.AreEqual(expectedHi, hi, "max-antal");
+        }
+    }
 }

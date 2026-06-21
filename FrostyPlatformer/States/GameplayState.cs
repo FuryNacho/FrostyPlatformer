@@ -283,8 +283,13 @@ namespace FrostyPlatformer.States
                     {
                         ms.Active = mirrorAct && _bossAwake;
                         ms.Angry = angry;
+                        // Akt 1→2: animerad glitch-exit. Akt 3 (Giant): säkerställ att hon är borta —
+                        // normalt redan dold via exiten, men vid dev-start direkt i Giant har den aldrig
+                        // skett, så göm henne direkt. (Akt 4 återanvänder kroppen → rör henne inte där.)
                         if (context.BossPhase.CurrentAct == BossAct.Swarm)
                             ms.BeginExit();
+                        else if (context.BossPhase.CurrentAct == BossAct.Giant && !ms.Accepting)
+                            ms.Vanish();
                     }
             }
 
@@ -611,6 +616,19 @@ namespace FrostyPlatformer.States
         private void HandleDynamicCollision(DynamicGameObject obj, DynamicGameObject other,
             GameContext context, ref float dx, ref float dy)
         {
+            // Istapp mot jättens näve → krossas PÅ PLATS (som mot marken) i stället för att fastna/blockeras
+            // på den (båda är icke-vänliga → vanlig kollision skulle bara knuffa). Hoppar över positions-
+            // resolutionen så skärvorna lossnar där de möttes.
+            if ((obj is DynamicCreatureBossIcicle || other is DynamicCreatureBossIcicle) &&
+                (obj is DynamicCreatureGiantArm    || other is DynamicCreatureGiantArm) &&
+                dx < other.px + 1f && dx + 1f > other.px &&
+                dy < other.py + 1f && dy + 1f > other.py)
+            {
+                var ic = (obj as DynamicCreatureBossIcicle) ?? (DynamicCreatureBossIcicle)other;
+                ic.Shatter();
+                return;
+            }
+
             // Horisontell krock
             if (dx < (other.px + 1f) && (dx + 1f) > other.px &&
                 obj.py < (other.py + 1f) && (obj.py + 1f) > other.py)
@@ -733,6 +751,7 @@ namespace FrostyPlatformer.States
             {
                 if (assailant is DynamicCreatureMirrorScarlet dealer)         dealer.OnDealtDamage(victim.px);
                 else if (assailant is DynamicCreatureSwarmCopy swarmDealer)   swarmDealer.OnDealtDamage(victim.px);
+                else if (assailant is DynamicCreatureBossIcicle icicle)       icicle.Shatter();   // krossas mot hjälten, som mot marken
             }
 
             if (victim.IsHero) victim.SolidVsDynamic = true;
@@ -880,6 +899,26 @@ namespace FrostyPlatformer.States
             return SwarmTargetAlive;
         }
 
+        /// <summary>
+        /// Intervall (min..max, inklusive) för hur många istappar ett näv-nedslag släpper, som funktion
+        /// av hur mycket skada som getts jätten: mer skada → fler istappar. Ren funktion (testbar).
+        /// 0 skada → 1–2; ≥1/3 given → 2–3; ≥2/3 given → 2–4.
+        /// </summary>
+        internal static (int lo, int hi) SlamBurstRange(int bossHealth, int bossMaxHealth)
+        {
+            float dealt = bossMaxHealth > 0 ? 1f - (float)bossHealth / bossMaxHealth : 0f;
+            if (dealt >= 2f / 3f) return (2, 4);
+            if (dealt >= 1f / 3f) return (2, 3);
+            return (1, 2);
+        }
+
+        // Slumpar antalet istappar för ETT nedslag givet aktuell jätte-hälsa (se SlamBurstRange).
+        private int SlamBurstCount(int bossHealth, int bossMaxHealth)
+        {
+            var (lo, hi) = SlamBurstRange(bossHealth, bossMaxHealth);
+            return _rng.Next(lo, hi + 1);
+        }
+
         // Akt 3 — jätten. Skada på jätte-baren per lyckad svagpunkts-stamp (giantHealth 40 / 8 = 5
         // stamps). Slam-takten: en näve åt gången; ny efter SlamInterval när föregående är borta.
         private const int GiantStompDamage = 8;
@@ -887,6 +926,7 @@ namespace FrostyPlatformer.States
         private const float SlamInterval = 1.4f;
         private float _giantSlamTimer;
         private bool _giantSlamLeftNext;   // växlar vilken arm som slår härnäst
+        private bool _giantHasSlammed;     // har jätten slagit näven i marken (arm i Stuck) minst en gång? → grindar istappsregnet
 
         // Bryggan akt 3→4: jätten rasar (kollaps) + en kort vit blixt (falsk seger).
         private const float CollapseFlashDur = 0.12f;
@@ -897,9 +937,20 @@ namespace FrostyPlatformer.States
         private bool _acceptanceStaged;
         private float _winTimer = -1f;
 
-        // Akt 3 — istappsregn. Ett nytt regn-objekt per intervall, slumpad kolumn.
+        // Akt 3 — istappar. Normalt faller is BARA som en skur strax efter varje näv-nedslag (bundet
+        // till jätten), spridd i området KRING nedslaget men med en dödzon så själva näven går att
+        // stampa. Det jämna bakgrundsregnet på timer slås PÅ först när bara ett stomp på näven återstår
+        // (svårare på upploppet, när man nästan vunnit).
         private const float IcicleInterval = 1.0f;
+        private const float SlamBurstDelay    = 0.18f; // fördröjning efter nedslaget innan skuren börjar
+        private const float SlamBurstSpacing  = 0.12f; // gap mellan skurens istappar
+        private const int   SlamBurstDeadZone = 2;     // istapparna landar MINST så här långt från näven (plats att stampa)
+        private const int   SlamBurstSpread   = 9;     // ...och som mest så här långt bort (bred spridning)
+        // Antalet istappar per nedslag är randomiserat och ökar med skadan som getts bossen — se SlamBurstRange.
         private float _icicleTimer;
+        private int   _slamBurstRemaining;            // istappar kvar att släppa i pågående skur
+        private float _slamBurstTimer;                // tid till nästa skur-istapp
+        private float _slamImpactX;                   // kolumn nedslaget skedde i (skuren biasar hit)
 
         private void JumpDamage(Creature assailant, Creature victim, GameContext context)
         {
@@ -1162,6 +1213,8 @@ namespace FrostyPlatformer.States
 
             if (!giantAct)
             {
+                _giantHasSlammed = false;   // nästa giant-akt börjar utan registrerat slag (replay/akt-byte)
+
                 // Bryggan till akt 4: jätten GÅS SÖNDER (kollaps + vit blixt) i stället för att
                 // bara försvinna. Armarna snäpps av i blixten; huvudet smulas och tas bort självt.
                 var g = context.ActiveObjects.OfType<DynamicCreatureGiant>().FirstOrDefault(x => !x.Redundant);
@@ -1206,6 +1259,20 @@ namespace FrostyPlatformer.States
             var arms = context.ActiveObjects.OfType<DynamicCreatureGiantArm>().Where(a => !a.Redundant).ToList();
             if (arms.Count == 0) return;
 
+            // Latcha första gången en näve faktiskt slagit i marken (arm i Stuck) → grindar istappsregnet.
+            if (!_giantHasSlammed && arms.Any(a => a.Phase == GiantArmPhase.Stuck))
+                _giantHasSlammed = true;
+
+            // Varje nedslag (engångs-signal per arm) → schemalägg en extra is-skur nära nedslaget.
+            // Antalet är slumpat och ökar med skadan som getts jätten (SlamBurstRange).
+            foreach (var a in arms)
+                if (a.ConsumeSlamLanded())
+                {
+                    _slamBurstRemaining = SlamBurstCount(context.BossPhase.BossHealth, context.BossPhase.BossMaxHealth);
+                    _slamBurstTimer     = SlamBurstDelay;
+                    _slamImpactX        = a.ImpactX;
+                }
+
             // En arm slår åt gången; växla sida. Räkna ned bara när båda armarna vilar.
             if (!arms.Any(a => a.IsSlamming))
             {
@@ -1240,21 +1307,50 @@ namespace FrostyPlatformer.States
                 return;
             }
 
-            // Akt 3 ska dra igång SAKTA: håll isen tills hela svärm-övergången är klar, och låt sedan
-            // första istappen vänta in en beat efter att jätten klivit fram (HazardFirstDelay).
-            if (SwarmExitInProgress) { _icicleTimer = HazardFirstDelay; return; }
+            // Akt 3 ska dra igång SAKTA, och istappsregnet är BUNDET till jätten: inga istappar förrän
+            // (a) hela svärm-övergången är klar OCH (b) jätten slagit näven i marken minst en gång. Sedan
+            // väntar första istappen in en beat (HazardFirstDelay) efter det första slaget.
+            if (SwarmExitInProgress || !_giantHasSlammed) { _icicleTimer = HazardFirstDelay; return; }
 
-            _icicleTimer -= elapsed;
-            if (_icicleTimer <= 0f)
+            // Extra is-skur strax efter varje näv-nedslag — i området KRING nedslaget, men minst
+            // SlamBurstDeadZone kolumner bort åt något håll så själva näven går att stampa.
+            if (_slamBurstRemaining > 0)
             {
-                var map = context.CurrentLevel!;
-                int tx = _rng.Next(2, Math.Max(3, map.Width - 2));
-                float markerY = FloorTopForColumn(map, tx) - 1f;   // markören ovanpå golvet
-                var icicle = new DynamicCreatureBossIcicle();
-                icicle.Configure(tx, markerY);
-                context.ActiveObjects.Add(icicle);
-                _icicleTimer = IcicleInterval;
+                _slamBurstTimer -= elapsed;
+                if (_slamBurstTimer <= 0f)
+                {
+                    int dist = _rng.Next(SlamBurstDeadZone, SlamBurstSpread + 1);
+                    int bx   = (int)Math.Round(_slamImpactX) + dist * (_rng.Next(2) == 0 ? -1 : 1);
+                    SpawnIcicle(context, bx);
+                    _slamBurstRemaining--;
+                    _slamBurstTimer = SlamBurstSpacing;
+                }
             }
+
+            // Bakgrundsregn (timer): slås PÅ först när bara ett stomp på näven återstår — svårare
+            // precis på upploppet (när man nästan vunnit).
+            bool lastStompLeft = context.BossPhase.BossHealth <= GiantStompDamage;
+            if (lastStompLeft)
+            {
+                _icicleTimer -= elapsed;
+                if (_icicleTimer <= 0f)
+                {
+                    int tx = _rng.Next(2, Math.Max(3, context.CurrentLevel!.Width - 2));
+                    SpawnIcicle(context, tx);
+                    _icicleTimer = IcicleInterval;
+                }
+            }
+        }
+
+        // Spawnar en istapp i kolumn tx (klampad inom arenan) med markören ovanpå golvet i den kolumnen.
+        private void SpawnIcicle(GameContext context, int tx)
+        {
+            var map = context.CurrentLevel!;
+            tx = Math.Clamp(tx, 2, Math.Max(2, map.Width - 3));
+            float markerY = FloorTopForColumn(map, tx) - 1f;
+            var icicle = new DynamicCreatureBossIcicle();
+            icicle.Configure(tx, markerY);
+            context.ActiveObjects.Add(icicle);
         }
 
         // Golvets ovansida i en kolumn (skannar nedifrån upp → huvudgolvet, ignorerar hyllor).

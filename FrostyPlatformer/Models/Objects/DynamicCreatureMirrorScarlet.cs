@@ -117,6 +117,20 @@ namespace FrostyPlatformer.Models.Objects
             _exitTimer = ExitDuration;
         }
 
+        /// <summary>
+        /// Gömmer kroppen OMEDELBART utan exit-animation. Normalt är hon redan dold när akt 3/4 nås
+        /// (via <see cref="BeginExit"/> i akt 1→2), men om man hoppar in direkt i en senare akt (dev-
+        /// flaggan DevConfig.BossStartAct) har den övergången aldrig skett — då ska hon ändå inte synas.
+        /// Idempotent.
+        /// </summary>
+        public void Vanish()
+        {
+            _hidden = true;
+            _exitTimer = -1f;
+            IsAttackable = false;
+            SolidVsDynamic = false;
+        }
+
         public DynamicCreatureMirrorScarlet() : base("mirror_scarlet", SpriteId.EnemyMirrorScarlet)
         {
             Friendly = false;

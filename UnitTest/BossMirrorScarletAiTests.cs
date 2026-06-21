@@ -319,5 +319,31 @@ namespace UnitTest
                     $"Väggträff ska inte ge reflex-hopp (frame {i}, vy={boss.vy}).");
             }
         }
+
+        // ── Vanish: göm direkt (dev-start i akt 3 → hon ska inte synas) ─────────────────
+        [TestMethod]
+        public void NotVanished_IsDrawn()
+        {
+            var boss = new DynamicCreatureMirrorScarlet { px = 10f, py = 10f };
+            var gfx = new Fakes.FakeRenderContext();
+
+            boss.DrawSelf(gfx, 0f, 0f);
+
+            Assert.AreEqual(1, gfx.DrawnSprites.Count, "Normalt (osynlig-flagga ej satt) ska kroppen ritas.");
+        }
+
+        [TestMethod]
+        public void Vanish_HidesBodyAndDisarms()
+        {
+            var boss = new DynamicCreatureMirrorScarlet { px = 10f, py = 10f };
+            var gfx = new Fakes.FakeRenderContext();
+
+            boss.Vanish();
+            boss.DrawSelf(gfx, 0f, 0f);
+
+            Assert.AreEqual(0, gfx.DrawnSprites.Count, "Efter Vanish ska kroppen inte ritas (akt 3).");
+            Assert.IsFalse(boss.IsAttackable, "Vanish ska avväpna henne.");
+            Assert.IsFalse(boss.SolidVsDynamic, "Vanish ska göra henne icke-solid.");
+        }
     }
 }
