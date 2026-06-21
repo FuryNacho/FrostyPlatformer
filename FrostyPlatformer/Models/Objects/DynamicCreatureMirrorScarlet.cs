@@ -581,6 +581,10 @@ namespace FrostyPlatformer.Models.Objects
             int screenX = ToPixel(px, ox);
             int screenY = ToPixel(py, oy);
 
+            // Vänd ansiktet efter färdriktningen. TurnedTo sätts av basklassens Update utifrån vx
+            // (Right = 0 default, Left = 1) → sprite:n speglas horisontellt när hon går vänster.
+            bool faceLeft = TurnedTo == Enum.PlayerOrientation.Left;
+
             // Akt 4: pixel-glitch — sprite:n ritas i horisontella band där en del förskjuts i
             // sidled (tear), plus främmande cyan/magenta-pixlar som "bryter sönder" henne. Allt
             // trappas upp med _glitch (samma nivå + närhet). Tydligt att något är annorlunda.
@@ -591,7 +595,10 @@ namespace FrostyPlatformer.Models.Objects
                     int off = 0;
                     if (_rng.NextDouble() < _glitch * 0.7f)
                         off = (int)((_rng.NextDouble() * 2 - 1) * (1f + _glitch * 4f));
-                    gfx.DrawPartialSprite(SpriteId, screenX + off, screenY + sy, 0, sy, 16, 2);
+                    if (faceLeft)
+                        gfx.DrawPartialSpriteFlippedX(SpriteId, screenX + off, screenY + sy, 0, sy, 16, 2);
+                    else
+                        gfx.DrawPartialSprite(SpriteId, screenX + off, screenY + sy, 0, sy, 16, 2);
                 }
 
                 int shards = (int)(_glitch * 5f);
@@ -605,7 +612,10 @@ namespace FrostyPlatformer.Models.Objects
                 return;
             }
 
-            gfx.DrawPartialSprite(SpriteId, screenX, screenY, 0, 0, 16, 16);
+            if (faceLeft)
+                gfx.DrawPartialSpriteFlippedX(SpriteId, screenX, screenY, 0, 0, 16, 16);
+            else
+                gfx.DrawPartialSprite(SpriteId, screenX, screenY, 0, 0, 16, 16);
         }
     }
 }
