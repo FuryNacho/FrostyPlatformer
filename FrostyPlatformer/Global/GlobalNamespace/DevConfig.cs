@@ -50,5 +50,11 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         /// Acceptance (akt 4). Läses när BossPhaseController skapas i GameplayState.Enter.
         /// </summary>
         public static BossAct BossStartAct = BossAct.Mirror;
+
+        /// <summary>
+        /// True DÖLJER jättens gula mark-markör som telegrafierar var näven landar (akt 3) — för att
+        /// speltesta hur striden känns utan den explicita varningen. Default false = markören visas.
+        /// </summary>
+        public static bool HideSlamMarker = false;
     }
 }
