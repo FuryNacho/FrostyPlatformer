@@ -64,5 +64,78 @@ namespace UnitTest
 
             Assert.AreEqual(8f, arm.ImpactX, 0.001f, "Näven (och därmed is-skuren) ska sikta på spelarens kolumn.");
         }
+
+        // ── Hammarslag (overhead-leverans, men stampbart + triggar istappar som vanligt) ────
+        [TestMethod]
+        public void HammerSlam_RisesAboveShoulder_ThenBecomesStompable()
+        {
+            var map = new FloorMap();
+            var arm = SlammingArm(map);   // ShoulderY = 5
+            var player = new DynamicCreatureEnemyPenguin { px = 12f, py = 12f };
+
+            arm.TriggerSlam(hammer: true);
+
+            float minPy = float.MaxValue;
+            bool everStuck = false, everAttackable = false;
+            for (int i = 0; i < 200; i++)
+            {
+                arm.Behaviour(Dt, player);
+                if (arm.py < minPy) minPy = arm.py;
+                if (arm.Phase == GiantArmPhase.Stuck) everStuck = true;
+                if (arm.IsAttackable) everAttackable = true;
+            }
+
+            Assert.IsTrue(minPy < 5f, $"Hammaren ska lyftas ovanför axeln (apex) under leveransen, minPy={minPy}.");
+            Assert.IsTrue(everStuck, "Hammaren ska bli stampbar (når Stuck).");
+            Assert.IsTrue(everAttackable, "Hammaren ska exponera svagpunkten (stampbar).");
+        }
+
+        [TestMethod]
+        public void HammerSlam_TriggersIcicleBurst()
+        {
+            var map = new FloorMap();
+            var arm = SlammingArm(map);
+            var player = new DynamicCreatureEnemyPenguin { px = 12f, py = 12f };
+
+            arm.TriggerSlam(hammer: true);
+            bool landed = false;
+            for (int i = 0; i < 200; i++) { arm.Behaviour(Dt, player); if (arm.ConsumeSlamLanded()) landed = true; }
+
+            Assert.IsTrue(landed, "Hammaren ska trigga is-skuren (når Stuck → landed-signal).");
+        }
+
+        // ── RecoilNow: näven studsar tillbaka direkt vid hjälte-träff ───────────────
+        [TestMethod]
+        public void RecoilNow_FromDropping_RetractsImmediately()
+        {
+            var map = new FloorMap();
+            var arm = SlammingArm(map);
+            var player = new DynamicCreatureEnemyPenguin { px = 12f, py = 12f };
+
+            arm.TriggerSlam();
+            for (int i = 0; i < 200 && arm.Phase != GiantArmPhase.Dropping; i++) arm.Behaviour(Dt, player);
+            Assert.AreEqual(GiantArmPhase.Dropping, arm.Phase, "Förutsätter att vi nådde Dropping.");
+
+            arm.RecoilNow();
+
+            Assert.AreEqual(GiantArmPhase.Recoiling, arm.Phase, "RecoilNow ska sätta Recoiling direkt.");
+            Assert.IsFalse(arm.IsAttackable, "Ska inte vara stampbar under retur.");
+        }
+
+        [TestMethod]
+        public void RecoilNow_DuringTelegraph_IsNoOp()
+        {
+            var map = new FloorMap();
+            var arm = SlammingArm(map);
+            var player = new DynamicCreatureEnemyPenguin { px = 12f, py = 12f };
+
+            arm.TriggerSlam();
+            arm.Behaviour(Dt, player);   // i Telegraph
+            Assert.AreEqual(GiantArmPhase.Telegraph, arm.Phase);
+
+            arm.RecoilNow();   // slaget har inte landat än → ska inte avbrytas
+
+            Assert.AreEqual(GiantArmPhase.Telegraph, arm.Phase, "RecoilNow under telegraf ska vara no-op.");
+        }
     }
 }

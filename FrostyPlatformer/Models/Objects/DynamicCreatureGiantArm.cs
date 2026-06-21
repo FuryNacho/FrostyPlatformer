@@ -36,6 +36,13 @@ namespace FrostyPlatformer.Models.Objects
         private const float StuckDur     = 0.9f;   // hur länge svagpunkten är exponerad
         private const float RecoilTime   = 0.4f;   // tid att dra tillbaka
 
+        // Hammarslag — overhead-variant när hjälten campar på en plattform. Näven lyfts UPP till en
+        // apex ovanför målet och huggs sedan RAKT NER på plattformen → tvingar ner hjälten. Går INTE
+        // att stampa (ingen Stuck/svagpunkt) och skadar vid kontakt. Trigg/val sköts av GameplayState.
+        private const float HammerDropTime = 0.5f;   // lyft + nedhugg (lite långsammare → läsbart)
+        private const float HammerRaise    = 4f;     // hur högt över målet näven lyfts innan nedhugget
+        private const float HammerApexFrac = 0.45f;  // andel av rörelsen som är lyftet (resten = nedhugg)
+
         /// <summary>Axelns ankarpunkt (tiles) — armen sträcks härifrån.</summary>
         public float ShoulderX { get; set; }
         public float ShoulderY { get; set; }
@@ -75,6 +82,7 @@ namespace FrostyPlatformer.Models.Objects
         private int   _surfaceY;       // ytan näven planterar på (för markören)
         private bool  _locked;
         private bool  _landedSignal;   // engångsflagga: näven slog precis i marken (konsumeras av GameplayState)
+        private bool  _hammer;         // detta slag är ett overhead-hammarslag (ej stampbart)
 
         public DynamicCreatureGiantArm() : base("giant_arm", SpriteId.GiantArm)
         {
@@ -97,13 +105,29 @@ namespace FrostyPlatformer.Models.Objects
             ApplyPos();
         }
 
-        /// <summary>Startar ett slag (om armen vilar).</summary>
-        public void TriggerSlam()
+        /// <summary>Startar ett slag (om armen vilar). <paramref name="hammer"/> = overhead-hammarslag
+        /// (näven huggs ner uppifrån, ej stampbart) i stället för det vanliga raka slaget.</summary>
+        public void TriggerSlam(bool hammer = false)
         {
             if (Phase != GiantArmPhase.Rest) return;
+            _hammer = hammer;
             Phase = GiantArmPhase.Telegraph;
             _timer = TelegraphDur;
             _locked = false;
+        }
+
+        /// <summary>
+        /// Drar tillbaka näven OMEDELBART (anropas när näven träffat hjälten). Hindrar att hjälten
+        /// fastnar/mosas under näven och begränsar ett slag till EN träff. No-op om armen redan
+        /// vilar/retirerar. Sätter inte igång retur från Telegraph (slaget har inte landat än).
+        /// </summary>
+        public void RecoilNow()
+        {
+            if (Phase == GiantArmPhase.Dropping || Phase == GiantArmPhase.Stuck)
+            {
+                Phase = GiantArmPhase.Recoiling;
+                IsAttackable = false;
+            }
         }
 
         public override void Behaviour(float fElapsedTime, DynamicGameObject? player = null)
@@ -122,16 +146,20 @@ namespace FrostyPlatformer.Models.Objects
                     SolidVsDynamic = false; IsAttackable = false;
                     if (!_locked && player != null && Arena != null) { LockTarget(player); _locked = true; }
                     _t = 0f;
-                    if (Giant != null) Giant.Pose = GiantPose.Telegraph;
+                    // Hammarslaget telegraferas tydligare: jätten morrar redan under uppladdningen (sur min)
+                    // i stället för den vanliga telegraf-posen → spelaren ser att det är ett hammarslag på väg.
+                    if (Giant != null) Giant.Pose = _hammer ? GiantPose.Roar : GiantPose.Telegraph;
                     _timer -= fElapsedTime;
                     if (_timer <= 0f) Phase = GiantArmPhase.Dropping;
                     break;
 
                 case GiantArmPhase.Dropping:
                     SolidVsDynamic = true; IsAttackable = false;   // tung och farlig på vägen ut
-                    _t += fElapsedTime / DropTime;
+                    _t += fElapsedTime / (_hammer ? HammerDropTime : DropTime);
                     if (_t >= 1f)
                     {
+                        // Båda slagen fastnar (stampbar svagpunkt) och triggar is-skuren. Hammaren skiljer
+                        // sig bara i leveransen (overhead-båge) + extra varning, inte i belöningen.
                         _t = 1f;
                         Phase = GiantArmPhase.Stuck;
                         _timer = StuckDur;
@@ -167,12 +195,35 @@ namespace FrostyPlatformer.Models.Objects
             while (sy < h && !Arena.GetSolid(tx, sy)) sy++;
             _surfaceY = sy;
             _targetX  = tx;
-            _targetY  = sy - 2f;   // svagpunkten 2 tiles över ytan → stampbar (se jump-constraint)
+            // Näven landar 1 tile över ytan = i hjältens nivå, så den når marken visuellt (inget glapp).
+            // Tryggt mot "stå still → auto-stamp": retire-on-träff gör att näven träffar + studsar tillbaka
+            // innan den hinner plantera sig på en stillastående hjälte (och JumpDamage är gatad till Stuck).
+            _targetY  = sy - 1f;
         }
 
-        // Interpolerar näven längs linjen axel→mål och sätter objektets position dit.
+        // Sätter nävens position. Rakt slag: interpolera längs linjen axel→mål. Hammarslag UNDER
+        // nedhugget: lyft till en apex ovanför målkolumnen (första HammerApexFrac) och hugg sedan
+        // RAKT NER på målet (resten). Retur (Recoiling) drar tillbaka längs den raka linjen.
         private void ApplyPos()
         {
+            if (_hammer && Phase == GiantArmPhase.Dropping)
+            {
+                float apexY = Math.Max(1f, Math.Min(ShoulderY, _targetY) - HammerRaise);
+                if (_t < HammerApexFrac)
+                {
+                    float u = _t / HammerApexFrac;                 // axel → apex (lyft upp och över)
+                    px = ShoulderX + (_targetX - ShoulderX) * u;
+                    py = ShoulderY + (apexY - ShoulderY) * u;
+                }
+                else
+                {
+                    float u = (_t - HammerApexFrac) / (1f - HammerApexFrac);   // apex → mål (rakt ner)
+                    px = _targetX;
+                    py = apexY + (_targetY - apexY) * u;
+                }
+                return;
+            }
+
             px = ShoulderX + (_targetX - ShoulderX) * _t;
             py = ShoulderY + (_targetY - ShoulderY) * _t;
         }
@@ -188,8 +239,19 @@ namespace FrostyPlatformer.Models.Objects
         {
             // Telegraf-markör på ytan där slaget kommer landa (blinkar) — ger tid att dodga.
             if (Phase == GiantArmPhase.Telegraph && ((int)(_anim * 6f) & 1) == 0)
+            {
                 gfx.DrawPartialSprite(SpriteId.GiantWeakPoint,
                     ToPixel(_targetX, ox), ToPixel(_surfaceY - 1, oy), 16, 0, 16, 16);
+
+                // Hammarslag: EXTRA varning — en blinkande markör högt upp i målkolumnen (vid apex)
+                // som signalerar "något kommer uppifrån här". Snabbare blink än markmarkören.
+                if (_hammer && ((int)(_anim * 12f) & 1) == 0)
+                {
+                    float apexY = Math.Max(1f, Math.Min(ShoulderY, _targetY) - HammerRaise);
+                    gfx.DrawPartialSprite(SpriteId.GiantWeakPoint,
+                        ToPixel(_targetX, ox), ToPixel(apexY, oy), 16, 0, 16, 16);
+                }
+            }
 
             // Synlig segmenterad is-arm längs linjen axel→näve (valfri vinkel).
             float dx = px - ShoulderX, dy = py - ShoulderY;
@@ -213,7 +275,8 @@ namespace FrostyPlatformer.Models.Objects
             int frame = Phase == GiantArmPhase.Stuck ? 1 : 0;
             Blit(ToPixel(px, ox) - 8, ToPixel(py, oy), frame * 32, 16, 32, 32);
 
-            // Svagpunkts-ikon på knogen — state speglar fasen (göms i vila).
+            // Svagpunkts-ikon på knogen — state speglar fasen (göms i vila). Gäller båda slagen
+            // (hammaren är stampbar igen).
             if (Phase != GiantArmPhase.Rest)
             {
                 int wp = Phase switch

@@ -752,6 +752,7 @@ namespace FrostyPlatformer.States
                 if (assailant is DynamicCreatureMirrorScarlet dealer)         dealer.OnDealtDamage(victim.px);
                 else if (assailant is DynamicCreatureSwarmCopy swarmDealer)   swarmDealer.OnDealtDamage(victim.px);
                 else if (assailant is DynamicCreatureBossIcicle icicle)       icicle.Shatter();   // krossas mot hjälten, som mot marken
+                else if (assailant is DynamicCreatureGiantArm arm)            arm.RecoilNow();    // näven studsar tillbaka direkt → ingen mosning
             }
 
             if (victim.IsHero) victim.SolidVsDynamic = true;
@@ -927,6 +928,8 @@ namespace FrostyPlatformer.States
         private float _giantSlamTimer;
         private bool _giantSlamLeftNext;   // växlar vilken arm som slår härnäst
         private bool _giantHasSlammed;     // har jätten slagit näven i marken (arm i Stuck) minst en gång? → grindar istappsregnet
+        private int  _lastSlamSurface;     // hjältens yta (nivå) vid förra slaget — för att upptäcka platå-camp
+        private bool _hadPrevSlam;         // har minst ett slag skett? (annars finns inget att jämföra mot)
 
         // Bryggan akt 3→4: jätten rasar (kollaps) + en kort vit blixt (falsk seger).
         private const float CollapseFlashDur = 0.12f;
@@ -1214,6 +1217,7 @@ namespace FrostyPlatformer.States
             if (!giantAct)
             {
                 _giantHasSlammed = false;   // nästa giant-akt börjar utan registrerat slag (replay/akt-byte)
+                _hadPrevSlam = false;       // ...och utan ett föregående slag att jämföra mot (hammar-beslut)
 
                 // Bryggan till akt 4: jätten GÅS SÖNDER (kollaps + vit blixt) i stället för att
                 // bara försvinna. Armarna snäpps av i blixten; huvudet smulas och tas bort självt.
@@ -1280,11 +1284,34 @@ namespace FrostyPlatformer.States
                 if (_giantSlamTimer <= 0f)
                 {
                     var next = arms.FirstOrDefault(a => a.IsLeft == _giantSlamLeftNext) ?? arms[0];
-                    next.TriggerSlam();
+
+                    // Hammarslag om hjälten CAMPAR på en plattform: står på en plattform (ovanför
+                    // huvudgolvet) OCH på samma nivå som vid förra slaget. Tvingar ner hen → bryter
+                    // platå-loopen. På golvet (eller efter att ha bytt nivå) blir det vanligt rakt slag.
+                    var player = context.Player!;
+                    var map    = context.CurrentLevel!;
+                    int heroSurface = SurfaceUnderHero(player, map);
+                    int floorTop    = FloorTopForColumn(map, Math.Clamp((int)Math.Round(player.px), 0, map.Width - 1));
+                    bool onPlatform = heroSurface < floorTop;
+                    bool hammer     = onPlatform && _hadPrevSlam && heroSurface == _lastSlamSurface;
+
+                    next.TriggerSlam(hammer);
                     _giantSlamLeftNext = !_giantSlamLeftNext;
                     _giantSlamTimer = SlamInterval;
+                    _lastSlamSurface = heroSurface;
+                    _hadPrevSlam = true;
                 }
             }
+        }
+
+        // Ytan (rad) DIREKT under hjälten i hens kolumn — golv eller plattformstopp. Används för att
+        // avgöra hjältens "nivå" (camp-detektering för hammarslag).
+        private static int SurfaceUnderHero(DynamicGameObject player, IMapData map)
+        {
+            int tx = Math.Clamp((int)Math.Round(player.px), 0, map.Width - 1);
+            int sy = (int)player.py + 1;
+            while (sy < map.Height && !map.GetSolid(tx, sy)) sy++;
+            return sy;
         }
 
         // ── Akt 3: istappsregn ─────────────────────────────────────────────────────

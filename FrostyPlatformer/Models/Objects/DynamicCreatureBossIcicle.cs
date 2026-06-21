@@ -30,6 +30,7 @@ namespace FrostyPlatformer.Models.Objects
         private const float WarnDur    = 0.7f;   // telegraf innan fallet
         private const float ShatterDur = 0.4f;   // hur länge smul-partiklarna skingras
         private const float FallSpeed  = 12f;    // tiles/s nedåt
+        private const int   TopMarkerScreenY = 15;   // varningsmarkörens FASTA skärm-y (precis under HUD-barerna)
 
         // Skärvornas spridningsriktningar (tiles) — smulet kastas utåt/uppåt vid nedslag.
         private static readonly (float dx, float dy)[] Shards =
@@ -114,10 +115,11 @@ namespace FrostyPlatformer.Models.Objects
             switch (Phase)
             {
                 case BossIciclePhase.Warn:
-                    // Blinkande varningsmarkör på marken + skymtande istapp vid taket.
+                    // Blinkande varningsmarkör HÖGST UPP i vyn (fast skärm-y, i istappens kolumn) — visar
+                    // vilken kolumn som hotas innan istappen kommer ner. Plus skymtande istapp vid taket.
                     if (((int)(_anim * 6f) & 1) == 0)
                     {
-                        gfx.DrawPartialSprite(SpriteId, ToPixel(px, ox), ToPixel(GroundMarkerY, oy), 2 * 16, 0, 16, 16);
+                        gfx.DrawPartialSprite(SpriteId, ToPixel(px, ox), TopMarkerScreenY, 2 * 16, 0, 16, 16);
                         gfx.DrawPartialSprite(SpriteId, ToPixel(px, ox), ToPixel(py, oy), 0, 0, 16, 16);
                     }
                     break;
