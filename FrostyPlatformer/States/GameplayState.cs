@@ -288,8 +288,8 @@ namespace FrostyPlatformer.States
                     }
             }
 
-            // Akt 2: håll svärmen vid liv (eller städa bort kvarvarande kopior efter akten).
-            ManageSwarm(context);
+            // Akt 2: håll svärmen vid liv (eller lös upp kvarvarande kopior efter akten).
+            ManageSwarm(context, elapsed);
 
             // Akt 3: visa jätten + driv näv-slammen (eller städa bort efter akten).
             if (_giantCollapseFlash > 0f) _giantCollapseFlash -= elapsed;
@@ -671,6 +671,10 @@ namespace FrostyPlatformer.States
                         else
                             DamageHero((Creature)obj, (Creature)context.Player!, "1");
                     }
+                    // Akt 2: en svärm-kopia som landar ovanpå en annan hoppar sidledes av (sprider
+                    // ut klungan i stället för att torna). Den ÖVRE kopian (obj) får impulsen.
+                    else if (obj is DynamicCreatureSwarmCopy topCopy && other is DynamicCreatureSwarmCopy)
+                        topCopy.OnStackedOn(other.px);
                 }
             }
         }
@@ -722,10 +726,14 @@ namespace FrostyPlatformer.States
 
             victim.KnockBack(tx / d, ty / d - 1f, 0.3f);
 
-            // Spegel-Scarlet drar sig ur efter att ha gett skada → bryter loop där spelaren
-            // annars fastnar i upprepade träffar (t.ex. under en platå).
-            if (victim.IsHero && assailant is DynamicCreatureMirrorScarlet dealer)
-                dealer.OnDealtDamage(victim.px);
+            // Bossar drar sig ur efter att ha gett skada → bryter loop där spelaren annars fastnar
+            // i upprepade träffar. Scarlet (akt 1): under en platå. Svärm-kopior (akt 2): hela
+            // klungan backar en aning så hjälten kommer loss ur högen.
+            if (victim.IsHero)
+            {
+                if (assailant is DynamicCreatureMirrorScarlet dealer)         dealer.OnDealtDamage(victim.px);
+                else if (assailant is DynamicCreatureSwarmCopy swarmDealer)   swarmDealer.OnDealtDamage(victim.px);
+            }
 
             if (victim.IsHero) victim.SolidVsDynamic = true;
             else victim.OnInteract(assailant);
@@ -826,6 +834,51 @@ namespace FrostyPlatformer.States
         private const int SwarmTargetAlive = 4;
         private int _swarmSpawnFlip;
 
+        // Crescendo mot slutet: när det är 2 stamp kvar fördubblas svärmen, när det är 1 kvar
+        // fördubblas den igen → ett stigande tryck strax innan akten faller. Förstärkningsvågorna
+        // kastas in UTSPRITT från EN sida (som en näve slängd från utanför bild), inte alla på en frame.
+        private const float SwarmSpawnInterval = 0.16f;   // tid mellan inkastade kopior (utspritt, en i taget)
+        private int   _swarmTier;                         // senast nådda crescendo-nivå (0/1/2) → upptäcker nya vågor
+        private bool  _waveFromLeft;                      // sida den aktuella förstärkningsvågen kastas in från
+        private float _swarmSpawnTimer;                   // tid till nästa inkastade kopia
+
+        // Akt 2→3-övergången är medvetet långsam och sinematisk: efter kaoset ska spelaren hinna inse
+        // att den är safe innan det drar igång igen. Sekvensen (fas 1→3) efter sista stompen:
+        //   1 Gather  — alla kvarvarande kopior + en svärm EXTRA ofarliga kopior dräller in, faller till
+        //               marken och glitchar idle en stund (smälta-att-man-överlevde-beat).
+        //   2 Cascade — kopiorna poffar bort en och en i ÖKANDE takt (poff … poff poff … poffpoffpoff).
+        //   3 Quiet   — tyst tom arena en stund, sen får akt 3 sakta dra igång (jätte + is grindas).
+        private const int   SwarmExitExtra     = 16;     // extra ofarliga kopior som kastas in bara för att poffa
+        private const float ExtraSpawnInterval = 0.10f;  // takten de extra kastas in i
+        private const float ExitTossY          = 6f;     // höjd de kastas in på vid sidan
+        private const float ExitTossUp         = -4.5f;  // liten knuff uppåt → ballistisk båge
+        private const float ExitTossSpeedMin   = 4f;     // min sidofart inåt (varieras → sprids över arenan)
+        private const float ExitTossSpeedMax   = 8.5f;   // max sidofart inåt (< MaxVelocityX)
+        private const float SwarmGatherTime    = 1.6f;   // håll-fas: faller, idle, glitchar
+        private const float PoffStartInterval  = 0.55f;  // första gapet i poff-cascaden (långsam start)
+        private const float PoffMinInterval    = 0.05f;  // snabbaste poff-takt (svansen: poffpoffpoff)
+        private const float PoffAccel          = 0.80f;  // gapet × detta per poff → accelererar
+        private const float SwarmQuietTime     = 2.2f;   // tyst tom arena innan akt 3 sakta drar igång
+        private const float HazardFirstDelay   = 1.4f;   // isen väntar in en beat efter att jätten klivit fram
+
+        private int   _swarmExitPhase;     // 0 ingen, 1 gather/idle, 2 poff-cascade, 3 tyst, 4 klar (akt 3 får starta)
+        private float _swarmExitTimer;     // tids-räknare inom aktuell fas
+        private int   _extraSpawned;       // hur många extra effekt-kopior som kastats in
+        private float _extraSpawnTimer;    // tid till nästa extra kopia
+        private float _poffTimer;          // tid till nästa poff i cascaden
+        private float _poffInterval;       // nuvarande poff-gap (krymper → accelererar)
+
+        /// <summary>
+        /// Hur många svärm-kopior som ska vara i luften givet boss-barens hälsa — crescendo mot slutet:
+        /// fördubblas vid 2 stamp kvar, fördubblas igen vid 1 stamp kvar. Ren funktion (testbar).
+        /// </summary>
+        internal static int CurrentSwarmTarget(int bossHealth)
+        {
+            if (bossHealth <= SwarmStompDamage)     return SwarmTargetAlive * 4;   // 1 stamp kvar
+            if (bossHealth <= SwarmStompDamage * 2) return SwarmTargetAlive * 2;   // 2 stamp kvar
+            return SwarmTargetAlive;
+        }
+
         // Akt 3 — jätten. Skada på jätte-baren per lyckad svagpunkts-stamp (giantHealth 40 / 8 = 5
         // stamps). Slam-takten: en näve åt gången; ny efter SlamInterval när föregående är borta.
         private const int GiantStompDamage = 8;
@@ -868,6 +921,14 @@ namespace FrostyPlatformer.States
                 context.BossPhase?.TakeHit(SwarmStompDamage);
                 victim.Health = 0; victim.Redundant = true; victim.RemoveCount = 1;
                 _enemyJump = GameConstants.EnemyStompWindowSeconds;
+
+                // Var detta sista stampet (akten lämnade Swarm)? Avväpna ALLA kvarvarande kopior i
+                // SAMMA frame så ingen kan skada hjälten efter segern — konsekvent, hela svärmen på en
+                // gång. ManageSwarm startar deras synliga glitch-out direkt efteråt (inga frysta statyer).
+                if (context.BossPhase != null && context.BossPhase.CurrentAct != BossAct.Swarm)
+                    foreach (var o in context.ActiveObjects)
+                        if (o is DynamicCreatureSwarmCopy other && !other.Redundant)
+                        { other.IsAttackable = false; other.SolidVsDynamic = false; }
                 return;
             }
 
@@ -911,44 +972,157 @@ namespace FrostyPlatformer.States
         // ── Akt 2: svärm-hantering ─────────────────────────────────────────────────
         /// <summary>
         /// Driver svärmen (akt 2): så länge BossPhaseController är i Swarm-akten hålls
-        /// <see cref="SwarmTargetAlive"/> kopior vid liv (nya spawnar in när någon stampats),
-        /// tills svärm-baren töms och controllern går vidare. Utanför akten städas eventuella
-        /// kvarvarande kopior bort. Körs efter objekt-loopen så listan kan muteras säkert.
+        /// <see cref="CurrentSwarmTarget"/> kopior vid liv (nya spawnar in när någon stampats),
+        /// med ett crescendo mot slutet. När akten vinns kör en sinematisk övergång (fas-maskin):
+        /// idle-glitch på marken → accelererande poff-cascade → tyst paus, innan akt 3 sakta drar
+        /// igång. Körs efter objekt-loopen så listan kan muteras säkert.
         /// </summary>
-        private void ManageSwarm(GameContext context)
+        private void ManageSwarm(GameContext context, float elapsed)
         {
             if (context.BossPhase == null) return;
 
             bool swarmAct = context.BossPhase.CurrentAct == BossAct.Swarm &&
                             context.BossPhase.Outcome == BossOutcome.Ongoing;
 
-            if (!swarmAct)
+            if (swarmAct)
             {
-                // Utanför akt 2 → markera kvarvarande kopior för borttagning.
-                foreach (var o in context.ActiveObjects)
-                    if (o is DynamicCreatureSwarmCopy c && !c.Redundant)
-                    { c.Health = 0; c.Redundant = true; c.RemoveCount = 1; }
+                // I akten: nollställ exit-sekvensen (en framtida seger ska kunna dra igång den igen).
+                _swarmExitPhase = 0;
+
+                // Vänta in akt 1-bossens glitch-exit innan svärmen droppar in: en kort beat med
+                // tom arena ger tydlig separation mellan akterna (annars överlappar de visuellt).
+                if (context.ActiveObjects.Any(o => o is DynamicCreatureMirrorScarlet ms && ms.ExitInProgress))
+                    return;
+
+                int bossHealth = context.BossPhase.BossHealth;
+
+                // Crescendo-nivå: 0 normalt, 1 vid 2 stamp kvar, 2 vid 1 stamp kvar. När en NY nivå
+                // nås startar en förstärkningsvåg som kastas in från EN sida (växlar mellan vågorna)
+                // — som en jätte utanför bild som slänger in en näve kopior på en horisontell rad.
+                int tier = bossHealth <= SwarmStompDamage ? 2 : bossHealth <= SwarmStompDamage * 2 ? 1 : 0;
+                if (tier != _swarmTier)
+                {
+                    if (tier > 0) _waveFromLeft = (_swarmSpawnFlip++ & 1) == 0;
+                    _swarmTier = tier;
+                }
+
+                // Fyll på mot målantalet, men UTSPRITT — en kopia i taget med mellanrum, inte hela
+                // vågen på en frame. Crescendo-vågorna (tier > 0) kommer alla från vågens sida;
+                // baspåfyllningen växlar sida som vanligt.
+                int target = CurrentSwarmTarget(bossHealth);
+                int alive  = context.ActiveObjects.Count(o => o is DynamicCreatureSwarmCopy c && c.Health > 0);
+                if (_swarmSpawnTimer > 0f) _swarmSpawnTimer -= elapsed;
+                if (alive < target && _swarmSpawnTimer <= 0f)
+                {
+                    bool fromLeft = tier > 0 ? _waveFromLeft : (_swarmSpawnFlip++ & 1) == 0;
+                    context.ActiveObjects.Add(MakeSwarmCopy(context, fromLeft));
+                    _swarmSpawnTimer = SwarmSpawnInterval;
+                }
                 return;
             }
 
-            // Vänta in akt 1-bossens glitch-exit innan svärmen droppar in: en kort beat med
-            // tom arena ger tydlig separation mellan akterna (annars överlappar de visuellt).
-            if (context.ActiveObjects.Any(o => o is DynamicCreatureMirrorScarlet ms && ms.ExitInProgress))
-                return;
-
-            int alive = context.ActiveObjects.Count(o => o is DynamicCreatureSwarmCopy c && c.Health > 0);
-            for (int i = alive; i < SwarmTargetAlive; i++)
-                context.ActiveObjects.Add(MakeSwarmCopy(context));
+            // ── Akt 2 vunnen → sinematisk övergång (fas-maskin) ──
+            switch (_swarmExitPhase)
+            {
+                case 0: BeginSwarmExit(context);                 break;   // precis vunnit → starta sekvensen
+                case 1: UpdateSwarmGather(context, elapsed);     break;   // dräll in extra + håll idle-glitch
+                case 2: UpdateSwarmPoffCascade(context, elapsed); break;  // accelererande poff-cascade
+                case 3:                                                   // tyst tom arena, sen får akt 3 starta
+                    _swarmExitTimer -= elapsed;
+                    if (_swarmExitTimer <= 0f) _swarmExitPhase = 4;
+                    break;
+            }
         }
 
-        // Skapar en kopia vid en arenakant (växlar sida varje gång) nära taket, så att den
-        // faller in och jagar — "svärmar in" från båda håll snarare än att poppa upp på hjälten.
-        private DynamicCreatureSwarmCopy MakeSwarmCopy(GameContext context)
+        /// <summary>Sant medan svärmens akt 2→3-övergång pågår (idle-glitch, poff-cascade eller den
+        /// tysta pausen) — både jätten och istappsregnet väntar in detta innan akt 3 sakta drar igång.</summary>
+        private bool SwarmExitInProgress => _swarmExitPhase >= 1 && _swarmExitPhase <= 3;
+
+        // Fas 0→1: alla kvarvarande kopior blir ofarliga och slutar jaga; de glitchar FÖRST när de
+        // landat (de som är i luften faller klart innan dess).
+        private void BeginSwarmExit(GameContext context)
+        {
+            foreach (var o in context.ActiveObjects)
+                if (o is DynamicCreatureSwarmCopy c && !c.Redundant)
+                    c.BeginExit();
+
+            _extraSpawned    = 0;
+            _extraSpawnTimer = 0f;
+            _swarmExitTimer  = SwarmGatherTime;
+            _swarmExitPhase  = 1;
+        }
+
+        // Fas 1 (Gather): dräll in extra OFARLIGA kopior bara för effekt medan håll-timern löper.
+        private void UpdateSwarmGather(GameContext context, float elapsed)
+        {
+            if (_extraSpawned < SwarmExitExtra)
+            {
+                _extraSpawnTimer -= elapsed;
+                if (_extraSpawnTimer <= 0f)
+                {
+                    context.ActiveObjects.Add(MakeExitCopy(context));
+                    _extraSpawned++;
+                    _extraSpawnTimer = ExtraSpawnInterval;
+                }
+            }
+
+            _swarmExitTimer -= elapsed;
+            if (_swarmExitTimer <= 0f)
+            {
+                _poffInterval   = PoffStartInterval;
+                _poffTimer      = _poffInterval;
+                _swarmExitPhase = 2;
+            }
+        }
+
+        // Fas 2 (Cascade): poffa bort en slumpvis kopia, krymp intervallet → accelererande poff-band.
+        // Poffar BARA kopior som faktiskt landat och börjat glitcha — aldrig en som fortfarande bågar in.
+        private void UpdateSwarmPoffCascade(GameContext context, float elapsed)
+        {
+            var all = context.ActiveObjects.OfType<DynamicCreatureSwarmCopy>()
+                             .Where(c => !c.Redundant).ToList();
+            if (all.Count == 0)
+            {
+                _swarmExitTimer = SwarmQuietTime;
+                _swarmExitPhase = 3;
+                return;
+            }
+
+            var glitching = all.Where(c => c.IsGlitchingOut).ToList();
+            if (glitching.Count == 0) return;   // alla kvar är fortfarande på väg ner → vänta in dem
+
+            _poffTimer -= elapsed;
+            if (_poffTimer <= 0f)
+            {
+                glitching[_rng.Next(glitching.Count)].Poff();
+                _poffInterval = Math.Max(PoffMinInterval, _poffInterval * PoffAccel);
+                _poffTimer    = _poffInterval;
+            }
+        }
+
+        // Extra effekt-kopia: KASTAS in i en ballistisk båge från en sida (som av en jätte utanför bild),
+        // ofarlig. Varierad sidofart sprider dem över arenan; de glitchar först när de landat.
+        private DynamicCreatureSwarmCopy MakeExitCopy(GameContext context)
         {
             int w = context.CurrentLevel?.Width ?? 36;
-            bool left = (_swarmSpawnFlip++ & 1) == 0;
-            float x = left ? 2f : w - 3f;
-            return new DynamicCreatureSwarmCopy { px = x, py = 2f };
+            bool fromLeft = _rng.Next(2) == 0;
+            float x = fromLeft ? 1f : w - 2f;
+            var c = new DynamicCreatureSwarmCopy { px = x, py = ExitTossY };
+            float speed = ExitTossSpeedMin + (float)_rng.NextDouble() * (ExitTossSpeedMax - ExitTossSpeedMin);
+            c.vx = (fromLeft ? 1f : -1f) * speed;   // hög sidofart inåt
+            c.vy = ExitTossUp;                      // liten knuff uppåt → båge
+            c.BeginExit();
+            return c;
+        }
+
+        // Skapar en kopia vid en arenakant (sida vald av anroparen) nära taket, med en liten
+        // inåt-knuff så den läser som inkastad från sidan innan jakten tar över.
+        private DynamicCreatureSwarmCopy MakeSwarmCopy(GameContext context, bool fromLeft)
+        {
+            int w = context.CurrentLevel?.Width ?? 36;
+            float x    = fromLeft ? 2f : w - 3f;
+            float toss = fromLeft ? 3f : -3f;
+            return new DynamicCreatureSwarmCopy { px = x, py = 2f, vx = toss };
         }
 
         // ── Akt 3: jätte-hantering ─────────────────────────────────────────────────
@@ -991,6 +1165,9 @@ namespace FrostyPlatformer.States
             // Spawna jätten (huvud) + två armar (en per axel) en gång.
             if (giant == null)
             {
+                // Vänta in hela akt 2→3-övergången (idle-glitch + poff-cascade + tyst paus) innan jätten.
+                if (SwarmExitInProgress) return;
+
                 var map = context.CurrentLevel!;
                 float gx = (map.Width - GiantWidthTiles) / 2f;   // huvudet centrerat i arenan
                 giant = new DynamicCreatureGiant { px = gx, py = GiantAnchorY };
@@ -1046,6 +1223,10 @@ namespace FrostyPlatformer.States
                     { ic.Health = 0; ic.Redundant = true; ic.RemoveCount = 1; }
                 return;
             }
+
+            // Akt 3 ska dra igång SAKTA: håll isen tills hela svärm-övergången är klar, och låt sedan
+            // första istappen vänta in en beat efter att jätten klivit fram (HazardFirstDelay).
+            if (SwarmExitInProgress) { _icicleTimer = HazardFirstDelay; return; }
 
             _icicleTimer -= elapsed;
             if (_icicleTimer <= 0f)
