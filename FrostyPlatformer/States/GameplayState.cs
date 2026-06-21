@@ -861,6 +861,7 @@ namespace FrostyPlatformer.States
         private const float SwarmQuietTime     = 2.2f;   // tyst tom arena innan akt 3 sakta drar igång
         private const float HazardFirstDelay   = 1.4f;   // isen väntar in en beat efter att jätten klivit fram
 
+        private bool  _swarmActWasActive;  // har svärm-akten faktiskt körts? → exit-sekvensen får bara köra EFTER en riktig akt 2
         private int   _swarmExitPhase;     // 0 ingen, 1 gather/idle, 2 poff-cascade, 3 tyst, 4 klar (akt 3 får starta)
         private float _swarmExitTimer;     // tids-räknare inom aktuell fas
         private int   _extraSpawned;       // hur många extra effekt-kopior som kastats in
@@ -986,7 +987,9 @@ namespace FrostyPlatformer.States
 
             if (swarmAct)
             {
-                // I akten: nollställ exit-sekvensen (en framtida seger ska kunna dra igång den igen).
+                // I akten: markera att svärmen körts + nollställ exit-sekvensen (en framtida seger
+                // ska kunna dra igång den igen).
+                _swarmActWasActive = true;
                 _swarmExitPhase = 0;
 
                 // Vänta in akt 1-bossens glitch-exit innan svärmen droppar in: en kort beat med
@@ -1020,6 +1023,19 @@ namespace FrostyPlatformer.States
                 }
                 return;
             }
+
+            // Akt 1 (Mirror) eller tidigare → nollställ exit-state (ren körning/replay) och gör INGET.
+            // Annars triggades den sinematiska övergången (extra glitch-kopior!) redan under akt 1.
+            if (context.BossPhase.CurrentAct == BossAct.Mirror)
+            {
+                _swarmActWasActive = false;
+                _swarmExitPhase = 0;
+                return;
+            }
+
+            // Efter svärm-akten (Giant/Acceptance/Resolved): kör exit-sekvensen EN gång — men bara om
+            // svärmen faktiskt har körts (annars t.ex. dev-start direkt i akt 3 → ingen falsk exit).
+            if (!_swarmActWasActive) return;
 
             // ── Akt 2 vunnen → sinematisk övergång (fas-maskin) ──
             switch (_swarmExitPhase)
