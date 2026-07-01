@@ -174,7 +174,7 @@ namespace FrostyPlatformer
             DevConfig.UnlockAllStages = true;  // alla banor öppna → gå direkt till slutbossen
             DevConfig.FullEnergy = true;
             // Hoppa direkt in i en boss-akt för speltest (BossAct.Mirror = hela striden från start).
-            DevConfig.BossStartAct = BossAct.Mirror;
+            DevConfig.BossStartAct = BossAct.Giant;
 
             try
             {
@@ -431,7 +431,7 @@ namespace FrostyPlatformer
             Reg(Rendering.SpriteId.EnemyWind,         agg.GetSpritePath(SpriteRef.EnemyWind));
             Reg(Rendering.SpriteId.EnemyMirrorScarlet, agg.GetSpritePath(SpriteRef.MirrorScarlet));
             Reg(Rendering.SpriteId.EnemySwarmCopy,     agg.GetSpritePath(SpriteRef.SwarmCopy));
-            Reg(Rendering.SpriteId.GiantHead,          agg.GetSpritePath(SpriteRef.GiantHead));
+            Reg(Rendering.SpriteId.GiantBody,          agg.GetSpritePath(SpriteRef.GiantBody));
             Reg(Rendering.SpriteId.GiantArm,           agg.GetSpritePath(SpriteRef.GiantArm));
             Reg(Rendering.SpriteId.GiantWeakPoint,     agg.GetSpritePath(SpriteRef.GiantWeakPoint));
             Reg(Rendering.SpriteId.GiantHazard,        agg.GetSpritePath(SpriteRef.GiantHazard));

@@ -1196,10 +1196,11 @@ namespace FrostyPlatformer.States
         }
 
         // ── Akt 3: jätte-hantering ─────────────────────────────────────────────────
-        // Jätten är 5 rutor bred (giant_boss-atlasen). Förankringspunkt (övre vänstra) centreras
-        // i arenan; py väljs så kroppen sitter i övre/mellersta delen av banan (justeras vid look-test).
-        private const int GiantWidthTiles = 5;
-        private const float GiantAnchorY = 3f;   // tornar i övre delen av arenan (ansiktet är 4 rutor högt)
+        // v14-kroppen är 10 tiles bred (giant_body-arket är 160px). Förankringspunkt (övre vänstra)
+        // centreras i arenan; py finjusteras vid look-test så fötterna landar nära golvet.
+        private const int GiantWidthTiles = 10;
+        private const float GiantAnchorY = 5.5f;   // bossens övre-vänstra ankare (finjusteras vid look-test)
+        private const float GiantNudgeX = 0.5f;    // liten höger-nudge (arenan ej helt symmetrisk); look-test
 
         /// <summary>
         /// Driver jättens närvaro (akt 3): visar EN jätte centrerad i arenan så länge
@@ -1242,19 +1243,20 @@ namespace FrostyPlatformer.States
                 if (SwarmExitInProgress) return;
 
                 var map = context.CurrentLevel!;
-                float gx = (map.Width - GiantWidthTiles) / 2f;   // huvudet centrerat i arenan
+                float gx = (map.Width - GiantWidthTiles) / 2f + GiantNudgeX;   // centrerad + liten höger-nudge
                 giant = new DynamicCreatureGiant { px = gx, py = GiantAnchorY };
+                // Kroppen läggs främst (index 0) = bakom allt annat; armarna direkt efter så
+                // nävarna ritas FRAMFÖR kroppen — men fortfarande före (bakom) hjälten.
                 context.ActiveObjects.Insert(0, giant);
 
-                float shoulderY = GiantAnchorY + 2.5f;           // axlarna vid huvudets nedre hörn
-                // Symmetriskt kring huvudets mitt: näven ritas 2 tiles bred (centrerad +0.5),
-                // så axlarna placeras på gx-0.5 / gx+4.5 → båda armarna sticker ut vid kanterna.
+                float shoulderY = GiantAnchorY + 3.4f;           // torso-ovankantens nivå (axel-fästen)
+                // Axlarna sitter vid torsons övre hörn (v14: ~x48 / ~x112 → gx+3 / gx+7).
                 var left = new DynamicCreatureGiantArm();
-                left.Configure(gx - 0.5f, shoulderY, true, giant, map);
+                left.Configure(gx + 3f, shoulderY, true, giant, map);
                 var right = new DynamicCreatureGiantArm();
-                right.Configure(gx + GiantWidthTiles - 0.5f, shoulderY, false, giant, map);
-                context.ActiveObjects.Insert(0, left);
-                context.ActiveObjects.Insert(0, right);
+                right.Configure(gx + 7f, shoulderY, false, giant, map);
+                context.ActiveObjects.Insert(1, left);
+                context.ActiveObjects.Insert(2, right);
 
                 _giantSlamTimer = SlamFirstDelay;
                 return;

@@ -239,14 +239,19 @@ namespace FrostyPlatformer.Models.Objects
 
         public override void DrawSelf(IRenderContext gfx, float ox, float oy)
         {
-            // Telegraf-markör på ytan där slaget kommer landa (blinkar) — ger tid att dodga. För
-            // hammarslaget är dessutom den uppladdade, utsträckta näven högt över kolumnen den tydliga
-            // varningen (se ApplyPos), så ingen extra apex-ikon behövs.
+            // Telegraf-markör på ytan där slaget kommer landa (blinkar) — ger tid att dodga.
             if (Phase == GiantArmPhase.Telegraph && !DevConfig.HideSlamMarker && ((int)(_anim * 6f) & 1) == 0)
                 gfx.DrawPartialSprite(SpriteId.GiantWeakPoint,
                     ToPixel(_targetX, ox), ToPixel(_surfaceY - 1, oy), 16, 0, 16, 16);
 
-            // Synlig segmenterad is-arm längs linjen axel→näve (valfri vinkel).
+            // Vänster arm ritas spegelvänd så formen pekar mot kroppen.
+            void Blit(int sx, int sy, int sxp, int syp, int w, int h)
+            {
+                if (IsLeft) gfx.DrawPartialSpriteFlippedX(SpriteId, sx, sy, sxp, syp, w, h);
+                else        gfx.DrawPartialSprite(SpriteId, sx, sy, sxp, syp, w, h);
+            }
+
+            // Segmenterad arm längs linjen axel→näve (valfri vinkel; centrerade 16×16-segment).
             float dx = px - ShoulderX, dy = py - ShoulderY;
             float dist = (float)Math.Sqrt(dx * dx + dy * dy);
             int segs = Math.Max(1, (int)(dist / 0.8f));
@@ -254,22 +259,22 @@ namespace FrostyPlatformer.Models.Objects
             {
                 float t = i / (float)segs;
                 gfx.DrawPartialSprite(SpriteId,
-                    ToPixel(ShoulderX + dx * t, ox), ToPixel(ShoulderY + dy * t, oy), 0, 0, 16, 16);
+                    ToPixel(ShoulderX + dx * t, ox) - 8, ToPixel(ShoulderY + dy * t, oy) - 8, 30, 2, 16, 16);
             }
 
-            // Axel-kapsel (sitter ihop med huvudet) + näven. Vänster arm ritas spegelvänd
-            // så formen pekar åt rätt håll (mot huvudet) i stället för åt fel håll.
-            void Blit(int dx, int dy, int sxp, int syp, int w, int h)
-            {
-                if (IsLeft) gfx.DrawPartialSpriteFlippedX(SpriteId, dx, dy, sxp, syp, w, h);
-                else        gfx.DrawPartialSprite(SpriteId, dx, dy, sxp, syp, w, h);
-            }
-            Blit(ToPixel(ShoulderX, ox), ToPixel(ShoulderY, oy), 16, 0, 16, 16);
-            int frame = Phase == GiantArmPhase.Stuck ? 1 : 0;
-            Blit(ToPixel(px, ox) - 8, ToPixel(py, oy), frame * 32, 16, 32, 32);
+            // Axel-kapsel (centrerad på axeln).
+            Blit(ToPixel(ShoulderX, ox) - 13, ToPixel(ShoulderY, oy) - 12, 2, 2, 26, 24);
 
-            // Svagpunkts-ikon på knogen — state speglar fasen (göms i vila). Gäller båda slagen
-            // (hammaren är stampbar igen).
+            // Handryggen (ledad handled): sitter strax ovanför näven och lutar mot axeln, så näven
+            // blir en tydlig fristående knopp att landa på. Sedan näven (knog-delen) vid nedslags-
+            // nivån py — dess ovansida (knogarna) är landningsytan man stampar.
+            float leanX = Math.Clamp((ShoulderX - px) * 0.3f, -1f, 1f);
+            Blit(ToPixel(px + leanX, ox) - 17, ToPixel(py, oy) - 12, 48, 2, 34, 14);
+            int fistSx = Phase == GiantArmPhase.Stuck ? 2 : 84;
+            int fistSy = Phase == GiantArmPhase.Stuck ? 28 : 2;
+            Blit(ToPixel(px, ox) - 17, ToPixel(py, oy), fistSx, fistSy, 34, 24);
+
+            // Svagpunkts-ikon på nävens ovansida (där man landar) — state speglar fasen (göms i vila).
             if (Phase != GiantArmPhase.Rest)
             {
                 int wp = Phase switch
@@ -280,7 +285,7 @@ namespace FrostyPlatformer.Models.Objects
                     _                       => 4,
                 };
                 gfx.DrawPartialSprite(SpriteId.GiantWeakPoint,
-                    ToPixel(px, ox), ToPixel(py, oy), wp * 16, 0, 16, 16);
+                    ToPixel(px, ox) - 8, ToPixel(py, oy) + 2, wp * 16, 0, 16, 16);
             }
         }
     }

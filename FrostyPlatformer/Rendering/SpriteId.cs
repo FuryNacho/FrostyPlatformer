@@ -53,8 +53,8 @@ namespace FrostyPlatformer.Rendering
         /// <summary>Svärm-kopia (slutbossens akt 2) sprite-ark.</summary>
         EnemySwarmCopy,
 
-        /// <summary>Jätten (slutbossens akt 3) — huvudets uttrycks-frames (80×64 per frame).</summary>
-        GiantHead,
+        /// <summary>Jätten (slutbossens akt 3) — kropps-arket (torso, huvud-uttryck, kärna, fötter) som komponeras av DynamicCreatureGiant.</summary>
+        GiantBody,
 
         /// <summary>Jättens arm/näve — slam-frames (48×64 per frame).</summary>
         GiantArm,

@@ -64,7 +64,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public const string SwarmCopy     = "swarm_copy";
         // Slutbossens akt 3 (jätten) byggs av flera ark — ett per kroppsdel/roll, så att de
         // senare kan bytas mot riktig pixelart oberoende av varandra.
-        public const string GiantHead      = "giant_head";       // huvudets uttrycks-frames
+        public const string GiantBody      = "giant_body";       // torso + huvud-uttryck + kärna + fötter
         public const string GiantArm       = "giant_arm";        // arm/näve slam-frames
         public const string GiantWeakPoint = "giant_weakpoint";  // svagpunktens 5 states
         public const string GiantHazard    = "giant_hazard";     // istapp/krasch/varningsmarkör
