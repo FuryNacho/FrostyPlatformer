@@ -193,26 +193,70 @@ namespace FrostyPlatformer.Models.Objects
             DrawPart(gfx, ox, oy, HeadForPose(), extraY: headBob);
         }
 
-        // Kollaps: hela den spruckna kroppen skälver allt värre och sjunker ihop, sen borta.
-        // (Den vita blixten sköts av GameplayState; en riktig smul-animation kommer i motion-passet.)
+        // Kollaps: kort skälv, sedan brister torso + huvud i 16×16-bitar som slungas utåt och
+        // faller (tunnas ut → "evaporerar"); fötterna trillar och kärnan flammar ut. Den vita
+        // blixten sköts av GameplayState.
         private void DrawCollapse(IRenderContext gfx, float ox, float oy)
         {
-            float p    = 1f - Math.Clamp(_collapseTimer / CollapseDur, 0f, 1f);   // 0 → 1
-            int   jx   = (int)Math.Round(Math.Sin(p * 60f) * (2f + p * 5f));      // växande skälv
-            int   sink = (int)Math.Round(p * p * 10f);                            // sjunker ihop
+            float p  = 1f - Math.Clamp(_collapseTimer / CollapseDur, 0f, 1f);   // 0 → 1
+            int   bx = ToPixel(px, ox), by = ToPixel(py, oy);
 
-            void Chunk(in Part pt, int extraY = 0, bool flip = false)
+            void Blit(in Part pt, int x, int y, bool flip = false)
             {
-                int x = ToPixel(px, ox) + pt.Dx + jx;
-                int y = ToPixel(py, oy) + pt.Dy + sink + extraY;
                 if (flip) gfx.DrawPartialSpriteFlippedX(SpriteId, x, y, pt.Sx, pt.Sy, pt.W, pt.H);
                 else      gfx.DrawPartialSprite(SpriteId, x, y, pt.Sx, pt.Sy, pt.W, pt.H);
             }
 
-            Chunk(Torso);
-            Chunk(Foot); Chunk(FootRight, flip: true);
-            Chunk(Core0);
-            Chunk(HeadCracked, extraY: -(int)Math.Round(p * 6f));   // huvudet tippar/lyfter när det brister
+            if (p < 0.28f)   // skälv innan bristningen
+            {
+                int jx = (int)Math.Round(Math.Sin(p * 90f) * 3f);
+                Blit(Torso,       bx + Torso.Dx + jx,       by + Torso.Dy);
+                Blit(Foot,        bx + Foot.Dx + jx,        by + Foot.Dy);
+                Blit(FootRight,   bx + FootRight.Dx + jx,   by + FootRight.Dy, flip: true);
+                Blit(Core0,       bx + Core0.Dx + jx,       by + Core0.Dy);
+                Blit(HeadCracked, bx + HeadCracked.Dx + jx, by + HeadCracked.Dy);
+                return;
+            }
+
+            float q = (p - 0.28f) / 0.72f;   // 0 → 1 under bristningen
+
+            // Kärn-flare som slocknar först.
+            if (q < 0.55f)
+            {
+                var c = CorePulse[(int)(q * 10f) % CorePulse.Length];
+                Blit(c, bx + c.Dx, by + c.Dy);
+            }
+
+            // Fötterna trillar utåt-ned.
+            int ff = (int)Math.Round(q * q * 26f);
+            Blit(Foot,      bx + Foot.Dx - (int)Math.Round(q * 6f),      by + Foot.Dy + ff);
+            Blit(FootRight, bx + FootRight.Dx + (int)Math.Round(q * 6f), by + FootRight.Dy + ff, flip: true);
+
+            // Torso + huvud smulas i 16×16-bitar.
+            Shatter(gfx, bx, by, Torso, q);
+            Shatter(gfx, bx, by, HeadCracked, q);
+        }
+
+        // Smular en del i 16×16-bitar som slungas utåt från delens mitt + faller (gravitation),
+        // och tunnas ut med q → färre bitar ju längre in i kollapsen.
+        private void Shatter(IRenderContext gfx, int bx, int by, in Part part, float q)
+        {
+            int cols = (part.W + 15) / 16, rows = (part.H + 15) / 16;
+            float cx = part.W / 2f, cy = part.H / 2f;
+            for (int gy = 0; gy < rows; gy++)
+                for (int gx = 0; gx < cols; gx++)
+                {
+                    if (((gx * 7 + gy * 13) % 11) < (int)(q * 11f)) continue;   // tunna ut
+                    int w = Math.Min(16, part.W - gx * 16);
+                    int h = Math.Min(16, part.H - gy * 16);
+                    float ux = gx * 16 + 8 - cx, uy = gy * 16 + 8 - cy;         // riktning ut från mitten
+                    int dx = (int)Math.Round(ux * q * 1.4f + Math.Sin((gx + gy) * 3.1f + q * 18f) * 2f * q);
+                    int dy = (int)Math.Round(uy * q * 0.6f + q * q * 22f);      // fall
+                    gfx.DrawPartialSprite(SpriteId,
+                        bx + part.Dx + gx * 16 + dx,
+                        by + part.Dy + gy * 16 + dy,
+                        part.Sx + gx * 16, part.Sy + gy * 16, w, h);
+                }
         }
     }
 }
