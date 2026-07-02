@@ -37,6 +37,11 @@ namespace FrostyPlatformer.Models.Objects
         private const float StuckDur     = 0.9f;   // hur länge svagpunkten är exponerad
         private const float RecoilTime   = 0.4f;   // tid att dra tillbaka
 
+        // Näv-varning: sista stunden av telegrafen blinkar näven amber ("nu kommer slaget"),
+        // sedan tillbaka till stål så fort den lämnat axeln (dropp). Cyan-stampbar är oförändrat.
+        private const float PreLaunchWarn    = 0.3f;   // hur nära slaget (sek kvar av telegrafen) blinken börjar
+        private const float PreLaunchBlinkHz = 10f;    // blink-takt för amber-varningen
+
         // Hammarslag — overhead-variant när hjälten campar på en plattform. Näven LADDAS UPP redan under
         // telegrafen (reser sig och hänger utsträckt högt över målkolumnen = själva varningen) och huggs
         // sedan snabbt RAKT NER. Trigg/val sköts av GameplayState; i övrigt stampbart som ett vanligt slag.
@@ -265,28 +270,19 @@ namespace FrostyPlatformer.Models.Objects
             // Axel-kapsel (centrerad på axeln).
             Blit(ToPixel(ShoulderX, ox) - 13, ToPixel(ShoulderY, oy) - 12, 2, 2, 26, 24);
 
-            // Handryggen (ledad handled): sitter strax ovanför näven och lutar mot axeln, så näven
-            // blir en tydlig fristående knopp att landa på. Sedan näven (knog-delen) vid nedslags-
-            // nivån py — dess ovansida (knogarna) är landningsytan man stampar.
+            // Handryggen (ledad handled) + näven färg-signalerar sitt läge — HELA näven byter färg
+            // i stället för en lösryckt ikon. Amber blinkar BARA sista stunden av telegrafen (varning
+            // "nu kommer slaget"); så fort näven lämnat axeln (dropp) visas stål igen. Cyan = stampbar.
+            bool amberWarn = Phase == GiantArmPhase.Telegraph
+                             && _timer < PreLaunchWarn
+                             && ((int)(_anim * PreLaunchBlinkHz) & 1) == 0;
+            int bhSx, fistSx;
+            if (Phase == GiantArmPhase.Stuck) { bhSx = 120; fistSx = 74; }   // cyan  — stampbar
+            else if (amberWarn)               { bhSx =  84; fistSx = 38; }   // amber — varnings-blink före slaget
+            else                              { bhSx =  48; fistSx =  2; }   // stål  — vila/dropp/retur
             float leanX = Math.Clamp((ShoulderX - px) * 0.3f, -1f, 1f);
-            Blit(ToPixel(px + leanX, ox) - 17, ToPixel(py, oy) - 12, 48, 2, 34, 14);
-            int fistSx = Phase == GiantArmPhase.Stuck ? 2 : 84;
-            int fistSy = Phase == GiantArmPhase.Stuck ? 28 : 2;
-            Blit(ToPixel(px, ox) - 17, ToPixel(py, oy), fistSx, fistSy, 34, 24);
-
-            // Svagpunkts-ikon på nävens ovansida (där man landar) — state speglar fasen (göms i vila).
-            if (Phase != GiantArmPhase.Rest)
-            {
-                int wp = Phase switch
-                {
-                    GiantArmPhase.Telegraph => 1,
-                    GiantArmPhase.Dropping  => 1,
-                    GiantArmPhase.Stuck     => (((int)(_anim * 8f)) & 1) == 0 ? 2 : 3,
-                    _                       => 4,
-                };
-                gfx.DrawPartialSprite(SpriteId.GiantWeakPoint,
-                    ToPixel(px, ox) - 8, ToPixel(py, oy) + 2, wp * 16, 0, 16, 16);
-            }
+            Blit(ToPixel(px + leanX, ox) - 17, ToPixel(py, oy) - 12, bhSx, 2, 34, 14);
+            Blit(ToPixel(px, ox) - 17, ToPixel(py, oy), fistSx, 28, 34, 24);
         }
     }
 }
