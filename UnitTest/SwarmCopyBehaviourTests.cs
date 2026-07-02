@@ -194,4 +194,28 @@ namespace UnitTest
             Assert.AreEqual(expectedHi, hi, "max-antal");
         }
     }
+
+    /// <summary>
+    /// Tester för akt 3:s näv-liggtid (Stuck): kortare ju mindre hälsa bossen har kvar — tre steg
+    /// (översta tredjedelen 3s, mitten 1.5s, sista 1s). Ren funktion av hälsa/maxhälsa → deterministisk.
+    /// </summary>
+    [TestClass]
+    public class StuckSecondsForHealthTests
+    {
+        // giantHealth = 40. Trösklar på KVARVARANDE hälsa: > 2/3 → 3s, > 1/3 → 1.5s, annars 1s.
+        [TestMethod]
+        [DataRow(40, 3.0f)]   // 3/3 kvar
+        [DataRow(32, 3.0f)]   // 80% kvar
+        [DataRow(27, 3.0f)]   // strax över 2/3 (0.675)
+        [DataRow(26, 1.5f)]   // strax under 2/3 (0.65)
+        [DataRow(24, 1.5f)]   // 60% kvar
+        [DataRow(16, 1.5f)]   // 40% kvar
+        [DataRow(14, 1.5f)]   // strax över 1/3 (0.35)
+        [DataRow(13, 1.0f)]   // strax under 1/3 (0.325)
+        [DataRow(8,  1.0f)]   // sista tredjedelen
+        public void StuckSeconds_ShortensWithLostHealth(int bossHealth, float expected)
+        {
+            Assert.AreEqual(expected, GameplayState.StuckSecondsForHealth(bossHealth, bossMaxHealth: 40), 0.001f);
+        }
+    }
 }

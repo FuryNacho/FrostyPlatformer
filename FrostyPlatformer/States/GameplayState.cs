@@ -913,6 +913,19 @@ namespace FrostyPlatformer.States
             return (1, 2);
         }
 
+        /// <summary>
+        /// Hur länge näven ligger planterad (Stuck, stampbar) i sekunder, som funktion av bossens
+        /// KVARVARANDE hälsa — tre steg som ökar pressen mot slutet: översta tredjedelen 3s, mitten
+        /// 1.5s, sista tredjedelen 1s. Ren funktion (testbar utan hårdvara).
+        /// </summary>
+        internal static float StuckSecondsForHealth(int bossHealth, int bossMaxHealth)
+        {
+            float remaining = bossMaxHealth > 0 ? (float)bossHealth / bossMaxHealth : 1f;
+            if (remaining > 2f / 3f) return 3.0f;
+            if (remaining > 1f / 3f) return 1.5f;
+            return 1.0f;
+        }
+
         // Slumpar antalet istappar för ETT nedslag givet aktuell jätte-hälsa (se SlamBurstRange).
         private int SlamBurstCount(int bossHealth, int bossMaxHealth)
         {
@@ -1297,6 +1310,7 @@ namespace FrostyPlatformer.States
                     bool onPlatform = heroSurface < floorTop;
                     bool hammer     = onPlatform && _hadPrevSlam && heroSurface == _lastSlamSurface;
 
+                    next.StuckSeconds = StuckSecondsForHealth(context.BossPhase.BossHealth, context.BossPhase.BossMaxHealth);
                     next.TriggerSlam(hammer);
                     _giantSlamLeftNext = !_giantSlamLeftNext;
                     _giantSlamTimer = SlamInterval;

@@ -62,6 +62,10 @@ namespace FrostyPlatformer.Models.Objects
         /// <summary>Arenan — för att hitta ytan (golv/plattform) under spelaren vid sikte.</summary>
         public IMapData? Arena { get; set; }
 
+        /// <summary>Hur länge näven ligger planterad (Stuck, stampbar) i sekunder. Sätts per slag av
+        /// GameplayState efter bossens hälsa (ökar pressen mot slutet). Default = <see cref="StuckDur"/>.</summary>
+        public float StuckSeconds { get; set; } = StuckDur;
+
         /// <summary>Sant när armen är mitt i ett slag (inte i vila).</summary>
         public bool IsSlamming => Phase != GiantArmPhase.Rest;
 
@@ -168,7 +172,7 @@ namespace FrostyPlatformer.Models.Objects
                         // sig bara i leveransen (overhead-båge) + extra varning, inte i belöningen.
                         _t = 1f;
                         Phase = GiantArmPhase.Stuck;
-                        _timer = StuckDur;
+                        _timer = StuckSeconds;
                         _landedSignal = true;   // näven slog i marken → trigga extra is-skur (konsumeras en gång)
                         if (Giant != null) Giant.Pose = GiantPose.Roar;
                     }
@@ -178,7 +182,7 @@ namespace FrostyPlatformer.Models.Objects
                     SolidVsDynamic = true; IsAttackable = true;     // svagpunkten exponerad → stampbar
                     _t = 1f;
                     _timer -= fElapsedTime;
-                    if (Giant != null && _timer < StuckDur - 0.4f) Giant.Pose = GiantPose.Idle;
+                    if (Giant != null && _timer < StuckSeconds - 0.4f) Giant.Pose = GiantPose.Idle;
                     if (_timer <= 0f) Phase = GiantArmPhase.Recoiling;
                     break;
 
