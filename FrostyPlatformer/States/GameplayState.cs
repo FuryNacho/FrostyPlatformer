@@ -387,6 +387,16 @@ namespace FrostyPlatformer.States
         {
             var hero = (DynamicCreatureHero)context.Player!;
 
+            // Akt 4: när hjälten kolliderat med spegeln (vinst triggad) fryses STYRNINGEN — man ska
+            // inte kunna dra sig ur glitchen. Bara horisontell styrning nollas; vy behålls så hjälten
+            // faller naturligt till marken om kontakten skedde i luften. Sekvensen spelar klart till slutet.
+            if (context.BossPhase?.Outcome == BossOutcome.PlayerWon &&
+                context.BossPhase.CurrentAct is BossAct.Acceptance or BossAct.Resolved)
+            {
+                hero.vx = 0f;
+                return;
+            }
+
             _bPower = _services.Input.IsRunDown || _services.Input.IsSelectDown;
             // Akt 4 (Spegeln): b-power avstängd — lugnt, avsiktligt tempo.
             if (context.BossPhase?.CurrentAct == BossAct.Acceptance) _bPower = false;
@@ -1452,13 +1462,14 @@ namespace FrostyPlatformer.States
             {
                 if (hero.py < scarlet.py - 0.3f && hero.vy > 0f)
                 {
-                    // Stamp = fel väg → det är HJÄLTEN som tar skada (din spegel slår inte tillbaka).
+                    // Stamp uppifrån = fel väg (den gamla instinkten) → HJÄLTEN tar skada och studsar.
                     DamageHero(scarlet, (Creature)hero);
                     hero.vy = -5.5f;
                 }
-                else if (hero.Grounded && scarlet.Grounded)
+                else
                 {
-                    // Båda på marken, gå in i varandra → sammansmältning (vinst).
+                    // All annan kontakt — gå IN i eller hoppa IN i henne, även i luften — räknas som
+                    // acceptans → sammansmältning (vinst). Hjälten fryses sedan och faller till marken.
                     bp.ApproachToward(1f);
                 }
             }
