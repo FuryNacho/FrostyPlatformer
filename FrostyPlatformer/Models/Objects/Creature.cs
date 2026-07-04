@@ -64,6 +64,11 @@ namespace FrostyPlatformer.Models.Objects
                     StateTick = 0.0f;
                     Controllable = true;
                     IsAttackable = true;
+                    // KnockBack() nollar SolidVsDynamic; återställ den här tillsammans med de andra
+                    // knockback-flaggorna. Utan detta blev knuffade fiender permanenta "spöken" som
+                    // hjälten går rakt igenom (märkbart i akt 2-svärmen). Health > 0 → döda förblir
+                    // icke-solida (deras egen Behaviour/borttagning styr då).
+                    SolidVsDynamic = Health > 0;
                 }
             }
             else
