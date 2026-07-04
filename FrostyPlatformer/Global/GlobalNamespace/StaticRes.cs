@@ -100,6 +100,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public const string PoffSmall       = "poff_small.wav";      // svärm-kopia poffar (akt 2)
         public const string GlitchDissolve  = "glitch_dissolve.wav"; // spegel-Scarlets glitch-exit (akt 1→2)
         public const string GiantCollapse   = "giant_collapse.wav";  // jätten rasar (akt 3→4)
+        public const string GiantArrive     = "giant_arrive.wav";    // jätten materialiseras/portal (akt 2→3)
 
         public const string BGSoundWorld    = "uno.wav";
         public const string BGSoundGame     = "theone.wav";

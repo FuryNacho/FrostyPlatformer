@@ -25,6 +25,9 @@ Skiva 2:
   glitch_dissolve.wav— spegel-Scarlets glitch-exit (akt 1→2): digital upplösning ~0.7s
   giant_collapse.wav — jätten rasar (akt 3→4): tungt mullrande kollaps
 
+Skiva 3:
+  giant_arrive.wav   — jätten materialiseras (akt 2→3): portal-laddning → snäpp-in-burst
+
 OBS: Dessa är syntetiserade — avsiktligt enkla och genre-passande. Byt gärna ut mot
 riktiga inspelningar senare; filnamnen (SoundRef) är kontraktet mot koden.
 """
@@ -232,6 +235,39 @@ def build_giant_collapse():
     return out
 
 
+def build_giant_arrive():
+    """Jätten materialiseras (akt 2→3): en portal laddar upp (stigande, ringmodulerad alien-whir
+    som sväller) → 'snäpp-in'-burst vid ~0.8s (ljus crack + nedåt-zap + låg boom) → glitch-gnistor
+    klingar ut. Total ~1.3s = GiantMaterialization (Charge 0.8 + Fade 0.5), så ljud och animation
+    ligger i takt: laddning under bollens uppbyggnad, burst när jätten snäpper in, gnistor i svansen."""
+    charge, total = 0.8, 1.3
+    n, snap_n = dur(total), dur(charge)
+    out = []
+    for i in range(n):
+        t = i / RATE
+        if i < snap_n:
+            x = i / snap_n                                   # 0..1 genom laddningen
+            f = lerp(90, 520, x * x)                         # accelererande pitch-stigning
+            warble = 0.75 + 0.25 * sine(7 + 12 * x, t)       # pulserande energi (AM)
+            tone = sine(f, t) * 0.6 + square(f * 1.006, t, 0.5) * 0.22
+            ring = sine(f * 2.01, t)                         # ringmod → metallisk/alien
+            whir = tone * (0.55 + 0.45 * ring) * warble
+            shimmer = noise(t) * 0.18 * x
+            sub = sine(lerp(38, 66, x), t) * 0.3 * x
+            s = (whir * 0.7 + shimmer + sub) * (x * x)       # sväller in mot snäppet
+        else:
+            u = t - charge                                   # 0..0.5 i reveal
+            crack = noise(t) * 0.8 * exp_decay(u, 0.045)     # ljus transient (jätten snäpper in)
+            zap   = square(lerp(900, 120, min(1.0, u / 0.22)), t, 0.5) * 0.42 * exp_decay(u, 0.11)
+            boom  = sine(lerp(125, 44, min(1.0, u * 3.2)), t) * 0.75 * exp_decay(u, 0.19)   # tyngd
+            gate  = 1.0 if (int(t * 90) % 2 == 0) else 0.28  # stutter-gate → digital glitch
+            fq    = int(lerp(1500, 380, min(1.0, u / 0.5)) / 60) * 60 + 60   # kvantiserad pitch
+            spark = square(fq, t, 0.5) * 0.22 * exp_decay(u, 0.22) * gate
+            s = crack + zap + boom + spark
+        out.append(s * lin_fade(i, n, 0.006, 0.05))
+    return out
+
+
 # ── Huvud ────────────────────────────────────────────────────────────────────
 
 def main():
@@ -266,6 +302,10 @@ def main():
     write_wav("poff_small.wav",      build_poff_small(),      peak=0.85)
     write_wav("glitch_dissolve.wav", build_glitch_dissolve(), peak=0.85)
     write_wav("giant_collapse.wav",  build_giant_collapse(),  peak=1.0)
+
+    # Skiva 3 — jätte-ankomst (akt 2→3): portal-laddning → snäpp-in-burst → glitch-gnistor (~1.3s
+    # = materialiseringen). Läggs SIST så RNG-strömmen för ovanstående ljud är oförändrad.
+    write_wav("giant_arrive.wav",    build_giant_arrive(),    peak=0.95)
 
     print("Klart.")
 

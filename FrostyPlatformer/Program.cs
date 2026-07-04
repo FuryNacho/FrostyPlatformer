@@ -174,7 +174,7 @@ namespace FrostyPlatformer
             DevConfig.UnlockAllStages = true;  // alla banor öppna → gå direkt till slutbossen
             DevConfig.FullEnergy = true;
             // Hoppa direkt in i en boss-akt för speltest (BossAct.Mirror = hela striden från start).
-            DevConfig.BossStartAct = BossAct.Giant;
+            DevConfig.BossStartAct = BossAct.Swarm;
 
             try
             {
@@ -497,6 +497,7 @@ namespace FrostyPlatformer
             Reg(SoundRef.PoffSmall,      volume: 0.3f);
             Reg(SoundRef.GlitchDissolve, volume: 0.35f);
             Reg(SoundRef.GiantCollapse,  volume: 0.5f);
+            Reg(SoundRef.GiantArrive,    volume: 0.45f);   // jätte-materialisering (akt 2→3)
             Reg(SoundRef.BGSoundWorld,      isLooped: true);
             Reg(SoundRef.BGSoundGame,       isLooped: true);
             Reg(SoundRef.BGSoundFinalStage, isLooped: true);

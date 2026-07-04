@@ -1489,7 +1489,12 @@ namespace FrostyPlatformer.States
                 if (SwarmExitInProgress) return;
 
                 // Materialisering: bygg upp energibollen FÖRST; jätten spawnar när bollen laddat klart.
-                _giantMaterialize ??= new GiantMaterialization();
+                // Portal-/materialiseringsljudet spelas exakt en gång, när effekten föds (~1.3s, i takt med den).
+                if (_giantMaterialize == null)
+                {
+                    _giantMaterialize = new GiantMaterialization();
+                    _services.Audio.Play(Global.GlobalNamespace.SoundRef.GiantArrive);
+                }
                 if (!_giantMaterialize.SpawnReady) return;
 
                 var map = context.CurrentLevel!;
