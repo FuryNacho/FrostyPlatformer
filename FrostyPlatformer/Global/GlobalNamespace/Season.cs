@@ -34,7 +34,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         /// <summary>Användarbyggda banor (slot1–slot7): mörk nattbakgrund med snöstämning.</summary>
         Custom,
 
-        /// <summary>Slutboss-arenan (mapten): mörk natthimmel med kalla isspira-siluetter.</summary>
+        /// <summary>Slutboss-arenan (mapten): mörk natthimmel med snöklädda fjäll-siluetter.</summary>
         Boss,
     }
 

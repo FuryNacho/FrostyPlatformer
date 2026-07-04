@@ -89,11 +89,14 @@ namespace FrostyPlatformer.States
             else
             {
                 _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundGame);
-                // Boss-musiken dör medvetet i akt 4 (Acceptans/Resolved) — starta INTE om den vid
-                // pause→resume där; annars återupplivas den tystnad finalen bygger på.
+                // Bossong (bossmusiken) gäller akt 1–3. I akt 4 (Acceptans/Resolved) tar det lugna
+                // acceptans-temat vid — starta INTE om bossong där. Vid pause→resume i akt 4
+                // (åter)startar vi istället acceptans-temat så tomrummet förblir fyllt.
                 bool act4 = context.BossPhase?.CurrentAct is BossAct.Acceptance or BossAct.Resolved;
                 if (!act4 && !_services.Audio.IsPlaying(Global.GlobalNamespace.SoundRef.BGSoundFinalStage))
                     _services.Audio.Play(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
+                else if (act4 && !_services.Audio.IsPlaying(Global.GlobalNamespace.SoundRef.BGSoundAcceptance))
+                    _services.Audio.Play(Global.GlobalNamespace.SoundRef.BGSoundAcceptance);
             }
 
             context.Player!.vx = 0;
@@ -313,8 +316,8 @@ namespace FrostyPlatformer.States
             // Akt 4: acceptans — gå-mot-henne-vinsten.
             ManageAcceptance(context, elapsed);
 
-            // Ljud: markera akt-skiften med en stinger (och låt musiken dö i akt 4).
-            ManageBossAudio(context);
+            // Ljud: markera akt-skiften med stingers och tona in akt 4-temat (fördröjt).
+            ManageBossAudio(context, elapsed);
 
             // Uppdatera mjuk kameraposition mot spelarens slutposition för denna tick.
             if (context.Player != null && context.CurrentLevel != null)
@@ -375,7 +378,10 @@ namespace FrostyPlatformer.States
                 _services.Dialog.Render(_rc);
         }
 
-        public void Exit(GameContext context) { }
+        // Stoppa akt 4-temat vid varje utgång ur boss-arenan (seger→slutskärm, död→game over,
+        // avhopp, preview). Loopen får aldrig läcka in i nästa skärm. No-op om den inte spelas.
+        public void Exit(GameContext context)
+            => _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundAcceptance);
 
         // ── Slut-övergång (akt 4 → slutskärm) ─────────────────────────────────────
         // Rendering av BossFinaleTransition: en vit iris-in som växer bakom hjälten plus bossens
@@ -1058,6 +1064,7 @@ namespace FrostyPlatformer.States
 
         // Ljud: bossaktens värde förra framen — för att upptäcka akt-skiften och spela övergångs-stinger.
         private BossAct _prevBossAct;
+        private float   _act4MusicDelay;   // >0 = räknar ner till att akt 4-temat tonar in (armeras vid akt 3→4)
 
         // Akt 2 — svärmen. Skada på svärm-baren per dödad kopia (swarmHealth 24 / 4 = 6 kopior
         // att stampa). SwarmTargetAlive = hur många kopior som svärmar samtidigt; nya spawnar
@@ -1655,10 +1662,21 @@ namespace FrostyPlatformer.States
         /// akt-logiken kört; akten flippas i BossPhaseController vid det dräpande stampet, så vi
         /// upptäcker skiftet genom att jämföra mot förra framens akt. Distinkta stingers per övergång.
         /// </summary>
-        private void ManageBossAudio(GameContext context)
+        private void ManageBossAudio(GameContext context, float elapsed)
         {
             var bp = context.BossPhase;
-            if (bp == null || bp.CurrentAct == _prevBossAct) return;
+            if (bp == null) return;
+
+            // Fördröjd insättning av akt 4-temat: låt tystnaden efter jätten andas innan det tonar in.
+            if (_act4MusicDelay > 0f)
+            {
+                _act4MusicDelay -= elapsed;
+                if (_act4MusicDelay <= 0f &&
+                    !_services.Audio.IsPlaying(Global.GlobalNamespace.SoundRef.BGSoundAcceptance))
+                    _services.Audio.Play(Global.GlobalNamespace.SoundRef.BGSoundAcceptance);
+            }
+
+            if (bp.CurrentAct == _prevBossAct) return;
 
             _prevBossAct = bp.CurrentAct;
             switch (bp.CurrentAct)
@@ -1671,9 +1689,10 @@ namespace FrostyPlatformer.States
                 case BossAct.Giant:                                   // akt 2 → 3
                     _services.Audio.Play(Global.GlobalNamespace.SoundRef.ActSting2);
                     break;
-                case BossAct.Acceptance:                              // akt 3 → 4: sting + musiken dör
+                case BossAct.Acceptance:                              // akt 3 → 4: sting → bossong dör → temat armeras (tonar in efter Act4MusicDelaySeconds)
                     _services.Audio.Play(Global.GlobalNamespace.SoundRef.ActSting3);
                     _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
+                    _act4MusicDelay = GameConstants.Act4MusicDelaySeconds;
                     break;
             }
         }

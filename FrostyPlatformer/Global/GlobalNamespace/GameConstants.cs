@@ -89,6 +89,12 @@ namespace FrostyPlatformer.Global
         /// <summary>Bas-volym för level editor-musiken (lågmäld bakgrund mot spelmusikens 1.0).</summary>
         public const float EditorMusicVolume = 0.05f;
 
+        /// <summary>Volym för akt 4-temat (Acceptans) — medvetet lågmält, en bit under övriga BG-spårs 1.0.</summary>
+        public const float AcceptanceMusicVolume = 0.4f;
+
+        /// <summary>Fördröjning (sek) innan akt 4-temat tonar in efter att jätten fallit — låt tystnaden andas.</summary>
+        public const float Act4MusicDelaySeconds = 3.5f;
+
 
         // ─────────────────────────────────────────────
         // Spellogik och regler
