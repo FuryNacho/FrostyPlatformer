@@ -94,18 +94,19 @@ namespace FrostyPlatformer.Core
 
         public string CreateIfNotExists(string FilePath, string FileName, string FileExtension, bool CreateFile = true)
         {
-            string PathLocation = Root + FilePath;
+            string PathLocation = NormalizeSeparators(Root + FilePath);
+            string FullPath     = NormalizeSeparators(PathLocation + FileName + FileExtension);
 
             if (!string.IsNullOrEmpty(FilePath) && !System.IO.Directory.Exists(PathLocation))
             {
                 var info = System.IO.Directory.CreateDirectory(PathLocation);
             }
 
-            if (!string.IsNullOrEmpty(FilePath) && !string.IsNullOrEmpty(FileName) && !string.IsNullOrEmpty(FileExtension) && !File.Exists(PathLocation + FileName + FileExtension))
+            if (!string.IsNullOrEmpty(FilePath) && !string.IsNullOrEmpty(FileName) && !string.IsNullOrEmpty(FileExtension) && !File.Exists(FullPath))
             {
                 if (CreateFile)
                 {
-                    using (StreamWriter writer = new StreamWriter(PathLocation + FileName + FileExtension)) { };
+                    using (StreamWriter writer = new StreamWriter(FullPath)) { };
                 }
                 else
                 {
@@ -113,8 +114,30 @@ namespace FrostyPlatformer.Core
                 }
             }
 
-            return PathLocation + FileName + FileExtension;
+            return FullPath;
         }
+
+        /// <summary>
+        /// Normaliserar sökvägsseparatorer till plattformens egen — '\' på Windows,
+        /// '/' på Linux (t.ex. Raspberry Pi).
+        /// </summary>
+        /// <remarks>
+        /// MÖNSTER: Normaliserings-boundary (Anti-Corruption Layer för filsystemet).
+        ///
+        /// MOTIVERING:
+        /// Kodbasens sökvägskonstanter (PathSprites, DataFile.Settings m.fl.) är skrivna
+        /// med Windows-backslash. På Linux är '\' ett giltigt filnamnstecken — INTE en
+        /// mappavgränsare — så utan detta blir "root/\Resources\hero.png" ETT enda knasigt
+        /// filnamn och all asset-laddning brister. Genom att normalisera vid fil-I/O-gränsen
+        /// (denna klass) behöver resten av koden aldrig känna till plattformen. På Windows
+        /// är resultatet oförändrat (backslash → backslash), så beteendet där är intakt.
+        ///
+        /// ANVÄNDNING:
+        /// Anropas i CreateIfNotExists på de sammansatta sökvägarna innan de rör disken.
+        /// </remarks>
+        internal static string NormalizeSeparators(string path)
+            => path.Replace('\\', System.IO.Path.DirectorySeparatorChar)
+                   .Replace('/',  System.IO.Path.DirectorySeparatorChar);
 
 
     }
