@@ -207,8 +207,63 @@ for i in range(N):
     b = max(-1.0, min(1.0, R[i]*scale))
     frames += struct.pack("<hh", int(a*32767), int(b*32767))
 
+# ── Intro-upptakt (acceptance_intro.wav) ─────────────────────────────────────
+# En varm Am-swell som byggs upp ur tystnaden upp till acceptance-nivån — en upptakt
+# innan temat. Spelas EN gång (ej del av loopen). Samma stråk-klang, ackord (Am7-
+# öppningen), reverb och samma `scale` som acceptance -> sömlös övergång i tonart,
+# klang och volym: upptaktens pad-release korsar in i temat som startar mitt i svansen.
+INTRO_OUT = os.path.join(SCRIPT_DIR, "..", "FrostyPlatformer",
+                         "Resources", "Assets", "Sound", "acceptance_intro.wav")
+INTRO_DUR = 5.5
+
+def _smooth(x):
+    return x * x * (3 - 2 * x)
+
+def _place(dl, dr, sl, sr, off, g):
+    for j in range(len(sl)):
+        k = off + j
+        if 0 <= k < len(dl):
+            dl[k] += sl[j] * g
+            dr[k] += sr[j] * g
+
+def _reverb_lin(buf, taps):          # icke-wrappande reverb (upptakten loopar inte)
+    dry = buf[:]; nn = len(buf)
+    for d, g in taps:
+        dd = int(d * SR)
+        for i in range(dd, nn):
+            buf[i] += g * dry[i - dd]
+
+def build_intro():
+    ni = int(INTRO_DUR * SR)
+    li = [0.0] * ni; ri = [0.0] * ni
+    # Am7 byggs upp ton för ton (samma ackord + nivåer som acceptance-öppningen).
+    for tone, start, g in [("A3", 0.0, 0.13), ("E4", 1.4, 0.09),
+                           ("C4", 2.8, 0.09), ("G4", 3.9, 0.09)]:
+        pl, pr = pad(freq(tone), INTRO_DUR - start)
+        _place(li, ri, pl, pr, int(start * SR), g)
+    b = bass(freq("A2"), INTRO_DUR)
+    _place(li, ri, b, b, 0, 0.5)
+    # Global crescendo ur tystnaden: 0 -> full vid ~4.5s. Pad-releasen tonar sedan ut
+    # mot slutet och korsar in i acceptance som startar vid Act4MusicDelaySeconds (5.0s).
+    for i in range(ni):
+        c = _smooth(min(1.0, (i / SR) / 4.5))
+        li[i] *= c; ri[i] *= c
+    return li, ri
+
+Li, Ri = build_intro()
+_reverb_lin(Li, taps_l); _reverb_lin(Ri, taps_r)
+intro_frames = bytearray()
+for i in range(len(Li)):
+    a = max(-1.0, min(1.0, Li[i] * scale))       # SAMMA scale som acceptance -> matchad nivå
+    b = max(-1.0, min(1.0, Ri[i] * scale))
+    intro_frames += struct.pack("<hh", int(a*32767), int(b*32767))
+
 if __name__ == "__main__":
     with wave.open(OUT, "w") as w:
         w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
         w.writeframes(bytes(frames))
-    print("  [ok] acceptance.wav  %.1fs stereo -> %s" % (N/SR, os.path.normpath(OUT)))
+    print("  [ok] acceptance.wav        %.1fs stereo -> %s" % (N/SR, os.path.normpath(OUT)))
+    with wave.open(INTRO_OUT, "w") as w:
+        w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
+        w.writeframes(bytes(intro_frames))
+    print("  [ok] acceptance_intro.wav  %.1fs stereo -> %s" % (len(Li)/SR, os.path.normpath(INTRO_OUT)))

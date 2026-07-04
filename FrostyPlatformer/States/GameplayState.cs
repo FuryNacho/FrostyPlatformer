@@ -378,10 +378,13 @@ namespace FrostyPlatformer.States
                 _services.Dialog.Render(_rc);
         }
 
-        // Stoppa akt 4-temat vid varje utgång ur boss-arenan (seger→slutskärm, död→game over,
-        // avhopp, preview). Loopen får aldrig läcka in i nästa skärm. No-op om den inte spelas.
+        // Stoppa akt 4-ljuden (upptakt + tema) vid varje utgång ur boss-arenan (seger→slutskärm,
+        // död→game over, avhopp, preview). Får aldrig läcka in i nästa skärm. No-op om de inte spelas.
         public void Exit(GameContext context)
-            => _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundAcceptance);
+        {
+            _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundAcceptanceIntro);
+            _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundAcceptance);
+        }
 
         // ── Slut-övergång (akt 4 → slutskärm) ─────────────────────────────────────
         // Rendering av BossFinaleTransition: en vit iris-in som växer bakom hjälten plus bossens
@@ -1694,9 +1697,10 @@ namespace FrostyPlatformer.States
                 case BossAct.Giant:                                   // akt 2 → 3
                     _services.Audio.Play(Global.GlobalNamespace.SoundRef.ActSting2);
                     break;
-                case BossAct.Acceptance:                              // akt 3 → 4: sting → bossong dör → temat armeras (tonar in efter Act4MusicDelaySeconds)
+                case BossAct.Acceptance:                              // akt 3 → 4: sting → bossong dör → upptakt sväller ur tystnaden → temat loopar efter Act4MusicDelaySeconds
                     _services.Audio.Play(Global.GlobalNamespace.SoundRef.ActSting3);
                     _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
+                    _services.Audio.Play(Global.GlobalNamespace.SoundRef.BGSoundAcceptanceIntro);   // build-up (en gång, ej loop)
                     _act4MusicDelay = GameConstants.Act4MusicDelaySeconds;
                     break;
             }

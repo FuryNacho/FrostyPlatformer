@@ -92,8 +92,9 @@ namespace FrostyPlatformer.Global
         /// <summary>Volym för akt 4-temat (Acceptans) — medvetet lågmält, en bit under övriga BG-spårs 1.0.</summary>
         public const float AcceptanceMusicVolume = 0.4f;
 
-        /// <summary>Fördröjning (sek) innan akt 4-temat tonar in efter att jätten fallit — låt tystnaden andas.</summary>
-        public const float Act4MusicDelaySeconds = 3.5f;
+        /// <summary>Tid (sek) från akt 4-start tills acceptance-temat börjar loopa. Fylls av
+        /// intro-upptakten (acceptance_intro) som sväller ur tystnaden upp till temats nivå.</summary>
+        public const float Act4MusicDelaySeconds = 5f;
 
 
         // ─────────────────────────────────────────────

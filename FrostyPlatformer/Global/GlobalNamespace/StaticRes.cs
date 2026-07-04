@@ -106,6 +106,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public const string BGSoundGame     = "theone.wav";
         public const string BGSoundFinalStage = "bossong.wav";
         public const string BGSoundAcceptance = "acceptance.wav"; // akt 4 (Acceptans): lugnt ambient C-dur-tema — parallelldur till bossong
+        public const string BGSoundAcceptanceIntro = "acceptance_intro.wav"; // akt 4: kort build-up-upptakt ur tystnaden (spelas en gång, ej loop)
         public const string BGSoundEnd      = "theend.wav";
         public const string BGNearPerfectEnd = "finalend.wav";
         public const string BGPerfectEnd    = "Caveman.wav";

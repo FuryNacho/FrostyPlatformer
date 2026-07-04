@@ -174,7 +174,7 @@ namespace FrostyPlatformer
             DevConfig.UnlockAllStages = true;  // alla banor öppna → gå direkt till slutbossen
             DevConfig.FullEnergy = true;
             // Hoppa direkt in i en boss-akt för speltest (BossAct.Mirror = hela striden från start).
-            DevConfig.BossStartAct = BossAct.Swarm;
+            DevConfig.BossStartAct = BossAct.Giant;
 
             try
             {
@@ -502,6 +502,7 @@ namespace FrostyPlatformer
             Reg(SoundRef.BGSoundGame,       isLooped: true);
             Reg(SoundRef.BGSoundFinalStage, isLooped: true);
             Reg(SoundRef.BGSoundAcceptance, isLooped: true, volume: GameConstants.AcceptanceMusicVolume);  // akt 4-tema, lågmält
+            Reg(SoundRef.BGSoundAcceptanceIntro, isLooped: false, volume: GameConstants.AcceptanceMusicVolume);  // akt 4-upptakt (en gång)
             Reg(SoundRef.BGSoundEnd,        isLooped: true);
             Reg(SoundRef.BGNearPerfectEnd,  isLooped: true);
             Reg(SoundRef.BGPerfectEnd,      isLooped: true);
