@@ -346,12 +346,21 @@ namespace FrostyPlatformer.States
                 if (_finale != null)
                     DrawFinaleCircle(cam, context);
 
+                // Akt 3: jätte-materialiseringens energiboll ritas BAKOM objekten → jätten framträder
+                // ur glöden (och bollen kollapsar bakom henne).
+                if (_giantMaterialize != null)
+                    DrawGiantMaterializeGlow(cam, context);
+
                 foreach (var obj in context.ActiveObjects)
                     obj.DrawSelf(_rc, cam.OffsetX, cam.OffsetY);
 
                 // Bossens pixel-explosion ritas ovanpå allt — glitchen blir en liten poff.
                 if (_finale != null)
                     DrawFinalePoff(cam, context);
+
+                // Jätte-materialiseringens glitch-gnistor flyger ovanpå allt vid framträdandet.
+                if (_giantMaterialize != null)
+                    DrawGiantMaterializeSparks(cam, context);
             }
 
             // Dölj HUD:en under slut-övergången (ren, filmisk utblekning).
@@ -382,38 +391,43 @@ namespace FrostyPlatformer.States
             float growth = _finale!.CircleGrowth01;
             if (growth <= 0f || context.Player == null) return;
 
-            int w = context.ScreenWidth;
-            int h = context.ScreenHeight;
             int cx = ScreenPixel(context.Player.px + 0.5f, cam.OffsetX);   // centrera på kroppen
             int cy = ScreenPixel(context.Player.py + 0.5f, cam.OffsetY);
 
             // Maxradie = avstånd till hörnet längst bort → cirkeln täcker garanterat hela skärmen.
-            int maxR = MaxCornerDistance(cx, cy, w, h);
-            int r = (int)(growth * maxR);
-            if (r <= 0) return;
+            int maxR = MaxCornerDistance(cx, cy, context.ScreenWidth, context.ScreenHeight);
+            FillCircle(cx, cy, (int)(growth * maxR), RenderColor.White, FinaleEdgeBand);
+        }
 
-            var white = RenderColor.White;
+        /// <summary>
+        /// Ritar en fylld cirkel via horisontella scanlines (FillRect per rad). Om
+        /// <paramref name="ditherBand"/> &gt; 0 ditheras de yttersta pixlarna (avtagande sannolikhet
+        /// utåt) → en brusig, "ätande" kant. Delas av slut-övergången och jätte-materialiseringen.
+        /// </summary>
+        private void FillCircle(int cx, int cy, int r, RenderColor color, int ditherBand)
+        {
+            if (r <= 0) return;
+            int w = _rc.ScreenWidth;
+            int h = _rc.ScreenHeight;
             int rSq = r * r;
             for (int y = Math.Max(0, cy - r); y <= Math.Min(h - 1, cy + r); y++)
             {
                 int dy = y - cy;
                 int half = (int)Math.Sqrt(rSq - dy * dy);
 
-                // Solid kärna upp till en bit innanför kanten; ytterbandet ditheras (brusig kant).
-                int solid = Math.Max(0, half - FinaleEdgeBand);
+                int solid = ditherBand > 0 ? Math.Max(0, half - ditherBand) : half;
                 int left  = Math.Max(0, cx - solid);
                 int right = Math.Min(w - 1, cx + solid);
                 if (right >= left)
-                    _rc.FillRect(left, y, right - left + 1, 1, white);
+                    _rc.FillRect(left, y, right - left + 1, 1, color);
 
-                // Dither-band på båda sidor — sannolikheten avtar utåt → mjuk, flimrande kant.
-                for (int e = solid + 1; e <= half; e++)
+                for (int e = solid + 1; e <= half && ditherBand > 0; e++)
                 {
-                    float pEdge = 1f - (float)(e - solid) / (FinaleEdgeBand + 1);
+                    float pEdge = 1f - (float)(e - solid) / (ditherBand + 1);
                     int rx = cx + e;
-                    if (rx >= 0 && rx < w && _rng.NextDouble() < pEdge) _rc.DrawPixel(rx, y, white);
+                    if (rx >= 0 && rx < w && _rng.NextDouble() < pEdge) _rc.DrawPixel(rx, y, color);
                     int lx = cx - e;
-                    if (lx >= 0 && lx < w && _rng.NextDouble() < pEdge) _rc.DrawPixel(lx, y, white);
+                    if (lx >= 0 && lx < w && _rng.NextDouble() < pEdge) _rc.DrawPixel(lx, y, color);
                 }
             }
         }
@@ -460,6 +474,76 @@ namespace FrostyPlatformer.States
             int dxMax = Math.Max(cx, w - 1 - cx);
             int dyMax = Math.Max(cy, h - 1 - cy);
             return (int)Math.Ceiling(Math.Sqrt((double)dxMax * dxMax + dyMax * dyMax));
+        }
+
+        // ── Akt 3: jätte-materialisering ──────────────────────────────────────────
+        // Rendering av GiantMaterialization: en energiboll i jättens isblå/cyan-palett som byggs upp
+        // och kollapsar, plus en cyan/magenta glitch-gnist-burst. Timing/kurvor ligger i den testbara
+        // GiantMaterialization; här översätts bara 0..1-värdena till pixlar.
+
+        private const float GiantMatRadiusTiles = 6.5f;   // bollens fulla radie ≈ jättens storlek
+        // Koncentriska band, ytterst → innerst (jättens kalla palett med het kärna).
+        private static readonly RenderColor[] GiantMatBands =
+        {
+            new RenderColor( 20,  60, 120),   // mörk isblå ytterkant
+            new RenderColor( 60, 130, 200),   // isblå
+            new RenderColor(120, 220, 240),   // ljus cyan
+            new RenderColor(230, 255, 255),   // nästan vit kärna
+        };
+        private static readonly float[] GiantMatBandFracs = { 1.0f, 0.72f, 0.45f, 0.22f };
+
+        /// <summary>Skärm-mitt för jätte-materialiseringen = jättens kommande kropp-centrum.</summary>
+        private void GiantMatCenter(CameraView cam, IMapData map, out int cx, out int cy)
+        {
+            float gx = (map.Width - GiantWidthTiles) / 2f + GiantNudgeX;   // samma som spawn i ManageGiant
+            cx = ScreenPixel(gx + GiantWidthTiles / 2f, cam.OffsetX);
+            cy = ScreenPixel(GiantAnchorY + 4f, cam.OffsetY);              // ungefär torso-centrum
+        }
+
+        /// <summary>Ritar energibollen (bakom jätten): koncentriska palett-band med pulserande radie
+        /// och dithrad ytterkant. Växer i Charge, kollapsar i Reveal och avslöjar jätten.</summary>
+        private void DrawGiantMaterializeGlow(CameraView cam, GameContext context)
+        {
+            var mat = _giantMaterialize;
+            if (mat == null || context.CurrentLevel == null) return;
+            float rad01 = mat.BallRadius01;
+            if (rad01 <= 0f) return;
+
+            GiantMatCenter(cam, context.CurrentLevel, out int cx, out int cy);
+
+            // Subtil energi-puls medan den laddar (dämpas när gnist-bursten tar över).
+            float pulse = 1f + 0.08f * (float)Math.Sin(mat.Elapsed * 25f) * (1f - mat.SparkProgress01);
+            int rOuter = (int)(rad01 * pulse * GiantMatRadiusTiles * GameConstants.TileSize);
+            if (rOuter <= 0) return;
+
+            for (int b = 0; b < GiantMatBands.Length; b++)
+                FillCircle(cx, cy, (int)(rOuter * GiantMatBandFracs[b]), GiantMatBands[b],
+                           b == 0 ? FinaleEdgeBand : 0);   // brusig kant bara på ytterbandet
+        }
+
+        /// <summary>Ritar cyan/magenta glitch-gnistorna som flyger radiellt utåt när jätten
+        /// framträder (ovanpå allt). Utbredningen drivs av materialiseringens gnist-förlopp.</summary>
+        private void DrawGiantMaterializeSparks(CameraView cam, GameContext context)
+        {
+            var mat = _giantMaterialize;
+            if (mat == null || context.CurrentLevel == null) return;
+            float sp = mat.SparkProgress01;
+            if (sp <= 0f || sp >= 1f) return;
+
+            GiantMatCenter(cam, context.CurrentLevel, out int cx, out int cy);
+
+            const int shards = 44;
+            int reachMax = (int)(GiantMatRadiusTiles * 1.2f * GameConstants.TileSize);
+            for (int i = 0; i < shards; i++)
+            {
+                double ang   = i * (Math.PI * 2 / shards) + (_rng.NextDouble() - 0.5) * 0.3;
+                double reach = reachMax * sp * (0.5 + _rng.NextDouble() * 0.5);
+                int sxp = cx + (int)(Math.Cos(ang) * reach);
+                int syp = cy + (int)(Math.Sin(ang) * reach);
+                var col = _rng.Next(2) == 0 ? new RenderColor(40, 230, 230)    // cyan
+                                            : new RenderColor(230, 40, 230);   // magenta
+                _rc.FillRect(sxp, syp, 2 + _rng.Next(0, 2), 2 + _rng.Next(0, 2), col);
+            }
         }
 
         // ── Preview-hjälpmetod ───────────────────────────────────────────────────
@@ -1072,6 +1156,9 @@ namespace FrostyPlatformer.States
         private int  _lastSlamSurface;     // hjältens yta (nivå) vid förra slaget — för att upptäcka platå-camp
         private bool _hadPrevSlam;         // har minst ett slag skett? (annars finns inget att jämföra mot)
 
+        // Akt 3-intro: energibolls-effekt som jätten materialiseras ur (skapas i ManageGiant).
+        private GiantMaterialization? _giantMaterialize;
+
         // Bryggan akt 3→4: jätten rasar (kollaps) + en kort vit blixt (falsk seger).
         private const float CollapseFlashDur = 0.12f;
         private float _giantCollapseFlash;
@@ -1361,6 +1448,7 @@ namespace FrostyPlatformer.States
             {
                 _giantHasSlammed = false;   // nästa giant-akt börjar utan registrerat slag (replay/akt-byte)
                 _hadPrevSlam = false;       // ...och utan ett föregående slag att jämföra mot (hammar-beslut)
+                _giantMaterialize = null;   // ...och utan en pågående materialisering
 
                 // Bryggan till akt 4: jätten GÅS SÖNDER (kollaps + vit blixt) i stället för att
                 // bara försvinna. Armarna snäpps av i blixten; huvudet smulas och tas bort självt.
@@ -1379,11 +1467,23 @@ namespace FrostyPlatformer.States
 
             var giant = context.ActiveObjects.OfType<DynamicCreatureGiant>().FirstOrDefault(g => !g.Redundant);
 
+            // Driv materialiserings-effekten om den är igång — även efter att jätten spawnat, så
+            // energibollen hinner kollapsa bakom henne. Nollställs när hela effekten spelat klart.
+            if (_giantMaterialize != null)
+            {
+                _giantMaterialize.Update(elapsed);
+                if (_giantMaterialize.IsComplete) _giantMaterialize = null;
+            }
+
             // Spawna jätten (huvud) + två armar (en per axel) en gång.
             if (giant == null)
             {
                 // Vänta in hela akt 2→3-övergången (idle-glitch + poff-cascade + tyst paus) innan jätten.
                 if (SwarmExitInProgress) return;
+
+                // Materialisering: bygg upp energibollen FÖRST; jätten spawnar när bollen laddat klart.
+                _giantMaterialize ??= new GiantMaterialization();
+                if (!_giantMaterialize.SpawnReady) return;
 
                 var map = context.CurrentLevel!;
                 float gx = (map.Width - GiantWidthTiles) / 2f + GiantNudgeX;   // centrerad + liten höger-nudge

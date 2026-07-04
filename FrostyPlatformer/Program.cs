@@ -492,8 +492,8 @@ namespace FrostyPlatformer
             Reg(SoundRef.ActSting1,  volume: 0.35f);
             Reg(SoundRef.ActSting2,  volume: 0.38f);
             Reg(SoundRef.ActSting3,  volume: 0.35f);
-            Reg(SoundRef.IceWhoosh,      volume: 0.25f);
-            Reg(SoundRef.IceShatter,     volume: 0.35f);
+            Reg(SoundRef.IceWhoosh,      volume: 0.125f);   // extra sänkt efter speltest (istappar var för framträdande)
+            Reg(SoundRef.IceShatter,     volume: 0.175f);
             Reg(SoundRef.PoffSmall,      volume: 0.3f);
             Reg(SoundRef.GlitchDissolve, volume: 0.35f);
             Reg(SoundRef.GiantCollapse,  volume: 0.5f);
