@@ -425,12 +425,36 @@ namespace FrostyPlatformer.States
                     "A winner is you!",
                     "Thank you for playing!",
 
-                    "The long winter melts",
-                    "behind you now.",
-                    "You met yourself, and",
-                    "chose warmth over war.",
-                    "And an alien heart",
-                    "finally comes home.",
+                    // Perfekt slut: den dolda, sorgliga sanningen om Scarlet — spelets subtext
+                    // (se FINAL_BOSS_PLAN.md) som annars ALDRIG visas på skärmen, viskas här som
+                    // belöning för 100%. Understated, inte utropat.
+                    "But you earned the truth.",
+
+                    "Scarlet was never born.",
+                    "She was made - a clockwork heart",
+                    "in a penguin suit, by a father",
+                    "who loved her more than he could say.",
+
+                    "She never felt real -",
+                    "a stranger on her own shore.",
+                    "So she left, to find some place",
+                    "that might feel like home.",
+
+                    "She was still out there, searching,",
+                    "when her father's clock ran down.",
+
+                    "She crossed back over all that ice -",
+                    "the same cold she had fled -",
+                    "and reached him just in time",
+                    "to say goodbye.",
+
+                    "In that grief, at last,",
+                    "something woke. She was real.",
+
+                    "The mirror was only her doubt,",
+                    "asking if she belonged.",
+                    "You did not defeat it.",
+                    "You let her come home.",
 
                     "We are penguins.. after all.",
                     "Much in common after all.",
@@ -442,7 +466,6 @@ namespace FrostyPlatformer.States
                 return new List<string>
                 {
                     "Congratulations!",
-                    "A winner is you!",
                     "Thank you for playing!",
 
                     "The snow begins to thaw.",
@@ -456,17 +479,37 @@ namespace FrostyPlatformer.States
             }
             else
             {
+                var classicLine = ClassicRetroGameLine();
                 // Enum.TypeOfEnding.Done
                 return new List<string>
                 {
                     "Congratulations!",
-                    "A winner is you!",
+                    classicLine,
                     "Thank you for playing!",
                     "We are penguins.. after all.",
                     "Much in common after all.",
                     "Press any button -to exit"
                 };
             }
+        }
+
+        // Cachas: BuildEndTextTemplate() körs varje typing-frame, så utan cache slumpades en NY
+        // rad varje frame → raden "flimrade"/bytte medan den skrevs ut. Väljs nu EN gång och behålls.
+        private string? _classicLine;
+        private string ClassicRetroGameLine()
+        {
+            if (_classicLine != null) return _classicLine;
+
+            var selectionOfLines = new List<string>()
+            {
+                "A winner is you!", // Pro Wrestling
+                "ALL YOUR BASE ARE BELONG TO US", // Zero Wing
+                "Conglaturation!!! You have completed a great game.", // Ghostbusters
+                "It's dangerous to go alone! Take this." // Zelda
+            };
+
+            _classicLine = selectionOfLines[Random.Shared.Next(selectionOfLines.Count)];
+            return _classicLine;
         }
 
         /// <summary>Avancerar typing-animationen ett steg — lägger till ett tecken eller hoppar en rad.</summary>
