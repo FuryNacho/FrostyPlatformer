@@ -82,6 +82,14 @@ namespace FrostyPlatformer.States
             int cy = (context.ScreenHeight - GameConstants.ScreenHeight) / 2;
             _rc.DrawSprite(SpriteId.SplashStart, cx, cy);
 
+            // "Remastered Edition"-sigillet (88×88) — stämplat i nedre högra kvadranten av splash-rutan.
+            const int SealSize        = 88;
+            const int SealMarginRight = 6;
+            const int SealMarginBottom = 24;
+            _rc.DrawSprite(SpriteId.SplashRemastered,
+                           cx + GameConstants.ScreenWidth  - SealSize - SealMarginRight,
+                           cy + GameConstants.ScreenHeight - SealSize - SealMarginBottom);
+
             if (_countDown <= 0)
             {
                 const int TextLeftMargin     = 4;   // Vänstermarginal relativt splash-sprites vänsterkant

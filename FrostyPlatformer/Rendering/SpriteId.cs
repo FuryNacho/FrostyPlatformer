@@ -77,6 +77,9 @@ namespace FrostyPlatformer.Rendering
         /// <summary>Startskärmens splash-bild.</summary>
         SplashStart,
 
+        /// <summary>"Remastered Edition"-sigillet (silver NES-stil) som läggs ovanpå startskärmen.</summary>
+        SplashRemastered,
+
         /// <summary>Slutskärmens splash-bild.</summary>
         SplashEnd,
 

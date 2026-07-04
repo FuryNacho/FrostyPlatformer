@@ -170,7 +170,7 @@ namespace FrostyPlatformer
         {
             // ── Utvecklingsflaggor ──────────────────────────────────────────────
             // Flippa här under utveckling. Båda ska vara false vid release.
-            DevConfig.WorldMapEditor  = false;  // världskarte-editering i level editorn
+            DevConfig.WorldMapEditor  = true;  // världskarte-editering i level editorn
             DevConfig.UnlockAllStages = true;  // alla banor öppna → gå direkt till slutbossen
             DevConfig.FullEnergy = true;
             // Hoppa direkt in i en boss-akt för speltest (BossAct.Mirror = hela striden från start).
@@ -450,6 +450,9 @@ namespace FrostyPlatformer
                 => _renderContext.RegisterSprite(id,
                        System.IO.Path.Combine(bgPath, file));
 
+            // Startskärmens "Remastered Edition"-sigill (RGBA-alpha, ritas ovanpå splashen).
+            RegBg(Rendering.SpriteId.SplashRemastered,   "splash_remastered_seal.png");
+
             RegBg(Rendering.SpriteId.ParallaxSkySpring,  "parallax_sky_spring.png");
             RegBg(Rendering.SpriteId.ParallaxMidSpring,  "parallax_mid_spring.png");
             RegBg(Rendering.SpriteId.ParallaxSkySummer,  "parallax_sky_summer.png");
@@ -481,19 +484,19 @@ namespace FrostyPlatformer
             Reg(SoundRef.DamageHero);
             Reg(SoundRef.PickUp);
 
-            // Slutboss-SFX (engångsljud). Volymerna är en första balans mot musiken —
+            // Slutboss-SFX (engångsljud). Volymerna halverade 2026-07-04 efter speltest (var för höga) —
             // finjustera här (per-ljud) snarare än i wav-filerna.
-            Reg(SoundRef.SlamImpact, volume: 0.9f);
-            Reg(SoundRef.SlamHammer, volume: 1.0f);
-            Reg(SoundRef.PoffGlitch, volume: 0.7f);
-            Reg(SoundRef.ActSting1,  volume: 0.7f);
-            Reg(SoundRef.ActSting2,  volume: 0.75f);
-            Reg(SoundRef.ActSting3,  volume: 0.7f);
-            Reg(SoundRef.IceWhoosh,      volume: 0.5f);
-            Reg(SoundRef.IceShatter,     volume: 0.7f);
-            Reg(SoundRef.PoffSmall,      volume: 0.6f);
-            Reg(SoundRef.GlitchDissolve, volume: 0.7f);
-            Reg(SoundRef.GiantCollapse,  volume: 1.0f);
+            Reg(SoundRef.SlamImpact, volume: 0.45f);
+            Reg(SoundRef.SlamHammer, volume: 0.5f);
+            Reg(SoundRef.PoffGlitch, volume: 0.35f);
+            Reg(SoundRef.ActSting1,  volume: 0.35f);
+            Reg(SoundRef.ActSting2,  volume: 0.38f);
+            Reg(SoundRef.ActSting3,  volume: 0.35f);
+            Reg(SoundRef.IceWhoosh,      volume: 0.25f);
+            Reg(SoundRef.IceShatter,     volume: 0.35f);
+            Reg(SoundRef.PoffSmall,      volume: 0.3f);
+            Reg(SoundRef.GlitchDissolve, volume: 0.35f);
+            Reg(SoundRef.GiantCollapse,  volume: 0.5f);
             Reg(SoundRef.BGSoundWorld,      isLooped: true);
             Reg(SoundRef.BGSoundGame,       isLooped: true);
             Reg(SoundRef.BGSoundFinalStage, isLooped: true);
