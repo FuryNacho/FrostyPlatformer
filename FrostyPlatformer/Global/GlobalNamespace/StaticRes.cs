@@ -87,6 +87,14 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public const string DamageHero      = "PAA traffljud.wav";
         public const string PickUp          = "PAA PLOCKA UPP.wav";
 
+        // Slutboss-SFX (syntetiserade av Tools/generate_sfx.py — se det scriptet).
+        public const string SlamImpact      = "slam_impact.wav";   // jättens näve i marken (akt 3)
+        public const string SlamHammer      = "slam_hammer.wav";   // tyngre variant: hammarslaget (camp-brytaren)
+        public const string PoffGlitch      = "poff_glitch.wav";   // digital poff/glitch (akt 4-final m.m.)
+        public const string ActSting1       = "act_sting1.wav";    // akt-övergång 1→2 (spegel → svärm)
+        public const string ActSting2       = "act_sting2.wav";    // akt-övergång 2→3 (svärm → jätte)
+        public const string ActSting3       = "act_sting3.wav";    // akt-övergång 3→4 (jätte → acceptans)
+
         public const string BGSoundWorld    = "uno.wav";
         public const string BGSoundGame     = "theone.wav";
         public const string BGSoundFinalStage = "bossong.wav";

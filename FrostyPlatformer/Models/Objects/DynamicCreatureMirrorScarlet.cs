@@ -83,6 +83,7 @@ namespace FrostyPlatformer.Models.Objects
         private float _glitch;             // glitch-intensitet 0..1 (akt 1-exit + akt 4 nära hjälten)
         private float _exitTimer = -1f;    // akt 1→2: glitch-upplösning pågår när ≥ 0
         private bool  _hidden;             // efter exit: kroppen behålls för akt 4 men ritas inte
+        private bool  _finalePoffed;       // akt 4-final: bossen har poffat → rita inte kroppen resten av övergången
         private float _dustTimer;          // akt 1→2: damm faller medan > 0 (efter upplösningen)
         private readonly float[] _dustX  = new float[DustCount];
         private readonly float[] _dustY  = new float[DustCount];
@@ -129,6 +130,26 @@ namespace FrostyPlatformer.Models.Objects
             _exitTimer = -1f;
             IsAttackable = false;
             SolidVsDynamic = false;
+        }
+
+        /// <summary>
+        /// Akt 4-finalen: låter GameplayState driva glitch-intensiteten (0..1) under glitch-hold-
+        /// fasen så bossen garanterat "skakar" innan poffen — oavsett merge-geometri (en luft-merge
+        /// skulle annars ge glitch 0). Anropas efter objektuppdateringen, så den skriver <c>_glitch</c>
+        /// sist före renderingen och överröstar Behaviour:s eget värde för denna frame.
+        /// </summary>
+        public void ForceFinaleGlitch(float level)
+            => _glitch = level < 0f ? 0f : level > 1f ? 1f : level;
+
+        /// <summary>
+        /// Akt 4-finalen: bossen "poffar" i en pixel-explosion (ritad av GameplayState) och kroppen
+        /// slutar ritas för resten av slut-övergången. Kroppen behålls i objektlistan så att
+        /// acceptans-loopen fortfarande hittar henne — hon är bara osynlig. Idempotent.
+        /// </summary>
+        public void PoffFinale()
+        {
+            _finalePoffed = true;
+            _glitch = 0f;
         }
 
         public DynamicCreatureMirrorScarlet() : base("mirror_scarlet", SpriteId.EnemyMirrorScarlet)
@@ -582,6 +603,10 @@ namespace FrostyPlatformer.Models.Objects
 
         public override void DrawSelf(IRenderContext gfx, float ox, float oy)
         {
+            // Akt 4-final: efter poffen ritas kroppen (och dammet) inte alls — pixel-explosionen och
+            // den vita cirkeln tar över helt, driven av GameplayState.
+            if (_finalePoffed) return;
+
             // Dammet ritas även när kroppen är dold (det faller kvar efter att hon försvunnit).
             DrawDust(gfx, ox, oy);
 

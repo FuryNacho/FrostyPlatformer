@@ -174,7 +174,7 @@ namespace FrostyPlatformer
             DevConfig.UnlockAllStages = true;  // alla banor öppna → gå direkt till slutbossen
             DevConfig.FullEnergy = true;
             // Hoppa direkt in i en boss-akt för speltest (BossAct.Mirror = hela striden från start).
-            DevConfig.BossStartAct = BossAct.Giant;
+            DevConfig.BossStartAct = BossAct.Mirror;
 
             try
             {
@@ -480,6 +480,15 @@ namespace FrostyPlatformer
             Reg(SoundRef.Damage);
             Reg(SoundRef.DamageHero);
             Reg(SoundRef.PickUp);
+
+            // Slutboss-SFX (engångsljud). Volymerna är en första balans mot musiken —
+            // finjustera här (per-ljud) snarare än i wav-filerna.
+            Reg(SoundRef.SlamImpact, volume: 0.9f);
+            Reg(SoundRef.SlamHammer, volume: 1.0f);
+            Reg(SoundRef.PoffGlitch, volume: 0.7f);
+            Reg(SoundRef.ActSting1,  volume: 0.7f);
+            Reg(SoundRef.ActSting2,  volume: 0.75f);
+            Reg(SoundRef.ActSting3,  volume: 0.7f);
             Reg(SoundRef.BGSoundWorld,      isLooped: true);
             Reg(SoundRef.BGSoundGame,       isLooped: true);
             Reg(SoundRef.BGSoundFinalStage, isLooped: true);

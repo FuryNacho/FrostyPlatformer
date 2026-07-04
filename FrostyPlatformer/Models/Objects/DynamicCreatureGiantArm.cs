@@ -74,6 +74,10 @@ namespace FrostyPlatformer.Models.Objects
         /// <summary>Kolumnen näven slår ner i (det låsta målet) — så GameplayState kan släppa extra is där.</summary>
         public float ImpactX => _targetX;
 
+        /// <summary>Sant om det pågående/senaste slaget är ett overhead-hammarslag (camp-brytaren) —
+        /// så GameplayState kan välja det tyngre nedslags-ljudet.</summary>
+        public bool IsHammer => _hammer;
+
         /// <summary>
         /// Läser och NOLLSTÄLLER "näven slog precis i marken"-signalen (Dropping→Stuck). GameplayState
         /// anropar denna för att trigga en extra is-skur per nedslag — exakt en gång per slag.

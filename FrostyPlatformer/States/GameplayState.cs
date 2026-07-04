@@ -89,7 +89,10 @@ namespace FrostyPlatformer.States
             else
             {
                 _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundGame);
-                if (!_services.Audio.IsPlaying(Global.GlobalNamespace.SoundRef.BGSoundFinalStage))
+                // Boss-musiken dör medvetet i akt 4 (Acceptans/Resolved) — starta INTE om den vid
+                // pause→resume där; annars återupplivas den tystnad finalen bygger på.
+                bool act4 = context.BossPhase?.CurrentAct is BossAct.Acceptance or BossAct.Resolved;
+                if (!act4 && !_services.Audio.IsPlaying(Global.GlobalNamespace.SoundRef.BGSoundFinalStage))
                     _services.Audio.Play(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
             }
 
@@ -127,6 +130,10 @@ namespace FrostyPlatformer.States
                     _heroSpawnPx = context.Player!.px;
                     _heroSpawnPy = context.Player!.py;
                 }
+
+                // Utgå från nuvarande akt (ny fight ELLER pause→resume) så första framen inte
+                // felaktigt tolkas som ett akt-skifte och spelar en övergångs-stinger.
+                _prevBossAct = context.BossPhase!.CurrentAct;
             }
             else
             {
@@ -306,6 +313,9 @@ namespace FrostyPlatformer.States
             // Akt 4: acceptans — gå-mot-henne-vinsten.
             ManageAcceptance(context, elapsed);
 
+            // Ljud: markera akt-skiften med en stinger (och låt musiken dö i akt 4).
+            ManageBossAudio(context);
+
             // Uppdatera mjuk kameraposition mot spelarens slutposition för denna tick.
             if (context.Player != null && context.CurrentLevel != null)
                 _services.Camera.Advance(context.Player.px, context.Player.py, elapsed);
@@ -331,11 +341,22 @@ namespace FrostyPlatformer.States
                         call.ScreenX, call.ScreenY, call.SpriteX, call.SpriteY,
                         call.TileWidth, call.TileHeight);
 
+                // Slut-övergångens vita cirkel ritas MELLAN banan och objekten → den sväljer arenan
+                // men hjälten (och bossen fram till poffen) syns kvar som silhuett ovanpå det vita.
+                if (_finale != null)
+                    DrawFinaleCircle(cam, context);
+
                 foreach (var obj in context.ActiveObjects)
                     obj.DrawSelf(_rc, cam.OffsetX, cam.OffsetY);
+
+                // Bossens pixel-explosion ritas ovanpå allt — glitchen blir en liten poff.
+                if (_finale != null)
+                    DrawFinalePoff(cam, context);
             }
 
-            HudRenderer.Draw(_rc, context);
+            // Dölj HUD:en under slut-övergången (ren, filmisk utblekning).
+            if (_finale == null)
+                HudRenderer.Draw(_rc, context);
 
             // Falsk seger-blixt när jätten rasar (bryggan till akt 4) — kort vit helskärm.
             if (_giantCollapseFlash > 0f)
@@ -346,6 +367,100 @@ namespace FrostyPlatformer.States
         }
 
         public void Exit(GameContext context) { }
+
+        // ── Slut-övergång (akt 4 → slutskärm) ─────────────────────────────────────
+        // Rendering av BossFinaleTransition: en vit iris-in som växer bakom hjälten plus bossens
+        // pixel-explosion. Ren rendering (som all annan DrawSelf-kod) — timing/kurvor ligger i den
+        // testbara BossFinaleTransition; här översätts bara 0..1-värdena till pixlar.
+
+        private const int FinaleEdgeBand = 3;   // bredd (px) på cirkelns dithrade ytterkant
+
+        /// <summary>Ritar den växande vita cirkeln, centrerad på hjältens kropp, med en brusig
+        /// (dithrad) ytterkant så den "äter" banan lite organiskt.</summary>
+        private void DrawFinaleCircle(CameraView cam, GameContext context)
+        {
+            float growth = _finale!.CircleGrowth01;
+            if (growth <= 0f || context.Player == null) return;
+
+            int w = context.ScreenWidth;
+            int h = context.ScreenHeight;
+            int cx = ScreenPixel(context.Player.px + 0.5f, cam.OffsetX);   // centrera på kroppen
+            int cy = ScreenPixel(context.Player.py + 0.5f, cam.OffsetY);
+
+            // Maxradie = avstånd till hörnet längst bort → cirkeln täcker garanterat hela skärmen.
+            int maxR = MaxCornerDistance(cx, cy, w, h);
+            int r = (int)(growth * maxR);
+            if (r <= 0) return;
+
+            var white = RenderColor.White;
+            int rSq = r * r;
+            for (int y = Math.Max(0, cy - r); y <= Math.Min(h - 1, cy + r); y++)
+            {
+                int dy = y - cy;
+                int half = (int)Math.Sqrt(rSq - dy * dy);
+
+                // Solid kärna upp till en bit innanför kanten; ytterbandet ditheras (brusig kant).
+                int solid = Math.Max(0, half - FinaleEdgeBand);
+                int left  = Math.Max(0, cx - solid);
+                int right = Math.Min(w - 1, cx + solid);
+                if (right >= left)
+                    _rc.FillRect(left, y, right - left + 1, 1, white);
+
+                // Dither-band på båda sidor — sannolikheten avtar utåt → mjuk, flimrande kant.
+                for (int e = solid + 1; e <= half; e++)
+                {
+                    float pEdge = 1f - (float)(e - solid) / (FinaleEdgeBand + 1);
+                    int rx = cx + e;
+                    if (rx >= 0 && rx < w && _rng.NextDouble() < pEdge) _rc.DrawPixel(rx, y, white);
+                    int lx = cx - e;
+                    if (lx >= 0 && lx < w && _rng.NextDouble() < pEdge) _rc.DrawPixel(lx, y, white);
+                }
+            }
+        }
+
+        /// <summary>Ritar bossens pixel-explosion — skärvor (cyan/magenta/vitt) som slungas radiellt
+        /// utåt från där bossen stod, med utbredningen driven av poff-förloppet.</summary>
+        private void DrawFinalePoff(CameraView cam, GameContext context)
+        {
+            if (!_finale!.BossPoffed) return;
+            float p = _finale.PoffProgress01;
+            if (p >= 1f) return;   // skärvorna har flugit ut → inget mer att rita
+
+            var scarlet = context.ActiveObjects.OfType<DynamicCreatureMirrorScarlet>().FirstOrDefault();
+            if (scarlet == null) return;
+
+            int bx = ScreenPixel(scarlet.px + 0.5f, cam.OffsetX);
+            int by = ScreenPixel(scarlet.py + 0.5f, cam.OffsetY);
+
+            const int shards  = 48;
+            const int maxDist = 26;
+            for (int i = 0; i < shards; i++)
+            {
+                double ang   = i * (Math.PI * 2 / shards) + (_rng.NextDouble() - 0.5) * 0.3;
+                double reach = maxDist * p * (0.55 + _rng.NextDouble() * 0.45);
+                int sxp = bx + (int)(Math.Cos(ang) * reach);
+                int syp = by + (int)(Math.Sin(ang) * reach);
+                var col = _rng.Next(3) switch
+                {
+                    0 => new RenderColor(40, 230, 230),   // cyan
+                    1 => new RenderColor(230, 40, 230),   // magenta
+                    _ => RenderColor.White,
+                };
+                _rc.FillRect(sxp, syp, 2 + _rng.Next(0, 2), 2 + _rng.Next(0, 2), col);
+            }
+        }
+
+        /// <summary>World- → skärm-pixel längs en axel (samma avrundning som DynamicGameObject.ToPixel).</summary>
+        private static int ScreenPixel(float world, float cameraOffset)
+            => (int)Math.Round((world - cameraOffset) * GameConstants.TileSize, MidpointRounding.AwayFromZero);
+
+        /// <summary>Avstånd (px) från (cx,cy) till skärmens mest avlägsna hörn — cirkelns fulla radie.</summary>
+        private static int MaxCornerDistance(int cx, int cy, int w, int h)
+        {
+            int dxMax = Math.Max(cx, w - 1 - cx);
+            int dyMax = Math.Max(cy, h - 1 - cy);
+            return (int)Math.Ceiling(Math.Sqrt((double)dxMax * dxMax + dyMax * dyMax));
+        }
 
         // ── Preview-hjälpmetod ───────────────────────────────────────────────────
         /// <summary>
@@ -857,6 +972,9 @@ namespace FrostyPlatformer.States
         private float _heroSpawnPx;
         private float _heroSpawnPy;
 
+        // Ljud: bossaktens värde förra framen — för att upptäcka akt-skiften och spela övergångs-stinger.
+        private BossAct _prevBossAct;
+
         // Akt 2 — svärmen. Skada på svärm-baren per dödad kopia (swarmHealth 24 / 4 = 6 kopior
         // att stampa). SwarmTargetAlive = hur många kopior som svärmar samtidigt; nya spawnar
         // tills baren töms. Spawn-flaggan växlar sida så de kommer från båda håll.
@@ -959,9 +1077,9 @@ namespace FrostyPlatformer.States
         private float _giantCollapseFlash;
 
         // Akt 4 — Spegeln. Vinst = gå in i din spegelbild på marken; stamp straffar dig själv.
-        private const float WinMergeDur = 1.3f;    // sammansmältnings-beat (blixt) före EndState
         private bool _acceptanceStaged;
-        private float _winTimer = -1f;
+        // Slut-övergången (boss poffar + vit cirkel sväljer arenan) — skapas när vinsten triggats.
+        private BossFinaleTransition? _finale;
 
         // Akt 3 — istappar. Normalt faller is BARA som en skur strax efter varje näv-nedslag (bundet
         // till jätten), spridd i området KRING nedslaget men med en dödzon så själva näven går att
@@ -1297,6 +1415,10 @@ namespace FrostyPlatformer.States
             foreach (var a in arms)
                 if (a.ConsumeSlamLanded())
                 {
+                    // Näven slog i marken → tungt nedslags-ljud (hammarslaget får den tyngre varianten).
+                    _services.Audio.Play(a.IsHammer
+                        ? Global.GlobalNamespace.SoundRef.SlamHammer
+                        : Global.GlobalNamespace.SoundRef.SlamImpact);
                     _slamBurstRemaining = SlamBurstCount(context.BossPhase.BossHealth, context.BossPhase.BossMaxHealth);
                     _slamBurstTimer     = SlamBurstDelay;
                     _slamImpactX        = a.ImpactX;
@@ -1415,6 +1537,34 @@ namespace FrostyPlatformer.States
             return y + 1;
         }
 
+        // ── Boss-ljud: akt-övergångar ──────────────────────────────────────────────
+        /// <summary>
+        /// Markerar slutbossens akt-skiften med en kort stinger — och låter musiken dö när akt 4
+        /// (Acceptans) börjar (kontrast → tystnad, FINAL_BOSS_PLAN §6). Körs varje frame efter att
+        /// akt-logiken kört; akten flippas i BossPhaseController vid det dräpande stampet, så vi
+        /// upptäcker skiftet genom att jämföra mot förra framens akt. Distinkta stingers per övergång.
+        /// </summary>
+        private void ManageBossAudio(GameContext context)
+        {
+            var bp = context.BossPhase;
+            if (bp == null || bp.CurrentAct == _prevBossAct) return;
+
+            _prevBossAct = bp.CurrentAct;
+            switch (bp.CurrentAct)
+            {
+                case BossAct.Swarm:                                   // akt 1 → 2
+                    _services.Audio.Play(Global.GlobalNamespace.SoundRef.ActSting1);
+                    break;
+                case BossAct.Giant:                                   // akt 2 → 3
+                    _services.Audio.Play(Global.GlobalNamespace.SoundRef.ActSting2);
+                    break;
+                case BossAct.Acceptance:                              // akt 3 → 4: sting + musiken dör
+                    _services.Audio.Play(Global.GlobalNamespace.SoundRef.ActSting3);
+                    _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
+                    break;
+            }
+        }
+
         // ── Akt 4: acceptans ───────────────────────────────────────────────────────
         /// <summary>
         /// Den inverterade finalen: när jätten rasat sätter spegel-Scarlet ihop sig i mitten,
@@ -1441,12 +1591,27 @@ namespace FrostyPlatformer.States
                 _acceptanceStaged = true;
             }
 
-            // Vunnet → kort sammansmältnings-beat (blixt), sen slutet.
+            // Vunnet → filmisk slut-övergång i stället för en hård klippning: bossen glitchar upp,
+            // poffar i en pixel-explosion, och en vit cirkel växer ut bakom hjälten och sväljer
+            // arenan. Först när övergången spelat klart byter vi till slutskärmen. (Se Draw för
+            // själva renderingen; BossFinaleTransition äger timing/kurvor.)
             if (bp.Outcome == BossOutcome.PlayerWon)
             {
-                if (_winTimer < 0f) { _winTimer = WinMergeDur; _giantCollapseFlash = 0.15f; }
-                _winTimer -= elapsed;
-                if (_winTimer <= 0f)
+                _finale ??= new BossFinaleTransition();
+                _finale.Update(elapsed);
+
+                // Fas A: driv boss-glitchen upp på plats (garanterat, oavsett merge-geometri).
+                if (!_finale.BossPoffed)
+                    scarlet.ForceFinaleGlitch(_finale.BossGlitch01);
+
+                // I frame:n då poffen ska ske: göm boss-kroppen (explosionen tar över) + poff-ljud.
+                if (_finale.TryConsumePoff())
+                {
+                    scarlet.PoffFinale();
+                    _services.Audio.Play(Global.GlobalNamespace.SoundRef.PoffGlitch);
+                }
+
+                if (_finale.IsComplete)
                 {
                     _services.Settings.ActivePlayer.ShowEnd = true;
                     context.BossPhase = null;
