@@ -46,6 +46,8 @@ namespace FrostyPlatformer.Models.Objects
 
         private float _timer;
         private float _anim;
+        private bool  _fellSignal;      // engångsflagga: fallet startade precis (Warn→Fall) — för whoosh-ljud
+        private bool  _shatterSignal;   // engångsflagga: istappen krossades precis — för splitter-ljud
 
         public DynamicCreatureBossIcicle() : base("giant_hazard", SpriteId.GiantHazard)
         {
@@ -77,7 +79,7 @@ namespace FrostyPlatformer.Models.Objects
                     SolidVsDynamic = false;
                     py = 0f; vx = 0; vy = 0;                 // hänger vid taket medan markören blinkar
                     _timer -= fElapsedTime;
-                    if (_timer <= 0f) Phase = BossIciclePhase.Fall;
+                    if (_timer <= 0f) { Phase = BossIciclePhase.Fall; _fellSignal = true; }
                     break;
 
                 case BossIciclePhase.Fall:
@@ -105,9 +107,27 @@ namespace FrostyPlatformer.Models.Objects
         {
             if (Phase == BossIciclePhase.Shatter || Redundant) return;
             Phase = BossIciclePhase.Shatter;
+            _shatterSignal = true;
             _timer = ShatterDur;
             SolidVsDynamic = false;   // ofarlig medan skärvorna skingras
             vx = 0; vy = 0;
+        }
+
+        /// <summary>Läser och NOLLSTÄLLER "fallet startade precis"-signalen (Warn→Fall) — för whoosh-ljud.
+        /// GameplayState anropar denna en gång per istapp.</summary>
+        public bool ConsumeFell()
+        {
+            if (!_fellSignal) return false;
+            _fellSignal = false;
+            return true;
+        }
+
+        /// <summary>Läser och NOLLSTÄLLER "istappen krossades precis"-signalen — för splitter-ljud.</summary>
+        public bool ConsumeShatter()
+        {
+            if (!_shatterSignal) return false;
+            _shatterSignal = false;
+            return true;
         }
 
         public override void DrawSelf(IRenderContext gfx, float ox, float oy)

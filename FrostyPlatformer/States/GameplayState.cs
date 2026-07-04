@@ -1306,6 +1306,7 @@ namespace FrostyPlatformer.States
             if (_poffTimer <= 0f)
             {
                 glitching[_rng.Next(glitching.Count)].Poff();
+                _services.Audio.Play(Global.GlobalNamespace.SoundRef.PoffSmall);
                 _poffInterval = Math.Max(PoffMinInterval, _poffInterval * PoffAccel);
                 _poffTimer    = _poffInterval;
             }
@@ -1367,6 +1368,7 @@ namespace FrostyPlatformer.States
                 if (g != null && !g.IsCollapsing)
                 {
                     g.BeginCollapse();
+                    _services.Audio.Play(Global.GlobalNamespace.SoundRef.GiantCollapse);
                     _giantCollapseFlash = CollapseFlashDur;
                     foreach (var o in context.ActiveObjects)
                         if (o is DynamicCreatureGiantArm a && !a.Redundant)
@@ -1482,6 +1484,15 @@ namespace FrostyPlatformer.States
                 return;
             }
 
+            // Ljud: whoosh när en istapp börjar falla, splitter när den krossas. Körs före spawn-grinden
+            // så redan fallande istappar låter även medan nya inte släpps (Play() är ändå idempotent).
+            foreach (var o in context.ActiveObjects)
+                if (o is DynamicCreatureBossIcicle ic && !ic.Redundant)
+                {
+                    if (ic.ConsumeFell())    _services.Audio.Play(Global.GlobalNamespace.SoundRef.IceWhoosh);
+                    if (ic.ConsumeShatter()) _services.Audio.Play(Global.GlobalNamespace.SoundRef.IceShatter);
+                }
+
             // Akt 3 ska dra igång SAKTA, och istappsregnet är BUNDET till jätten: inga istappar förrän
             // (a) hela svärm-övergången är klar OCH (b) jätten slagit näven i marken minst en gång. Sedan
             // väntar första istappen in en beat (HazardFirstDelay) efter det första slaget.
@@ -1554,6 +1565,8 @@ namespace FrostyPlatformer.States
             {
                 case BossAct.Swarm:                                   // akt 1 → 2
                     _services.Audio.Play(Global.GlobalNamespace.SoundRef.ActSting1);
+                    // Spegel-Scarlet glitchar ur arenan samma stund (BeginExit i Update) → hennes upplösnings-ljud.
+                    _services.Audio.Play(Global.GlobalNamespace.SoundRef.GlitchDissolve);
                     break;
                 case BossAct.Giant:                                   // akt 2 → 3
                     _services.Audio.Play(Global.GlobalNamespace.SoundRef.ActSting2);

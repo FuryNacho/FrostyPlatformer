@@ -94,6 +94,12 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         public const string ActSting1       = "act_sting1.wav";    // akt-övergång 1→2 (spegel → svärm)
         public const string ActSting2       = "act_sting2.wav";    // akt-övergång 2→3 (svärm → jätte)
         public const string ActSting3       = "act_sting3.wav";    // akt-övergång 3→4 (jätte → acceptans)
+        // Slutboss-SFX skiva 2.
+        public const string IceWhoosh       = "ice_whoosh.wav";      // istapp faller (akt 3)
+        public const string IceShatter      = "ice_shatter.wav";     // istapp krossas mot marken
+        public const string PoffSmall       = "poff_small.wav";      // svärm-kopia poffar (akt 2)
+        public const string GlitchDissolve  = "glitch_dissolve.wav"; // spegel-Scarlets glitch-exit (akt 1→2)
+        public const string GiantCollapse   = "giant_collapse.wav";  // jätten rasar (akt 3→4)
 
         public const string BGSoundWorld    = "uno.wav";
         public const string BGSoundGame     = "theone.wav";

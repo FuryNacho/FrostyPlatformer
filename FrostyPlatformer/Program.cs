@@ -489,6 +489,11 @@ namespace FrostyPlatformer
             Reg(SoundRef.ActSting1,  volume: 0.7f);
             Reg(SoundRef.ActSting2,  volume: 0.75f);
             Reg(SoundRef.ActSting3,  volume: 0.7f);
+            Reg(SoundRef.IceWhoosh,      volume: 0.5f);
+            Reg(SoundRef.IceShatter,     volume: 0.7f);
+            Reg(SoundRef.PoffSmall,      volume: 0.6f);
+            Reg(SoundRef.GlitchDissolve, volume: 0.7f);
+            Reg(SoundRef.GiantCollapse,  volume: 1.0f);
             Reg(SoundRef.BGSoundWorld,      isLooped: true);
             Reg(SoundRef.BGSoundGame,       isLooped: true);
             Reg(SoundRef.BGSoundFinalStage, isLooped: true);

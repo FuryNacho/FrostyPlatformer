@@ -8,13 +8,22 @@ Samma teknik som chiptune/8-bit-ljud, vilket passar spelets pixel-estetik.
 Körs med: python generate_sfx.py
 Kräver: inget utöver Python-standardbiblioteket (wave, math, struct, random).
 
-Genererar (första ljud-skivan — se RELEASE_PLAN.md "Måste för release" punkt 1):
+Genererar (se RELEASE_PLAN.md "Måste för release" punkt 1):
+
+Skiva 1:
   slam_impact.wav  — jättens näve slår i marken (akt 3)
   slam_hammer.wav  — tyngre variant: hammarslaget (camp-brytaren)
-  poff_glitch.wav  — digital poff/glitch (akt 4-finalen; återanvändbar för svärm/spegel)
+  poff_glitch.wav  — digital poff/glitch (akt 4-finalen)
   act_sting1.wav   — akt-övergång 1→2 (spegel → svärm): kort stigande blip
   act_sting2.wav   — akt-övergång 2→3 (svärm → jätte): mörkare, olycksbådande
   act_sting3.wav   — akt-övergång 3→4 (jätte → acceptans): mjuk, upplösande (leder in i tystnaden)
+
+Skiva 2:
+  ice_whoosh.wav     — istapp faller (akt 3): kort luftig svischning
+  ice_shatter.wav    — istapp krossas mot marken: ljus glasig splitter
+  poff_small.wav     — svärm-kopia poffar (akt 2): lätt, ljus poff
+  glitch_dissolve.wav— spegel-Scarlets glitch-exit (akt 1→2): digital upplösning ~0.7s
+  giant_collapse.wav — jätten rasar (akt 3→4): tungt mullrande kollaps
 
 OBS: Dessa är syntetiserade — avsiktligt enkla och genre-passande. Byt gärna ut mot
 riktiga inspelningar senare; filnamnen (SoundRef) är kontraktet mot koden.
@@ -143,6 +152,86 @@ def build_sting(notes, note_len, wave_fn, amp=0.8, tau=0.12, gap=0.0):
     return out
 
 
+def build_ice_whoosh():
+    """Fallande istapp: luftig svischning — brus genom ett lågpass vars ton faller (mörknar)."""
+    n = dur(0.32)
+    out = []
+    prev = 0.0
+    for i in range(n):
+        t = i / RATE
+        x = t / 0.32
+        a = lerp(0.5, 0.15, x)          # 1-pols lågpass; cutoff faller → luftigare mot slutet
+        prev += a * (noise(t) - prev)
+        env = math.sin(math.pi * x)     # mjuk svällning in→ut
+        out.append(prev * env * 0.9)
+    return out
+
+
+def build_ice_shatter():
+    """Istapp krossas: ljus brus-smäll + några glasiga 'tings' som klingar snabbt."""
+    n = dur(0.28)
+    tings = [2600, 3100, 3700, 2200]
+    out = []
+    for i in range(n):
+        t = i / RATE
+        s = noise(t) * 0.6 * exp_decay(t, 0.05)
+        for k, f in enumerate(tings):
+            st = k * 0.015
+            if t >= st:
+                s += square(f, t - st) * 0.18 * exp_decay(t - st, 0.04)
+        out.append(s * lin_fade(i, n, 0.0, 0.03))
+    return out
+
+
+def build_poff_small():
+    """Svärm-kopians poff: som den stora poffen men ljusare och kortare (mindre kropp)."""
+    n = dur(0.16)
+    steps = [1900, 1500, 1100, 760]
+    out = []
+    for i in range(n):
+        t = i / RATE
+        x = t / 0.16
+        idx = min(len(steps) - 1, int(x * len(steps)))
+        zap = square(steps[idx], t) * 0.55
+        spark = noise(t) * 0.5 * exp_decay(t, 0.04)
+        out.append((zap * exp_decay(t, 0.06) + spark) * lin_fade(i, n, 0.0, 0.02))
+    return out
+
+
+def build_glitch_dissolve():
+    """Spegel-Scarlets exit: digital upplösning — nedåt-stegad 'tearing'-fyrkant + växande brus,
+    hackad av en snabb stutter-gate (bit-crush-känsla). Klingar ut mot slutet."""
+    n = dur(0.7)
+    out = []
+    for i in range(n):
+        t = i / RATE
+        x = t / 0.7
+        fq = int(lerp(700, 120, x) / 40) * 40 + 40    # kvantiserad nedåt-pitch (digitalt)
+        tear = square(fq, t) * 0.5
+        nz = noise(t) * lerp(0.2, 0.6, x)             # bruset växer när hon löses upp
+        gate = 1.0 if (int(t * 60) % 2 == 0) else 0.35   # stutter-gate → glitch-hack
+        env = lerp(1.0, 0.2, x)
+        out.append((tear + nz) * gate * env)
+    return out
+
+
+def build_giant_collapse():
+    """Jätten rasar: lågt fallande boom + tungt mullrande brus + smulande skräp-stötar."""
+    n = dur(0.9)
+    out = []
+    prev = 0.0
+    for i in range(n):
+        t = i / RATE
+        x = t / 0.9
+        f = lerp(70, 25, min(1.0, x * 1.3))
+        boom = sine(f, t) * exp_decay(t, 0.5)
+        prev += 0.08 * (noise(t) - prev)              # tungt lågpass → mullrande rumble
+        rumble = prev * lerp(0.9, 0.3, x)
+        crumb = noise(t) * 0.4 * exp_decay(t, 0.3) if (int(t * 30) % 3 == 0) else 0.0
+        out.append((boom * 0.8 + rumble + crumb * 0.5) * lin_fade(i, n, 0.0, 0.05))
+    return out
+
+
 # ── Huvud ────────────────────────────────────────────────────────────────────
 
 def main():
@@ -170,6 +259,13 @@ def main():
     write_wav("act_sting3.wav",
               build_sting([523, 659, 784, 1047], 0.13, sine, amp=0.6, tau=0.22, gap=0.02),
               peak=0.7)
+
+    # ── Skiva 2 ──────────────────────────────────────────────────────────────
+    write_wav("ice_whoosh.wav",      build_ice_whoosh(),      peak=0.7)
+    write_wav("ice_shatter.wav",     build_ice_shatter(),     peak=0.9)
+    write_wav("poff_small.wav",      build_poff_small(),      peak=0.85)
+    write_wav("glitch_dissolve.wav", build_glitch_dissolve(), peak=0.85)
+    write_wav("giant_collapse.wav",  build_giant_collapse(),  peak=1.0)
 
     print("Klart.")
 
