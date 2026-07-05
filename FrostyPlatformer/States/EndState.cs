@@ -435,7 +435,7 @@ namespace FrostyPlatformer.States
                     "in a penguin suit, by a father",
                     "who loved her more than he could say.",
 
-                    "She never felt real -",
+                    "She never felt real ",
                     "a stranger on her own shore.",
                     "So she left, to find some place",
                     "that might feel like home.",
@@ -443,8 +443,8 @@ namespace FrostyPlatformer.States
                     "She was still out there, searching,",
                     "when her father's clock ran down.",
 
-                    "She crossed back over all that ice -",
-                    "the same cold she had fled -",
+                    "She crossed back over all that ice ",
+                    "the same cold she had fled ",
                     "and reached him just in time",
                     "to say goodbye.",
 
