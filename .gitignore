@@ -340,30 +340,21 @@ ASALocalRun/
 healthchecksdb
 
 # -------------------------------------------------------
-# Game assets – lokala filer, checkas inte in i git
-# Läggs till manuellt lokalt för att kunna köra spelet
+# Game assets – versioneras i git sedan release (2026-07-05).
+# Tidigare ignorerade för att "skydda" art; vid itch.io-release är
+# de ändå publika, så de får lika gärna versionhanteras här.
 # ** prefix matchar sökvägen oavsett projektundermapp
 # -------------------------------------------------------
 
-# Sprites
-**/Resources/Assets/Sprites/*.png
-**/Resources/Assets/Sprites/*.bmp
-**/Resources/Assets/Sprites/*.jpg
-**/Resources/Assets/Sprites/*.ico
-
-# Kartor (genereras av FurryNachoLevelEditor / ConvertMaps-verktyget)
-**/Resources/Assets/MapData/*.json
-**/Resources/Assets/MapData/Tiled/*.json
-**/Resources/Assets/MapData/Tiled/*.tsx
-
-# Ljud och musik
-**/Resources/Assets/Sound/*.wav
-**/Resources/Assets/Sound/*.mp3
-**/Resources/Assets/Sound/*.ogg
-
-# Inställningar och highscore (genereras vid körning)
+# Inställningar och highscore (genereras vid körning – lokala, ej i git)
 **/Resources/Settings/settings.json
 **/Resources/Settings/highscore.json
+
+# Editor-testartefakt (skräpfil – versioneras ej)
+**/Resources/Assets/Sprites/test_new_unique_xyz.png
+
+# Release-byggen (dotnet publish → zip, genereras lokalt)
+dist/
 
 # Claude-specifika filer (lokala AI-instruktioner och sessionsdata, ska ej pushas)
 CLAUDE.md

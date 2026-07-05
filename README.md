@@ -5,10 +5,8 @@ Private project — published to GitHub as version control and backup.
 
 ## Origin
 Started as OlcSideScrollingConsoleGame (.NET Framework 4.7.2, PixelEngine).
-Extensively refactored (SOLID principles, 289 unit tests, clean architecture).
-This repo is the next chapter: .NET 8 migration and engine replacement.
-
-See `ROADMAP.md` for the migration plan.
+Extensively refactored (SOLID principles, 500+ unit tests, clean architecture).
+Now on .NET 8 with MonoGame (DesktopGL) as the engine, assets loaded at runtime.
 
 ## Controls
 
@@ -28,8 +26,8 @@ The game window is resizable. The 256×224 native resolution is always preserved
 with pillarbox/letterbox — no stretching.
 
 ## Assets
-Sprites, maps, and audio are excluded from version control (.gitignore).
-Add them locally to run the game.
+Sprites, maps, and audio live under `FrostyPlatformer/Resources/Assets/` and are
+version-controlled. Runtime-generated files (settings, high scores) stay local.
 
 ## Map format
 Maps are stored as Tiled JSON (`.json`) in `Resources/Assets/MapData/Tiled/`.
