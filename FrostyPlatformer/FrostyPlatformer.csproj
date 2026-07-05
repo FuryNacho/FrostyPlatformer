@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>FrostyPlatformer</RootNamespace>
-    <AssemblyName>FrostyPlatformer</AssemblyName>
+    <AssemblyName>PenguinAfterAllRemastered</AssemblyName>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>
