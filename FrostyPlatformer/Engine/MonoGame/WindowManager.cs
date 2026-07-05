@@ -30,7 +30,7 @@ namespace FrostyPlatformer.Engine.MonoGame
         /// Läget spelet startar i när inget val sparats i settings. Ändra denna rad för
         /// att flippa standardläge (t.ex. <see cref="ScreenMode.BorderlessFullscreen"/> för konsolbygget).
         /// </summary>
-        public const ScreenMode DefaultScreenMode = ScreenMode.Windowed;
+        public const ScreenMode DefaultScreenMode = ScreenMode.BorderlessFullscreen;
 
         private readonly GraphicsDeviceManager _graphics;
 
