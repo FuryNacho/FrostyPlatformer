@@ -64,8 +64,8 @@ namespace FrostyPlatformer.Engine.MonoGame
                 case ScreenMode.Windowed:
                 default:
                     _graphics.IsFullScreen              = false;
-                    _graphics.PreferredBackBufferWidth  = GameConstants.ScreenWidth  * GameConstants.PixelWidth;
-                    _graphics.PreferredBackBufferHeight = GameConstants.ScreenHeight * GameConstants.PixelHeight;
+                    _graphics.PreferredBackBufferWidth  = GameConstants.WindowedWidth;
+                    _graphics.PreferredBackBufferHeight = GameConstants.WindowedHeight;
                     break;
             }
 

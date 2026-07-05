@@ -246,9 +246,17 @@ namespace FrostyPlatformer.Engine.MonoGame
 
         // ─── Mus-input ────────────────────────────────────────────────────────
         // Mouse.GetState() returnerar fysiska skärmpixlar. Spellogiken arbetar i
-        // logiska pixlar (fysisk / PixelWidth). Dela med scale-faktorn för att matcha.
-        public int  MouseX             => _mouse.X / GameConstants.PixelWidth;
-        public int  MouseY             => _mouse.Y / GameConstants.PixelHeight;
+        // logiska pixlar. Med virtuell upplösning (letterbox) ritas spelet i en
+        // centrerad, skalad ruta på skärmen, så musen måste kompenseras för både
+        // offset (svarta kanter) och skala. FrostyGame sätter transformen varje gång
+        // skärmstorleken ändras. Standard (offset 0, skala PixelWidth) = ingen
+        // letterbox → identiskt med tidigare beteende (fönster i designstorlek).
+        public int   ViewportOffsetX { get; set; }
+        public int   ViewportOffsetY { get; set; }
+        public float ViewportScale   { get; set; } = GameConstants.PixelWidth;
+
+        public int  MouseX             => (int)((_mouse.X - ViewportOffsetX) / ViewportScale);
+        public int  MouseY             => (int)((_mouse.Y - ViewportOffsetY) / ViewportScale);
         public bool IsMouseLeftDown    => _mouse.LeftButton  == ButtonState.Pressed;
         public bool IsMouseRightDown   => _mouse.RightButton == ButtonState.Pressed;
         public bool IsMouseLeftPressed =>

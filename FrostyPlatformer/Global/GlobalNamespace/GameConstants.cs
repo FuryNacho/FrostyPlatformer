@@ -15,6 +15,16 @@ namespace FrostyPlatformer.Global
         public const int PixelHeight       = 4;
         public const int FrameRate         = -1;   // -1 = okappat
 
+        // 16:9-presentation: spelet renderas i ett fast utsnitt (ViewWidth×ViewHeight
+        // logiska spelpixlar = hur det ser ut maximerat på en 1080p-skärm) och skalas
+        // för att FYLLA skärmen — samma bild på monitor och TV, bara olika stor.
+        // ScreenWidth/Height (256×224) är kvar som designreferens (kameratester).
+        public const int ViewWidth         = 480;
+        public const int ViewHeight        = 270;
+        // Standard fönsterstorlek (16:9) så fönsterläge också fyller utan svarta kanter.
+        public const int WindowedWidth     = 1280;
+        public const int WindowedHeight    = 720;
+
         public const int TileSize          = 16;   // Tile-storlek i pixlar
         public const int TileSheetColumns  = 5;    // Antal kolumner i tile-spritesheet
         public const int TileSheetRows     = 5;    // Antal rader i tile-spritesheet
@@ -86,8 +96,8 @@ namespace FrostyPlatformer.Global
         // ─────────────────────────────────────────────
         // Ljud
         // ─────────────────────────────────────────────
-        /// <summary>Bas-volym för level editor-musiken (lågmäld bakgrund mot spelmusikens 1.0).</summary>
-        public const float EditorMusicVolume = 0.05f;
+        /// <summary>Bas-volym för level editor-musiken — samma nivå som spelmusiken (1.0).</summary>
+        public const float EditorMusicVolume = 1.0f;
 
         /// <summary>Volym för akt 4-temat (Acceptans) — medvetet lågmält, en bit under övriga BG-spårs 1.0.</summary>
         public const float AcceptanceMusicVolume = 0.4f;

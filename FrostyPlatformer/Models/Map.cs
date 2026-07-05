@@ -947,7 +947,7 @@ namespace FrostyPlatformer.Models
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 19, 21, Assets!, 0, 40));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 21, 21, Assets!, 0, 41));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 29, 20, Assets!, 0, 42));
-            ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 30, 30, Assets!, 0, 43));
+            ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 30, 20, Assets!, 0, 43));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 33, 20, Assets!, 0, 44));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 41, 21, Assets!, 0, 45));
             ListDynamicObjs.Add(ItemFactory!.Create(ItemType.Energi, 42, 21, Assets!, 0, 46));
@@ -1921,7 +1921,7 @@ namespace FrostyPlatformer.Models
 
             #endregion
 
-           ListDynamicObjs.Add(new Teleport(377.5f, 8.0f, MapName.MapNine, 2.0f, 5.0f));
+           ListDynamicObjs.Add(new Teleport(377.5f, 8.0f, MapName.WorldMap, 2.0f, 5.0f));
 
             return true;
         }

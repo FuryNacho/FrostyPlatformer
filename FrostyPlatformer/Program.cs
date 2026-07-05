@@ -106,6 +106,17 @@ namespace FrostyPlatformer
         private const int PixW    = GameConstants.PixelWidth;
         private const int PixH    = GameConstants.PixelHeight;
 
+        // ── Virtuell upplösning (16:9, fyller skärmen) ────────────────────────
+        // Spelet renderas alltid till en fast 1920×1080-yta (16:9-vyn = hur det ser ut
+        // maximerat på en 1080p-skärm) och skalas upp för att FYLLA skärmen. Samma bild
+        // på monitor och TV, bara olika stor. På en icke-16:9-skärm läggs kanter till
+        // (aldrig beskuren eller förvrängd vy).
+        private const int VirtualW = GameConstants.ViewWidth  * PixW;   // 1920
+        private const int VirtualH = GameConstants.ViewHeight * PixH;   // 1080
+        private RenderTarget2D _virtualScreen = null!;
+        private Rectangle      _presentDest;
+        private float          _presentScale = PixW;
+
         // ── Egenskaper som delegerar till _context ────────────────────────────
         private DynamicCreatureHero Hero
         {
@@ -152,8 +163,8 @@ namespace FrostyPlatformer
             _windowManager = new Engine.MonoGame.WindowManager(_graphics);
             // Initial fönsterstorlek (windowed). Det riktiga läget appliceras i LoadContent
             // när sparade inställningar lästs in.
-            _graphics.PreferredBackBufferWidth  = ScreenW * PixW;
-            _graphics.PreferredBackBufferHeight = ScreenH * PixH;
+            _graphics.PreferredBackBufferWidth  = GameConstants.WindowedWidth;
+            _graphics.PreferredBackBufferHeight = GameConstants.WindowedHeight;
             // Variabelt tidssteg + VSync: loopen synkroniseras med skärmens faktiska Hz
             // (60, 75, 144, 165 Hz etc.) utan ackumulatordrift. IsFixedTimeStep = true
             // orsakar periodiska catch-up-uppdateringar på skärmar som inte kör exakt
@@ -230,8 +241,10 @@ namespace FrostyPlatformer
         protected override void LoadContent()
         {
             _spriteBatch   = new SpriteBatch(GraphicsDevice);
-            // PixW×PixH (4×4): varje logisk spelpixel ritas som ett 4×4-block direkt
-            // mot backbuffer — inget render-target-mellansteg behövs.
+            // Spelet ritas i 4×-skala till en fast virtuell yta (VirtualW×VirtualH) och
+            // skalas sedan upp centrerat till skärmen i Draw (letterbox). Så vyn är
+            // identisk på alla upplösningar. RenderContext arbetar mot den virtuella ytan.
+            _virtualScreen = new RenderTarget2D(GraphicsDevice, VirtualW, VirtualH);
             _renderContext = new MonoGameRenderContext(GraphicsDevice, _spriteBatch, scaleX: PixW, scaleY: PixH);
             RegisterSprites();
 
@@ -336,6 +349,8 @@ namespace FrostyPlatformer
         /// </summary>
         protected override void Draw(GameTime gameTime)
         {
+            // 1. Rita spelet till den fasta virtuella ytan (256×224 logiskt @ 4× = 1024×896).
+            GraphicsDevice.SetRenderTarget(_virtualScreen);
             GraphicsDevice.Clear(Color.Black);
             _spriteBatch.Begin(
                 SpriteSortMode.Deferred,
@@ -343,6 +358,18 @@ namespace FrostyPlatformer
                 SamplerState.PointClamp,
                 null, null, null, null);
             _stateManager.Draw(_renderContext, _context);
+            _spriteBatch.End();
+
+            // 2. Skala upp den centrerat till skärmen. På en 16:9-skärm fyller den helt;
+            //    på andra proportioner läggs svarta kanter till (aldrig beskuren vy).
+            GraphicsDevice.SetRenderTarget(null);
+            GraphicsDevice.Clear(Color.Black);
+            _spriteBatch.Begin(
+                SpriteSortMode.Deferred,
+                BlendState.Opaque,
+                SamplerState.PointClamp,
+                null, null, null, null);
+            _spriteBatch.Draw(_virtualScreen, _presentDest, Color.White);
             _spriteBatch.End();
 
             base.Draw(gameTime);
@@ -405,8 +432,41 @@ namespace FrostyPlatformer
         /// </summary>
         private void UpdateScreenDimensions()
         {
-            _context.ScreenWidth  = GraphicsDevice.Viewport.Width  / PixW;
-            _context.ScreenHeight = GraphicsDevice.Viewport.Height / PixH;
+            // Spelet renderas alltid i det fasta 16:9-utsnittet, så den logiska
+            // storleken är konstant oavsett fönster/skärm. Skalningen till den
+            // faktiska skärmen beräknas i UpdatePresentTransform och sker i Draw.
+            _context.ScreenWidth  = GameConstants.ViewWidth;
+            _context.ScreenHeight = GameConstants.ViewHeight;
+            UpdatePresentTransform();
+        }
+
+        /// <summary>
+        /// Beräknar var den virtuella ytan (VirtualW×VirtualH) ritas på den faktiska
+        /// skärmen: enhetlig skala som fyller så mycket som möjligt utan att förvränga
+        /// bilden, centrerad med svarta kanter (letterbox/pillarbox). Uppdaterar även
+        /// musens viewport-transform så editorn träffar rätt tile trots skalningen.
+        /// </summary>
+        private void UpdatePresentTransform()
+        {
+            int bbW = GraphicsDevice.PresentationParameters.BackBufferWidth;
+            int bbH = GraphicsDevice.PresentationParameters.BackBufferHeight;
+
+            // Enhetlig skala (min av bredd/höjd) = ingen förvrängning, aldrig beskuren vy.
+            float sx = (float)bbW / VirtualW;
+            float sy = (float)bbH / VirtualH;
+            _presentScale = sx < sy ? sx : sy;
+
+            int destW = (int)(VirtualW * _presentScale);
+            int destH = (int)(VirtualH * _presentScale);
+            _presentDest = new Rectangle((bbW - destW) / 2, (bbH - destH) / 2, destW, destH);
+
+            // Mus: fysisk pixel → logisk spelpixel (kompensera för kant-offset + total skala).
+            if (_input != null)
+            {
+                _input.ViewportOffsetX = _presentDest.X;
+                _input.ViewportOffsetY = _presentDest.Y;
+                _input.ViewportScale   = _presentScale * PixW;
+            }
         }
 
         // ── Sprite- och ljudregistrering ──────────────────────────────────────
@@ -508,7 +568,7 @@ namespace FrostyPlatformer
             Reg(SoundRef.BGPerfectEnd,      isLooped: true);
 
             // Level editor-musik: ej loopad per instans (EditorMusicSequencer
-            // sekvenserar main→main→middle), halv volym mot spelmusiken, och
+            // sekvenserar main→main→middle), samma volym som spelmusiken, och
             // undantagen från spelets Mute() så de två ljud-inställningarna är oberoende.
             Reg(SoundRef.EditorMusicMain,   isLooped: false,
                 volume: GameConstants.EditorMusicVolume, isEditorMusic: true);
