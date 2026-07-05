@@ -36,6 +36,16 @@ namespace FrostyPlatformer.States
         {
             _animCount = 10;
 
+            // Tysta bakgrundsmusiken när game over-skärmen visas. Döds-övergången i GameplayState
+            // transitionar hit utan att stoppa musiken, så utan detta fortsatte boss-temat (akt 1-3),
+            // acceptans-temat (akt 4) eller banmusiken att spela vidare på game over-skärmen. Bara
+            // musik stoppas (inte StopAll) så träff-SFX:et från döds-stöten får klinga ut. Stop på ett
+            // spår som inte spelas är en no-op.
+            _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundGame);
+            _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundFinalStage);
+            _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundAcceptance);
+            _services.Audio.Stop(Global.GlobalNamespace.SoundRef.BGSoundAcceptanceIntro);
+
             // Ge tillbaka lite liv
             if (context.Player != null && context.Player.Health < 1)
                 context.Player.Health = 10;
