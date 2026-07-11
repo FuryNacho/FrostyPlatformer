@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using FrostyPlatformer.Core;
+using FrostyPlatformer.Global;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Rendering;
 
@@ -146,7 +147,8 @@ namespace FrostyPlatformer.States
                             DateTime = DateTime.Now,
                             Handle   = name,
                             TimeSpan = context.EndTotalTime,
-                            Percent  = context.CollectedEnergiIds.Count
+                            // StartingEnergi + insamlade → en full runda visas som 100 på listan
+                            Percent  = GameConstants.StartingEnergi + context.CollectedEnergiIds.Count
                         });
                         _services.Score.Save();
                     }

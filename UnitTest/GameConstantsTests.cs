@@ -138,5 +138,32 @@ namespace UnitTest
         {
             Assert.IsTrue(GameConstants.PerfectEndingHealth > 0);
         }
+
+        // ─────────────────────────────────────────────
+        // Energi-ekonomi
+        // ─────────────────────────────────────────────
+
+        [TestMethod]
+        public void EnergiCounts_ArePositive()
+        {
+            Assert.IsTrue(GameConstants.StartingEnergi   > 0, "StartingEnergi ska vara positiv");
+            Assert.IsTrue(GameConstants.TotalEnergiCount > 0, "TotalEnergiCount ska vara positiv");
+        }
+
+        [TestMethod]
+        public void MaxEnergi_IsStartingPlusCollectible()
+        {
+            // Grunden för slutvillkoret: de man föds med + de man kan plocka = totalen
+            Assert.AreEqual(GameConstants.StartingEnergi + GameConstants.TotalEnergiCount,
+                GameConstants.MaxEnergi);
+        }
+
+        [TestMethod]
+        public void MaxEnergi_EqualsPerfectEndingHealth()
+        {
+            // Designen bygger på att en full runda (StartingEnergi + alla insamlade) ger exakt
+            // fullt liv. Går denna vakt sönder kan Perfect-sluten bli oåtkomligt igen.
+            Assert.AreEqual(GameConstants.PerfectEndingHealth, GameConstants.MaxEnergi);
+        }
     }
 }

@@ -115,6 +115,16 @@ namespace FrostyPlatformer.Global
         public const int  ObjectCleanupCount   = 4;      // RemoveCount-tröskel för objektborttagning
         public const int  PerfectEndingHealth  = 100;    // Hälsotröskel för perfekt slut
 
+        // Energi-ekonomi: hjälten "föds" med StartingEnergi energier (= starthälsa), och det
+        // finns TotalEnergiCount insamlingsbara ute i banorna. Tillsammans blir de MaxEnergi (100),
+        // vilket också är MaxHealth. Slutvillkoret (EndState.DetermineEnding) och highscore-procenten
+        // räknar StartingEnergi + insamlade, så att en full runda landar på exakt 100.
+        // OBS: StartingEnergi speglar SaveSlot.HeroEnergi-defaulten (7) i FrostyPlatformer.Shared —
+        // de ligger i olika assemblies och kan inte dela konstant, så håll dem i synk manuellt.
+        public const int  StartingEnergi       = 7;      // Energier hjälten börjar med (= starthälsa)
+        public const int  TotalEnergiCount     = 93;     // Insamlingsbara energier i banorna (CoinId 1–93)
+        public const int  MaxEnergi            = StartingEnergi + TotalEnergiCount; // 100
+
 
 
         // ─────────────────────────────────────────────

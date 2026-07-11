@@ -170,11 +170,17 @@ namespace FrostyPlatformer.States
         public void Exit(GameContext context) { }
 
         // ── Sluttyps-bestämning ───────────────────────────────────────────────────
-        private static Enum.TypeOfEnding DetermineEnding(GameContext context)
+        // internal (inte private) så slutvillkoret kan enhetstestas direkt — se EndStateTests.
+        internal static Enum.TypeOfEnding DetermineEnding(GameContext context)
         {
-            if (context.CollectedEnergiIds.Count == 100)
+            // Total energi = de StartingEnergi man föds med + de insamlade. En full runda ger
+            // StartingEnergi + TotalEnergiCount == MaxEnergi (7 + 93 = 100). CollectedEnergiIds
+            // räknar ENDAST de insamlade, därför läggs StartingEnergi på här.
+            int totalEnergi = GameConstants.StartingEnergi + context.CollectedEnergiIds.Count;
+
+            if (totalEnergi == GameConstants.MaxEnergi)
             {
-                return context.Player?.Health == 100
+                return context.Player?.Health == GameConstants.PerfectEndingHealth
                     ? Enum.TypeOfEnding.Perfect
                     : Enum.TypeOfEnding.NerePerfect;
             }
