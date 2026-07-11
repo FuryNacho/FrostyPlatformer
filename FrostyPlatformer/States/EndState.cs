@@ -510,7 +510,7 @@ namespace FrostyPlatformer.States
             {
                 "A winner is you!", // Pro Wrestling
                 "ALL YOUR BASE ARE BELONG TO US", // Zero Wing
-                "Conglaturation!!! You have completed a great game.", // Ghostbusters
+                "You have completed a great game.", // Ghostbusters
                 "It's dangerous to go alone! Take this." // Zelda
             };
 
