@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using FrostyPlatformer.Core;
+using FrostyPlatformer.Global;
 using FrostyPlatformer.Models;
 using FrostyPlatformer.Rendering;
 
@@ -313,16 +314,15 @@ namespace FrostyPlatformer.States
         }
 
         /// <summary>
-        /// Bygger listan över de 7 user map-slottarna (slot1..slot7) för Clear My
-        /// Maps. Tomma slots visas men är inte valbara (SlotIsUsed = false).
+        /// Bygger listan över user map-slottarna (slot1..slotN, N = MaxUserMapSlots) för Clear
+        /// My Maps. Tomma slots visas men är inte valbara (SlotIsUsed = false).
         /// </summary>
         private List<OptionsObj> DefaultListUserMaps()
         {
-            const int MaxUserSlots = 7;
             var existing = new HashSet<string>(_services.UserMaps.GetAvailableMapIds());
 
             var list = new List<OptionsObj>();
-            for (int i = 1; i <= MaxUserSlots; i++)
+            for (int i = 1; i <= GameConstants.MaxUserMapSlots; i++)
             {
                 string slotId = "slot" + i;
                 bool   isUsed = existing.Contains(slotId);

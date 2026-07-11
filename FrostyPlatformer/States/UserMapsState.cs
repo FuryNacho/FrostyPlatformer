@@ -21,7 +21,7 @@ namespace FrostyPlatformer.States
     /// inbyggda banor — håller GameplayState fri från nav-logik.
     ///
     /// ANVÄNDNING:
-    /// Aktiveras från MenuState ("My Maps"). Visar upp till 7 slots med best time.
+    /// Aktiveras från MenuState ("My Maps"). Visar sparade slots med best time.
     /// Enter startar GameplayState med context.UserMapSlotId satt; Esc → MenuState.
     /// </remarks>
     internal sealed class UserMapsState : IGameState

@@ -31,7 +31,7 @@ namespace FrostyPlatformer.Global.GlobalNamespace
         /// <summary>Banor 7–9 (mapseven, mapeight, mapnine): snö, is och vintermörker.</summary>
         Winter,
 
-        /// <summary>Användarbyggda banor (slot1–slot7): mörk nattbakgrund med snöstämning.</summary>
+        /// <summary>Användarbyggda banor (slot1–slotN): mörk nattbakgrund med snöstämning.</summary>
         Custom,
 
         /// <summary>Slutboss-arenan (mapten): mörk natthimmel med snöklädda fjäll-siluetter.</summary>

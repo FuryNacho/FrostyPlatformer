@@ -165,5 +165,16 @@ namespace UnitTest
             // fullt liv. Går denna vakt sönder kan Perfect-sluten bli oåtkomligt igen.
             Assert.AreEqual(GameConstants.PerfectEndingHealth, GameConstants.MaxEnergi);
         }
+
+        // ─────────────────────────────────────────────
+        // Level-editor — user map-slots
+        // ─────────────────────────────────────────────
+
+        [TestMethod]
+        public void MaxUserMapSlots_IsPositive()
+        {
+            // Enda källan för antalet egna banor (editorns picker + Clear My Maps läser denna).
+            Assert.IsTrue(GameConstants.MaxUserMapSlots > 0);
+        }
     }
 }

@@ -125,6 +125,10 @@ namespace FrostyPlatformer.Global
         public const int  TotalEnergiCount     = 93;     // Insamlingsbara energier i banorna (CoinId 1–93)
         public const int  MaxEnergi            = StartingEnergi + TotalEnergiCount; // 100
 
+        // Antal egna banor spelaren kan skapa i level-editorn (slot1..slotN). Vald för att matcha
+        // antalet banor i spelet. Enda källan — både editorns picker och Clear My Maps läser denna.
+        public const int  MaxUserMapSlots      = 8;
+
 
 
         // ─────────────────────────────────────────────

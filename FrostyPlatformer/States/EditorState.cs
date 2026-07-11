@@ -54,9 +54,9 @@ namespace FrostyPlatformer.States
         private const int PaletteWidth   =
             GameConstants.TileSheetColumns * GameConstants.TileSize + PalettePadding * 2;
 
-        // ── Användarkartor — 7 fasta slots ──────────────────────────────────────
-        private const int MaxUserSlots = 7;
-        private static string SlotId(int n) => $"slot{n}";   // "slot1" .. "slot7"
+        // ── Användarkartor — fasta slots (antal i GameConstants.MaxUserMapSlots) ──
+        private const int MaxUserSlots = GameConstants.MaxUserMapSlots;
+        private static string SlotId(int n) => $"slot{n}";   // "slot1" .. "slot{MaxUserSlots}"
 
         // ── Färgkonstanter ──────────────────────────────────────────────────────
         private static readonly RenderColor CollisionOverlayColor =
