@@ -35,7 +35,7 @@ namespace FrostyPlatformer.States
             rc.DrawPartialSprite(SpriteId.Items, 3, 3, 0, 16 * 4, 16, 4);
 
             string text = context.Player.Health.ToString() + "% " +
-                          context.GameTotalTime.ToString("hh':'mm':'ss'.'fff");
+                          ShownTime(context).ToString("hh':'mm':'ss'.'fff");
             for (int i = 0; i < text.Length; i++)
             {
                 char c = text[i];
@@ -71,6 +71,22 @@ namespace FrostyPlatformer.States
                 rc.DrawText("Start resume.", 25, 35);
                 rc.DrawText("Select go back.", 25, 45);
             }
+        }
+
+        /// <summary>
+        /// Tiden som ska visas i HUD:en. För kampanjen (ordinariebanor) är det den absoluta
+        /// session-klockan <see cref="GameContext.GameTotalTime"/> som ackumuleras mellan banor.
+        /// För en user map-körning (My Maps eller editor-preview) visas i stället per-körnings-
+        /// deltat GameTotalTime − UserMapRunStartTime, så klockan börjar på 0 varje spelomgång.
+        /// Ändrar bara VISNINGEN — själva GameTotalTime rörs aldrig, så kampanj-timingen är oförändrad.
+        /// internal för enhetstest.
+        /// </summary>
+        internal static System.TimeSpan ShownTime(GameContext context)
+        {
+            bool isUserMapRun = context.UserMapSlotId != null || context.IsPreviewMode;
+            return isUserMapRun
+                ? context.GameTotalTime - context.UserMapRunStartTime
+                : context.GameTotalTime;
         }
 
         /// <summary>
