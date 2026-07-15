@@ -142,8 +142,7 @@ namespace FrostyPlatformer.States
             {
                 string slotId = _slots[i];
                 var    record = _services.UserMapScores.GetRecord(slotId);
-                string time   = record != null ? FormatTime(record.BestTime) : "No high score set";
-                DrawRow(cx, startY + i * RowHeight, $"{slotId}   {time}", i == _selectedIndex);
+                DrawRow(cx, startY + i * RowHeight, FormatSlotLabel(slotId, record), i == _selectedIndex);
             }
 
             // Back-rad sist — samma markör-stil som kartraderna.
@@ -218,6 +217,18 @@ namespace FrostyPlatformer.States
             int seconds    = t.Seconds;
             int hundredths = t.Milliseconds / 10;
             return $"{minutes}:{seconds:D2}.{hundredths:D2}";
+        }
+
+        /// <summary>
+        /// Bygger radtexten för en slot i listan: slot-id, bästa tid och spelarens
+        /// initialer (Handle). Utan rekord visas "No high score set" och inga initialer.
+        /// internal för enhetstest (ser till att initialerna faktiskt visas efter tiden).
+        /// </summary>
+        internal static string FormatSlotLabel(string slotId, UserMapScore? record)
+        {
+            if (record == null)
+                return $"{slotId}   No high score set";
+            return $"{slotId}   {FormatTime(record.BestTime)}   {record.Handle}";
         }
     }
 }
